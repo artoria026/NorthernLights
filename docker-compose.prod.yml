@@ -1,0 +1,78 @@
+# Despliegue de produccion en prod-01 (ver ~/infra/context/architecture.md).
+#
+# Nombre separado de "docker-compose.yml" a propósito: ese nombre está
+# trackeado en git como el compose de herramientas de desarrollo local
+# (pgAdmin, ver ese archivo) — si el de producción usara el mismo nombre,
+# un `git reset --hard origin/master` (paso normal del deploy) lo pisaría
+# de vuelta al de pgAdmin en cada deploy, porque este archivo nunca fue
+# comiteado. Por eso northern-lights.sh siempre lo referencia explícito con
+# `docker compose -f docker-compose.prod.yml`, nunca el nombre por default.
+#
+# Postgres y Redis son nativos del host, compartidos — este compose NO los
+# levanta, se conecta a ellos via 172.17.0.1 (ver .env).
+#
+# backend, celery-worker y celery-beat comparten la MISMA imagen (un solo
+# build) — cada uno corre un `command:` distinto. Las migraciones
+# (alembic upgrade head) corren solo en el CMD de `backend` (ver Dockerfile)
+# para que los 3 no compitan por migrar al mismo tiempo.
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: northern-lights-backend
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8093:8000"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    mem_limit: 512m
+
+  celery-worker:
+    build:
+      context: ./backend
+    container_name: northern-lights-celery-worker
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - app-network
+    command: uv run celery -A app.core.celery worker --loglevel=info --concurrency=2
+    depends_on:
+      - backend
+    mem_limit: 512m
+
+  celery-beat:
+    build:
+      context: ./backend
+    container_name: northern-lights-celery-beat
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - app-network
+    command: uv run celery -A app.core.celery beat --loglevel=info
+    depends_on:
+      - backend
+    mem_limit: 128m
+
+  frontend:
+    build:
+      context: ./frontend-web
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_APP_ENV: production
+    container_name: northern-lights-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8094:80"
+    networks:
+      - app-network
+    mem_limit: 128m
+
+networks:
+  app-network:
+    name: northern-lights-network

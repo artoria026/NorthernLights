@@ -1,0 +1,311 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  .theme {
+    --font-heading: var(--font-sans);
+    --font-sans: 'Inter Variable', sans-serif
+  }
+  /* NorthernLights: paleta tomada de "NorthernLights Standalone.html" (Claude
+     Design, agosto 2026) -- reemplaza la paleta verde dark-only anterior.
+     Soporta modo claro/oscuro real: :root = claro, .dark = oscuro (el toggle
+     en AppSidebar agrega/quita la clase .dark en <html>, ver themeStore.ts).
+     Los tokens --nl-* exponen la paleta del diseno tal cual (con sus 4 niveles
+     de superficie bg-page/bg-card/bg-input/bg-track/bg-hover, que no tienen
+     equivalente 1:1 en el set semantico de shadcn) para los componentes
+     nuevos; el set semantico de shadcn (--background, --primary, etc.) se
+     mantiene para que Button/Badge/Dialog/Input/Table/Progress sigan
+     funcionando sin tocarlos. */
+  :root {
+    color-scheme: light;
+    --nl-bg-page: #f5f5f3;
+    --nl-bg-sidebar: #ffffff;
+    --nl-bg-card: #ffffff;
+    --nl-bg-input: #f0f0ee;
+    --nl-bg-track: #e7e7e3;
+    --nl-bg-hover: #f0f0ee;
+    --nl-border: #e2e2de;
+    --nl-border-strong: #c7c7c1;
+    --nl-text-primary: #1a1a1c;
+    --nl-text-secondary: #6f6f76;
+    --nl-text-muted: #a4a4a8;
+    --nl-accent: #00c9a7;
+    --nl-accent-ink: #00806a;
+    --nl-accent-soft-bg: #d9f5ee;
+    --nl-accent-fg: #0c0c0e;
+    --nl-danger: #f04e4e;
+    --nl-danger-ink: #c73333;
+    --nl-danger-soft-bg: #fbe4e4;
+    --nl-warning: #f5a623;
+    --nl-warning-ink: #9c6510;
+    --nl-warning-soft-bg: #fdf1d9;
+    --nl-violet: #8b7cf6;
+    --nl-violet-ink: #6247d6;
+    --nl-violet-soft-bg: #ece8fd;
+    --nl-blue: #4e8ef0;
+    --nl-blue-ink: #2f6fd6;
+    --nl-blue-soft-bg: #dfeafd;
+    --nl-pink: #e85d9c;
+
+    --background: var(--nl-bg-page);
+    --foreground: var(--nl-text-primary);
+    --card: var(--nl-bg-card);
+    --card-foreground: var(--nl-text-primary);
+    --popover: var(--nl-bg-card);
+    --popover-foreground: var(--nl-text-primary);
+    --primary: var(--nl-accent-ink);
+    --primary-foreground: var(--nl-accent-fg);
+    --secondary: var(--nl-bg-input);
+    --secondary-foreground: var(--nl-text-secondary);
+    --muted: var(--nl-bg-track);
+    --muted-foreground: var(--nl-text-secondary);
+    --accent: var(--nl-bg-hover);
+    --accent-foreground: var(--nl-text-primary);
+    --destructive: var(--nl-danger-ink);
+    --border: var(--nl-border);
+    --input: var(--nl-border);
+    --ring: var(--nl-accent);
+    --chart-1: var(--nl-accent);
+    --chart-2: var(--nl-blue);
+    --chart-3: var(--nl-warning);
+    --chart-4: var(--nl-violet);
+    --chart-5: var(--nl-danger);
+    --radius: 0.5rem;
+    --sidebar: var(--nl-bg-sidebar);
+    --sidebar-foreground: var(--nl-text-primary);
+    --sidebar-primary: var(--nl-accent);
+    --sidebar-primary-foreground: var(--nl-accent-fg);
+    --sidebar-accent: var(--nl-bg-hover);
+    --sidebar-accent-foreground: var(--nl-text-primary);
+    --sidebar-border: var(--nl-border);
+    --sidebar-ring: var(--nl-accent);
+    --success: var(--nl-accent-ink);
+    --warning: var(--nl-warning-ink);
+    --info: var(--nl-blue-ink);
+  }
+
+  .dark {
+    color-scheme: dark;
+    --nl-bg-page: #0c0c0e;
+    --nl-bg-sidebar: #111114;
+    --nl-bg-card: #161618;
+    --nl-bg-input: #1c1c1f;
+    --nl-bg-track: #1e1e22;
+    --nl-bg-hover: #1c1c1f;
+    --nl-border: #232327;
+    --nl-border-strong: #3a3a45;
+    --nl-text-primary: #f0f0f2;
+    --nl-text-secondary: #6b6b72;
+    --nl-text-muted: #3a3a40;
+    --nl-accent: #00c9a7;
+    --nl-accent-ink: #00c9a7;
+    --nl-accent-soft-bg: #0c2a25;
+    --nl-accent-fg: #0c0c0e;
+    --nl-danger: #f04e4e;
+    --nl-danger-ink: #f04e4e;
+    --nl-danger-soft-bg: #2a1414;
+    --nl-warning: #f5a623;
+    --nl-warning-ink: #f5a623;
+    --nl-warning-soft-bg: #2a2210;
+    --nl-violet: #8b7cf6;
+    --nl-violet-ink: #8b7cf6;
+    --nl-violet-soft-bg: #211c3f;
+    --nl-blue: #4e8ef0;
+    --nl-blue-ink: #4e8ef0;
+    --nl-blue-soft-bg: #14233f;
+    --nl-pink: #e85d9c;
+
+    --background: var(--nl-bg-page);
+    --foreground: var(--nl-text-primary);
+    --card: var(--nl-bg-card);
+    --card-foreground: var(--nl-text-primary);
+    --popover: var(--nl-bg-card);
+    --popover-foreground: var(--nl-text-primary);
+    --primary: var(--nl-accent-ink);
+    --primary-foreground: var(--nl-accent-fg);
+    --secondary: var(--nl-bg-input);
+    --secondary-foreground: var(--nl-text-secondary);
+    --muted: var(--nl-bg-track);
+    --muted-foreground: var(--nl-text-secondary);
+    --accent: var(--nl-bg-hover);
+    --accent-foreground: var(--nl-text-primary);
+    --destructive: var(--nl-danger-ink);
+    --border: var(--nl-border);
+    --input: var(--nl-border);
+    --ring: var(--nl-accent);
+    --chart-1: var(--nl-accent);
+    --chart-2: var(--nl-blue);
+    --chart-3: var(--nl-warning);
+    --chart-4: var(--nl-violet);
+    --chart-5: var(--nl-danger);
+    --sidebar: var(--nl-bg-sidebar);
+    --sidebar-foreground: var(--nl-text-primary);
+    --sidebar-primary: var(--nl-accent);
+    --sidebar-primary-foreground: var(--nl-accent-fg);
+    --sidebar-accent: var(--nl-bg-hover);
+    --sidebar-accent-foreground: var(--nl-text-primary);
+    --sidebar-border: var(--nl-border);
+    --sidebar-ring: var(--nl-accent);
+    --success: var(--nl-accent-ink);
+    --warning: var(--nl-warning-ink);
+    --info: var(--nl-blue-ink);
+  }
+
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* color-scheme por si solo no basta en todos los navegadores para el popup
+     nativo del <select> -- se fuerza el fondo/color explicitamente. */
+  select,
+  select option {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
+  html {
+    @apply font-sans;
+    /* Reserva el ancho del scrollbar SIEMPRE, aunque la pantalla no tenga
+       suficiente contenido para necesitarlo -- sin esto, una pantalla corta
+       (Cuentas) queda a ancho completo y una larga (Presupuesto) pierde ~15px
+       de ancho por el scrollbar, haciendo que el header y todo lo demas se
+       vea "mas grande/desplazado" al comparar una pantalla contra otra. */
+    scrollbar-gutter: stable;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--nl-border-strong);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  @keyframes pulseDot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .4; transform: scale(1.4); }
+  }
+  @keyframes thinkBounce {
+    0%, 80%, 100% { opacity: .3; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-4px); }
+  }
+  @keyframes fadeInView {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes flowArrow {
+    0%, 100% { transform: translateX(0); opacity: .55; }
+    50% { transform: translateX(3px); opacity: 1; }
+  }
+  /* Anillo pulsante alrededor del "hueco" del recorrido guiado con foco (ver
+     TourHost.tsx) -- confirma visualmente que ese es el elemento activo. */
+  @keyframes tourRingPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,201,167,.45); }
+    50% { box-shadow: 0 0 0 6px rgba(0,201,167,0); }
+  }
+  /* Wiggle de hover para iconos de accion en la sidebar (campana, megafono de
+     Novedades) -- se dispara una vez por hover via group-hover, no en loop. */
+  @keyframes nlIconRing {
+    0%, 100% { transform: rotate(0deg); }
+    20% { transform: rotate(14deg); }
+    40% { transform: rotate(-11deg); }
+    60% { transform: rotate(7deg); }
+    80% { transform: rotate(-4deg); }
+  }
+
+  /* Transicion entre /login y /register (ver AuthLayout.tsx). Dos capas:
+     1) authIn/authOut como animacion normal de mount -- funciona siempre,
+        sin depender de que el browser soporte la View Transitions API.
+     2) las reglas ::view-transition-* de abajo, que en browsers que si la
+        soportan (Chrome/Edge) reemplazan el corte seco de la navegacion por
+        un cross-fade real entre el panel viejo y el nuevo. */
+  /* El panel de texto (izquierda) entra deslizando desde la izquierda. La
+     card del form (derecha) NO desliza -- solo se desvanece/aparece. */
+  @keyframes authOutLeft {
+    from { opacity: 1; transform: translateX(0) scale(1); }
+    to { opacity: 0; transform: translateX(-90px) scale(0.96); }
+  }
+  @keyframes authInLeft {
+    from { opacity: 0; transform: translateX(-90px) scale(0.96); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  @keyframes authFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  @keyframes authFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  /* Carrusel de features dentro del panel izquierdo (AuthLayout/HeroCarousel)
+     -- distinto de authInLeft/authFadeIn de arriba, que son para la
+     navegacion ENTRE Login y Register (View Transitions API). Este anima
+     el cambio de slide DENTRO de la misma pantalla, disparado por un
+     key={index} que remonta el contenido en cada avance del carrusel. */
+  @keyframes heroSlideFade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  ::view-transition-old(auth-hero-copy),
+  ::view-transition-new(auth-hero-copy) {
+    animation-duration: 1400ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  ::view-transition-old(auth-form-card),
+  ::view-transition-new(auth-form-card) {
+    animation-duration: 500ms;
+    animation-timing-function: ease-out;
+  }
+  ::view-transition-old(auth-hero-copy) { animation-name: authOutLeft; }
+  ::view-transition-new(auth-hero-copy) { animation-name: authInLeft; }
+  ::view-transition-old(auth-form-card) { animation-name: authFadeOut; }
+  ::view-transition-new(auth-form-card) { animation-name: authFadeIn; }
+}

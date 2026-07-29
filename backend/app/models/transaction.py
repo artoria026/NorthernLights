@@ -1,0 +1,108 @@
+import uuid
+from datetime import date
+from decimal import Decimal
+
+from sqlalchemy import ARRAY, CheckConstraint, Date, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.database import Base
+from app.models.mixins import SoftDeleteMixin, TimestampMixin
+
+ENTRY_TYPES = (
+    "expense",
+    "income",
+    "transfer",
+    "loan_received",
+    "loan_repayment",
+    "loan_given",
+    "loan_collection",
+    "adjustment_in",
+    "adjustment_out",
+)
+ENTRY_STATUSES = ("draft", "pending", "confirmed", "rejected")
+LINE_TYPES = ("debit", "credit")
+
+
+class JournalEntry(Base, TimestampMixin, SoftDeleteMixin):
+    __tablename__ = "journal_entries"
+    __table_args__ = (
+        CheckConstraint(f"entry_type IN {ENTRY_TYPES}", name="ck_journal_entries_entry_type"),
+        CheckConstraint(f"status IN {ENTRY_STATUSES}", name="ck_journal_entries_status"),
+        Index(
+            "idx_journal_entries_user_confirmed",
+            "user_id",
+            "date",
+            postgresql_where="status = 'confirmed' AND deleted_at IS NULL",
+        ),
+        Index(
+            "idx_journal_entries_user_draft",
+            "user_id",
+            "created_at",
+            postgresql_where="status = 'draft' AND deleted_at IS NULL",
+        ),
+        Index(
+            "idx_journal_entries_user_type",
+            "user_id",
+            "entry_type",
+            "date",
+            postgresql_where="status = 'confirmed' AND deleted_at IS NULL",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tags: Mapped[list[str] | None] = mapped_column(ARRAY(String), default=list)
+    amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
+
+    entry_type: Mapped[str] = mapped_column(String, nullable=False)
+    category_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("categories.id"), nullable=True
+    )
+    status: Mapped[str] = mapped_column(String, nullable=False, default="confirmed")
+
+    is_recurring: Mapped[bool] = mapped_column(default=False)
+    recurring_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("recurring_items.id"), nullable=True
+    )
+    # Borrador generado por debt_service.process_due_debt_payments (mismo patron
+    # que recurring_id) -- al confirmarse, transaction_service dispara los
+    # efectos de la deuda (balance, cuotas pagadas, DebtPayment) via
+    # debt_service.apply_confirmed_payment.
+    debt_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("debts.id"), nullable=True
+    )
+
+    client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+
+    lines: Mapped[list["JournalLine"]] = relationship(
+        back_populates="entry", cascade="all, delete-orphan"
+    )
+
+
+class JournalLine(Base):
+    __tablename__ = "journal_lines"
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="ck_journal_lines_amount_positive"),
+        CheckConstraint(f"type IN {LINE_TYPES}", name="ck_journal_lines_type"),
+        Index("idx_journal_lines_account_type", "account_id", "type"),
+        Index("idx_journal_lines_entry", "entry_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entry_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("journal_entries.id", ondelete="CASCADE"), nullable=False
+    )
+    account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=False
+    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    type: Mapped[str] = mapped_column(String, nullable=False)
+
+    entry: Mapped["JournalEntry"] = relationship(back_populates="lines")
