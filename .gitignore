@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Env
+.env
+.env.local
+*.env.*
+!*.env.example
+!*.env.local.example
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes / logs
+*.log
+
+# Celery beat (creado localmente por `celery beat`, no es parte del repo)
+celerybeat-schedule*
