@@ -140,6 +140,33 @@ export function useCreateDebt() {
   })
 }
 
+export interface UpdateDebtInput {
+  name?: string
+  payment_amount?: string
+  payment_frequency?: PaymentFrequency
+  payment_day?: number
+  next_payment_date?: string
+  linked_account_id?: string
+  payment_source_account_id?: string
+  notes?: string
+}
+
+/** PUT /debts/{id} (backend/app/routers/debts.py) ya existia listo desde
+ * siempre -- lo unico que faltaba era que el frontend lo usara. Hoy solo lo
+ * consume la resolucion inline de "cuenta vinculada" en el modal de pago
+ * (ver RegisterPaymentForm en Debts.tsx), pero sirve para cualquier campo de
+ * DebtUpdate. */
+export function useUpdateDebt() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: UpdateDebtInput }) => {
+      const { data } = await api.put<ApiSuccess<Debt>>(`/debts/${id}`, input)
+      return data.data
+    },
+    onSuccess: () => invalidateDebts(queryClient),
+  })
+}
+
 export interface RegisterDebtPaymentInput {
   account_id: string
   amount: string

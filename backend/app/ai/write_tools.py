@@ -138,7 +138,12 @@ WRITE_TOOLS = [
                 "next_payment_date": {"type": "string", "description": "YYYY-MM-DD"},
                 "linked_account_name": {
                     "type": "string",
-                    "description": "Nombre de la cuenta desde la que se paga, si se menciono",
+                    "description": (
+                        "Nombre de la cuenta desde la que se paga, si se menciono. "
+                        "OBLIGATORIO para type='credit_card' -- la deuda ES la cuenta real, "
+                        "sin esto no se puede crear. Si el usuario no la tiene creada "
+                        "todavia, usa create_account primero (o preguntale los datos)."
+                    ),
                 },
                 "notes": {"type": "string"},
                 "initial_charge": {

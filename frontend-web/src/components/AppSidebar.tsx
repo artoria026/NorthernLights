@@ -21,10 +21,11 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { ChangelogButton } from '@/components/ChangelogButton'
+import { ChangelogButton, ChangelogDialog } from '@/components/ChangelogButton'
 import { useLogout, useSyncedTheme } from '@/hooks/useAuth'
 import { useUnreadCount } from '@/hooks/useNotifications'
 import { useAuthStore } from '@/stores/authStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 // Version del build, mostrada en el pie de esta sidebar -- una sola fuente de
 // verdad (package.json) en vez de hardcodear el string aqui tambien.
 import pkg from '../../package.json'
@@ -108,8 +109,17 @@ export function AppSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const logout = useLogout()
+  const confirm = useConfirmStore((s) => s.ask)
 
   async function handleLogout() {
+    const ok = await confirm({
+      title: 'Cerrar sesión',
+      message: '¿Seguro que quieres cerrar sesión?',
+      confirmLabel: 'Cerrar sesión',
+      variant: 'danger',
+      icon: LogOut,
+    })
+    if (!ok) return
     await logout.mutateAsync()
     navigate('/login')
   }
@@ -337,7 +347,7 @@ export function AppSidebar() {
           type="button"
           title="Cerrar sesión"
           onClick={handleLogout}
-          className="group p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent flex-shrink-0"
+          className="group p-1.5 rounded-md text-destructive hover:bg-destructive/10 flex-shrink-0"
         >
           <LogOut size={16} strokeWidth={1.8} className="transition-transform duration-200 group-hover:translate-x-0.5" />
         </button>
@@ -346,6 +356,10 @@ export function AppSidebar() {
         NorthernLights v{pkg.version}
       </div>
       </div>
+
+      {/* Una sola instancia para los dos ChangelogButton de arriba (barra
+          movil + sidebar) -- ver comentario en ChangelogButton.tsx. */}
+      <ChangelogDialog />
     </>
   )
 }

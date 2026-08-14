@@ -219,17 +219,50 @@ async def test_informal_debt_payment_works_without_linked_account(client: AsyncC
     assert bank.json()["data"]["balance"] == "400.00"
 
 
-async def test_credit_card_payment_without_linked_account_rejected(client: AsyncClient):
+async def test_credit_card_debt_creation_without_linked_account_rejected(client: AsyncClient):
+    """Antes se podia crear la TDC sin cuenta vinculada y el problema recien
+    aparecia al intentar pagar -- sin ninguna forma de arreglarlo desde la UI
+    (bug real reportado). Ahora se corta aqui, al crear."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
-    bank_id = await _create_account(client, headers, initial_balance="500")
 
     debt = await client.post(
         "/api/v1/debts",
         headers=headers,
         json={"name": "TDC sin vincular", "type": "credit_card", "total_amount": "500.00"},
     )
-    debt_id = debt.json()["data"]["id"]
+    assert debt.status_code == 400
+    assert "cuenta vinculada" in debt.json()["error"]
+
+
+async def test_credit_card_payment_without_linked_account_rejected_and_fixable(
+    client: AsyncClient, session_factory
+):
+    """Red de seguridad para deudas que hayan quedado en ese estado ANTES del
+    chequeo de test_credit_card_debt_creation_without_linked_account_rejected
+    (ej. datos ya existentes en produccion) -- simula una asi insertandola
+    directo por el service, sin pasar por create_debt. Ademas confirma que
+    PUT /debts/{id} (ya expuesto, ver debt_service.update_debt) es
+    suficiente para arreglarla sin tener que borrarla y recrearla."""
+    token, uid = await _register_and_login_with_id(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank_id = await _create_account(client, headers, initial_balance="500")
+    tdc_id = await _create_account(client, headers, type="liability", subtype="credit_card")
+
+    from app.models.debt import Debt
+
+    async with rls_session(session_factory, uid) as session:
+        debt = Debt(
+            user_id=uid,
+            name="TDC legacy sin vincular",
+            type="credit_card",
+            direction="owed_by_me",
+            total_amount=Decimal("500.00"),
+            current_balance=Decimal("500.00"),
+        )
+        session.add(debt)
+        await session.flush()
+        debt_id = str(debt.id)
 
     payment = await client.post(
         f"/api/v1/debts/{debt_id}/payments",
@@ -237,6 +270,20 @@ async def test_credit_card_payment_without_linked_account_rejected(client: Async
         json={"account_id": bank_id, "amount": "100.00", "date": "2026-08-01"},
     )
     assert payment.status_code == 400
+    assert "cuenta vinculada" in payment.json()["error"]
+
+    updated = await client.put(
+        f"/api/v1/debts/{debt_id}", headers=headers, json={"linked_account_id": tdc_id}
+    )
+    assert updated.status_code == 200
+    assert updated.json()["data"]["linked_account_id"] == tdc_id
+
+    retry = await client.post(
+        f"/api/v1/debts/{debt_id}/payments",
+        headers=headers,
+        json={"account_id": bank_id, "amount": "100.00", "date": "2026-08-01"},
+    )
+    assert retry.status_code == 201
 
 
 async def test_msi_creates_debt_and_initial_journal_entry(client: AsyncClient):

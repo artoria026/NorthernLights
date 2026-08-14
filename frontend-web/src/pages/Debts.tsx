@@ -20,6 +20,7 @@ import {
   useDebts,
   useRegisterDebtPayment,
   useUnplannedDebts,
+  useUpdateDebt,
 } from '@/hooks/useDebts'
 import { apiErrorMessage } from '@/services/api'
 import { debtTypeLabel, formatMoney, paymentFrequencyLabel, selectClass } from '@/lib/utils'
@@ -246,9 +247,19 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
   })
   const [categoryId, setCategoryId] = useState('')
   const [payingAccountId, setPayingAccountId] = useState('')
+  // Validacion propia, distinta del error del servidor (createDebt.isError):
+  // el backend igual la exige (debt_service.create_debt), pero avisar antes
+  // de mandar la request evita el viaje redondo y el mensaje generico.
+  const [formError, setFormError] = useState<string | null>(null)
+  const needsLinkedAccount = !isReceivable && form.type === 'credit_card'
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    setFormError(null)
+    if (needsLinkedAccount && !form.linked_account_id) {
+      setFormError('Selecciona la cuenta de la tarjeta -- si todavía no la das de alta, créala primero en Cuentas.')
+      return
+    }
     try {
       await createDebt.mutateAsync({
         ...form,
@@ -332,27 +343,38 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
           </SelectContent>
         </Select>
       </div>
-      {!isReceivable && form.type === 'credit_card' && (
+      {needsLinkedAccount && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-muted-foreground">Cuenta vinculada (la TDC real)</label>
-          <Select
-            value={form.linked_account_id || null}
-            onValueChange={(v) => setForm({ ...form, linked_account_id: v ?? '' })}
-          >
-            <SelectTrigger className="h-9 w-full">
-              <SelectValue placeholder="Ninguna">
-                {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Ninguna</SelectItem>
-              {accounts?.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <label className="text-xs text-muted-foreground">
+            Cuenta vinculada (la TDC real) -- obligatoria
+          </label>
+          {accounts && accounts.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Todavía no tienes cuentas.{' '}
+              <Link to="/accounts" className="underline hover:no-underline">
+                Crea la tarjeta en Cuentas
+              </Link>{' '}
+              y regresa aquí.
+            </p>
+          ) : (
+            <Select
+              value={form.linked_account_id || null}
+              onValueChange={(v) => setForm({ ...form, linked_account_id: v ?? '' })}
+            >
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue placeholder="Selecciona la tarjeta">
+                  {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {accounts?.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       )}
       {(isReceivable || form.type !== 'credit_card') && (
@@ -429,17 +451,89 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
         </>
       )}
 
+      {formError && <p className="text-sm text-destructive">{formError}</p>}
       {createDebt.isError && <p className="text-sm text-destructive">{apiErrorMessage(createDebt.error)}</p>}
       <button
         type="submit"
-        disabled={createDebt.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
+        disabled={createDebt.isPending || (needsLinkedAccount && accounts?.length === 0)}
+        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium disabled:opacity-40"
         style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
       >
         <Check size={14} />
         {createDebt.isPending ? 'Guardando...' : 'Crear deuda'}
       </button>
     </form>
+  )
+}
+
+/** Si la TDC quedo creada sin cuenta vinculada (NewDebtForm ya lo exige para
+ * deudas nuevas, pero esto resuelve las que ya hayan quedado asi -- ver
+ * debt_service._resolve_debt_side_account), el pago no se puede registrar
+ * hasta asignarla. En vez de mandar al usuario a buscar donde arreglarlo (no
+ * habia donde, ver bug reportado), se resuelve aqui mismo con useUpdateDebt
+ * y se sigue directo al formulario de pago normal. */
+function ResolveLinkedAccountForm({ debt, onResolved }: { debt: Debt; onResolved: () => void }) {
+  const { data: accounts } = useAccounts()
+  const updateDebt = useUpdateDebt()
+  const [linkedAccountId, setLinkedAccountId] = useState('')
+
+  async function handleAssign() {
+    if (!linkedAccountId) return
+    try {
+      await updateDebt.mutateAsync({ id: debt.id, input: { linked_account_id: linkedAccountId } })
+      onResolved()
+    } catch {
+      // error mostrado abajo
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm text-muted-foreground">
+        Esta tarjeta todavía no tiene una cuenta vinculada -- necesitamos saber cuál es antes de poder
+        registrar el pago.
+      </p>
+      {accounts && accounts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Todavía no tienes cuentas.{' '}
+          <Link to="/accounts" className="underline hover:no-underline">
+            Crea la tarjeta en Cuentas
+          </Link>{' '}
+          y regresa aquí.
+        </p>
+      ) : (
+        <>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-muted-foreground">Cuenta de esta tarjeta</label>
+            <Select value={linkedAccountId || null} onValueChange={(v) => setLinkedAccountId(v ?? '')}>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue placeholder="Selecciona una cuenta">
+                  {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {accounts?.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {updateDebt.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateDebt.error)}</p>}
+          <button
+            type="button"
+            onClick={handleAssign}
+            disabled={!linkedAccountId || updateDebt.isPending}
+            className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium disabled:opacity-40"
+            style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
+          >
+            <Check size={14} />
+            {updateDebt.isPending ? 'Asignando...' : 'Asignar y continuar'}
+          </button>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -450,6 +544,15 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
   const [accountId, setAccountId] = useState('')
   const [amount, setAmount] = useState(debt.payment_amount ?? '')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  // Resuelto en cuanto onResolved invalida ['debts'] y el `debt` de arriba
+  // (viene del listado, no de un fetch propio de este form) llega con
+  // linked_account_id ya asignado -- este flag solo cubre el instante entre
+  // el click de "Asignar y continuar" y que ese refetch termine.
+  const [justResolved, setJustResolved] = useState(false)
+
+  if (debt.type === 'credit_card' && !debt.linked_account_id && !justResolved) {
+    return <ResolveLinkedAccountForm debt={debt} onResolved={() => setJustResolved(true)} />
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()

@@ -7,11 +7,18 @@ import { useConfirmStore } from '@/stores/confirmStore'
 export function ConfirmDialogHost() {
   const request = useConfirmStore((s) => s.request)
   const settle = useConfirmStore((s) => s.settle)
+  // Trash2 tiene sentido como default de "danger" (la mayoria de los usos
+  // son borrar algo), pero no toda accion roja borra -- ej. cerrar sesion.
+  // `request.icon` (ver confirmStore.ts) pisa este default cuando aplica.
+  const ConfirmIcon = request?.icon ?? (request?.variant === 'danger' ? Trash2 : Check)
 
   return (
     <Dialog open={!!request} onOpenChange={(open) => !open && settle(false)}>
       {request && (
-        <DialogContent className="sm:max-w-sm" showCloseButton={false}>
+        <DialogContent
+          className="sm:max-w-sm duration-200 data-open:slide-in-from-top-3 data-open:zoom-in-95 data-closed:slide-out-to-top-3"
+          showCloseButton={false}
+        >
           <DialogHeader>
             <DialogTitle>{request.title}</DialogTitle>
           </DialogHeader>
@@ -36,7 +43,7 @@ export function ConfirmDialogHost() {
                   : { background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }
               }
             >
-              {request.variant === 'danger' ? <Trash2 size={14} /> : <Check size={14} />}
+              <ConfirmIcon size={14} />
               {request.confirmLabel}
             </button>
           </div>

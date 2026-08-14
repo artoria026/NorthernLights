@@ -19,6 +19,7 @@ import { apiErrorMessage } from '@/services/api'
 import { fileToNormalizedDataUrl, validateImageFile } from '@/lib/image'
 import { selectClass } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
+import { useConfirmStore } from '@/stores/confirmStore'
 import type { PayCycle, Theme } from '@/types'
 
 function SettingsCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -623,8 +624,17 @@ function DeleteAccountCard() {
 function SessionCard() {
   const navigate = useNavigate()
   const logout = useLogout()
+  const confirm = useConfirmStore((s) => s.ask)
 
   async function handleLogout() {
+    const ok = await confirm({
+      title: 'Cerrar sesión',
+      message: '¿Seguro que quieres cerrar sesión?',
+      confirmLabel: 'Cerrar sesión',
+      variant: 'danger',
+      icon: LogOut,
+    })
+    if (!ok) return
     await logout.mutateAsync()
     navigate('/login')
   }
@@ -635,7 +645,7 @@ function SessionCard() {
         type="button"
         disabled={logout.isPending}
         onClick={handleLogout}
-        className="w-full flex items-center justify-center gap-2 rounded-md border border-border py-2 text-sm text-destructive hover:bg-accent disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 rounded-md border border-destructive/40 py-2 text-sm text-destructive hover:bg-destructive/10 disabled:opacity-50"
       >
         <LogOut size={15} strokeWidth={2} />
         {logout.isPending ? 'Cerrando sesión...' : 'Cerrar sesión'}

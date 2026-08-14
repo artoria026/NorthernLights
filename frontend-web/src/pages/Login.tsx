@@ -14,6 +14,13 @@ import { useLogin } from '@/hooks/useAuth'
 import { api, apiErrorMessage } from '@/services/api'
 import { AuthLayout, type AuthValueProp } from './AuthLayout'
 
+// Apagado a proposito: GOOGLE_CLIENT_ID/SECRET todavia estan vacios (ver
+// backend/app/core/config.py), asi que /auth/google/login hoy redirige a una
+// URL de Google que rechaza la solicitud. En vez de dejar el boton activo
+// mostrando un error confuso, se deshabilita aqui -- una sola linea para
+// prenderlo de vuelta en cuanto haya un proyecto real en Google Cloud Console.
+const GOOGLE_LOGIN_ENABLED = false
+
 const VALUE_PROPS: AuthValueProp[] = [
   {
     icon: TrendingUp,
@@ -173,10 +180,13 @@ export function Login() {
 
         <button
           type="button"
+          disabled={!GOOGLE_LOGIN_ENABLED}
+          title={GOOGLE_LOGIN_ENABLED ? undefined : 'Todavía no disponible'}
           onClick={() => {
+            if (!GOOGLE_LOGIN_ENABLED) return
             window.location.href = `${api.defaults.baseURL}/auth/google/login`
           }}
-          className="w-full h-11 flex items-center justify-center gap-2 rounded-lg border text-[14px] transition-colors hover:bg-accent"
+          className="w-full h-11 flex items-center justify-center gap-2 rounded-lg border text-[14px] transition-colors hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           style={{ borderColor: 'var(--nl-border)' }}
         >
           <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
@@ -198,6 +208,9 @@ export function Login() {
             />
           </svg>
           Continuar con Google
+          {!GOOGLE_LOGIN_ENABLED && (
+            <span className="text-[11px] text-muted-foreground">(próximamente)</span>
+          )}
         </button>
 
         {import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true' && (

@@ -265,6 +265,19 @@ async def get_debt(session: AsyncSession, user_id: UUID, debt_id: UUID) -> Debt:
 async def create_debt(
     session: AsyncSession, user_id: UUID, data: DebtCreate, current_user_role: str
 ) -> Debt:
+    # TDC es el unico tipo donde la deuda ES la cuenta real (ver
+    # _resolve_debt_side_account) -- sin esto, la deuda queda creada pero
+    # nadie puede pagarla despues (bug real reportado: se crea la TDC antes
+    # de dar de alta la cuenta, y al intentar pagar ya no hay forma de
+    # arreglarlo desde la UI). Mejor cortarlo aqui, al crear, que dejar que
+    # explote silenciosamente en el primer pago.
+    if data.type == "credit_card" and data.linked_account_id is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Una tarjeta de crédito necesita su cuenta vinculada -- si todavía no la diste "
+            "de alta, créala primero en Cuentas y después regresa a crear esta deuda.",
+        )
+
     # Deudas compartidas: solo admin puede escribir is_shared/responsible_party.
     is_shared = data.is_shared
     responsible_party = data.responsible_party
@@ -375,9 +388,14 @@ async def _resolve_debt_side_account(session: AsyncSession, user_id: UUID, debt:
     if debt.linked_account_id is not None:
         return debt.linked_account_id
     if debt.type == "credit_card":
+        # create_debt ya bloquea que esto pase para deudas nuevas -- este
+        # camino es la red de seguridad para deudas que quedaron asi antes de
+        # ese chequeo. El mensaje evita el nombre crudo del campo de la DB
+        # porque el frontend lo muestra tal cual al usuario.
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Esta deuda no tiene linked_account_id configurado; asignalo antes de registrar pagos",
+            "Esta tarjeta de crédito no tiene una cuenta vinculada -- asígnala antes de "
+            "registrar pagos.",
         )
     ledger = await account_service.get_or_create_debt_ledger_account(
         session, user_id, debt.direction
