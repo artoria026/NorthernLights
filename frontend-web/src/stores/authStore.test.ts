@@ -44,6 +44,8 @@ describe('authStore', () => {
       pay_cycle: 'monthly',
       debt_trouble_mode: false,
       last_seen_changelog_version: null,
+      accepted_disclaimer_version: null,
+      current_disclaimer_version: '1',
       created_at: '2026-01-01',
     })
     useAuthStore.getState().logout()
