@@ -4,7 +4,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import Receive, Scope, Send
 
 from app.core.config import settings
 from app.core.logging import configure_logging
@@ -33,20 +33,57 @@ logger = structlog.get_logger(__name__)
 app = FastAPI(title="App Finanzas Personales API", version="0.1.0")
 
 
-class CatchAllExceptionMiddleware(BaseHTTPMiddleware):
+class CatchAllExceptionMiddleware:
     """Una excepcion no capturada por ningun handler de FastAPI la procesa
     Starlette en ServerErrorMiddleware, que queda FUERA de CORSMiddleware --
     el navegador entonces reporta un falso error de CORS en vez del 500 real.
     Atajarla aqui (una capa de middleware normal, dentro de CORSMiddleware
     porque se registra antes) hace que la respuesta de error si pase por
-    CORSMiddleware en su camino de vuelta."""
+    CORSMiddleware en su camino de vuelta.
 
-    async def dispatch(self, request: Request, call_next):
+    ASGI puro a proposito, NO `BaseHTTPMiddleware` (como era antes): ese subclase
+    corre el resto del stack en un Task separado (via TaskGroup/memory stream)
+    para poder darle a `dispatch` un `call_next()` con forma de funcion normal.
+    Con un StreamingResponse de larga duracion (ej. /ai/chat, ver ai/advisor.py)
+    esa frontera extra de Task es justo donde una desconexion del cliente (o
+    un error del proveedor de IA que corta el generador a medio camino) puede
+    disparar un `CancelledError` que golpea codigo de limpieza (cierre de la
+    sesion de DB) fuera de lugar -- deja la conexion de asyncpg terminada a
+    medias en vez de cerrada limpia, y esa conexion envenenada vuelve al pool
+    para el siguiente request que le toque (bug real, visto en prod: un 503
+    transitorio de Gemini en /ai/chat hizo que un /api/v1/categories sin
+    relacion alguna fallara con "connection is closed" segundos despues).
+    ASGI puro corre todo en el mismo Task que la request -- sin esa frontera,
+    una cancelacion sigue las reglas normales de asyncio (se resuelve en el
+    mismo `finally`/`async with` que ya la esperaba) en vez de cruzar Tasks."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        response_started = False
+
+        async def send_wrapper(message):
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+
         try:
-            return await call_next(request)
+            await self.app(scope, receive, send_wrapper)
         except Exception:
-            logger.exception("unhandled_exception", path=request.url.path)
-            return JSONResponse(
+            logger.exception("unhandled_exception", path=scope.get("path", ""))
+            if response_started:
+                # Ya se le mando algo al cliente (ej. headers de un SSE que
+                # alcanzo a empezar) -- no se puede reemplazar por un
+                # JSONResponse nuevo, los headers ya se fueron. Solo queda
+                # loguearlo (arriba) y dejar la conexion terminar.
+                return
+            response = JSONResponse(
                 status_code=500,
                 content={
                     "error": "Ocurrio un error inesperado",
@@ -54,6 +91,7 @@ class CatchAllExceptionMiddleware(BaseHTTPMiddleware):
                     "details": {},
                 },
             )
+            await response(scope, receive, send)
 
 
 app.add_middleware(CatchAllExceptionMiddleware)
