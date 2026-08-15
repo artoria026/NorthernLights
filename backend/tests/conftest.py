@@ -10,6 +10,25 @@ os.environ.setdefault(
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-use-only-in-ci-suites")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test")
 
+# Candado duro, no solo el fallback de arriba: `setdefault` no protege nada si
+# DATABASE_URL ya viene seteada desde afuera (ej. un `docker compose run`
+# heredando el .env de produccion -- exactamente lo que paso el 15/08/2026 y
+# borro la DB real dos veces, ver postmortem). `apply_migrations` mas abajo
+# corre `alembic downgrade base` al final de la sesion -- dropea las 20 tablas
+# sin preguntar. Si el nombre de la base no contiene "test", abortar ANTES de
+# que cualquier fixture llegue a tocarla, sin importar como se invoco pytest.
+_db_name = os.environ["DATABASE_URL"].rsplit("/", 1)[-1].split("?", 1)[0]
+if "test" not in _db_name:
+    raise RuntimeError(
+        f"DATABASE_URL apunta a '{_db_name}', que no parece una base de test "
+        "(el nombre no contiene 'test'). Este suite corre `alembic downgrade "
+        "base` al terminar -- dropea TODAS las tablas. Nunca correrlo con el "
+        ".env de produccion (ej. `docker compose -f docker-compose.prod.yml "
+        "run backend pytest` hereda ese .env sin querer). Usa una DATABASE_URL "
+        "explicita contra `finanzas_test` (ver README 'Setup en una maquina "
+        "nueva')."
+    )
+
 import pytest
 import pytest_asyncio
 from alembic.config import Config
