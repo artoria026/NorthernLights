@@ -64,6 +64,17 @@ class UserPreferences(Base, TimestampMixin):
     # cerraron el modal. Comparado contra la version mas reciente del array
     # en el frontend, no hay tabla de releases en el backend.
     last_seen_changelog_version: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Version del aviso de privacidad (DISCLAIMER.md en la raiz del repo,
+    # texto real en frontend/src/lib/disclaimer.ts) que el usuario acepto --
+    # NULL para cuentas creadas antes de esta feature. A diferencia de
+    # last_seen_changelog_version (solo informativo), este SI se hace cumplir:
+    # DisclaimerGate en el frontend bloquea toda la app hasta que coincida con
+    # settings.DISCLAIMER_VERSION, y /auth/register no crea la cuenta sin
+    # aceptarlo. Se guarda server-side (POST /auth/accept-disclaimer, ver
+    # auth_service.accept_disclaimer) en vez de aceptar el string desde el
+    # cliente como last_seen_changelog_version -- es un campo de cumplimiento,
+    # no se puede confiar en que el cliente diga la verdad de si lo acepto.
+    accepted_disclaimer_version: Mapped[str | None] = mapped_column(String, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="preferences")
 

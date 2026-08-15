@@ -278,6 +278,15 @@
     from { opacity: 0; }
     to { opacity: 1; }
   }
+  /* Carrusel de features dentro del panel izquierdo (AuthLayout/HeroCarousel)
+     -- distinto de authInLeft/authFadeIn de arriba, que son para la
+     navegacion ENTRE Login y Register (View Transitions API). Este anima
+     el cambio de slide DENTRO de la misma pantalla, disparado por un
+     key={index} que remonta el contenido en cada avance del carrusel. */
+  @keyframes heroSlideFade {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   ::view-transition-old(auth-hero-copy),
   ::view-transition-new(auth-hero-copy) {

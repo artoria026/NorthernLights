@@ -1,6 +1,19 @@
-import { AlertCircle, Eye, EyeOff, Lock, Mail, Rocket, ShieldCheck, Sparkles, User } from 'lucide-react'
+import {
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Rocket,
+  ShieldCheck,
+  Sparkles,
+  User,
+} from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DisclaimerContent } from '@/components/DisclaimerContent'
 import { useLogin, useRegister, useUpdateSettings } from '@/hooks/useAuth'
 import { LATEST_CHANGELOG_VERSION } from '@/lib/changelog'
 import { apiErrorMessage } from '@/services/api'
@@ -29,6 +42,8 @@ export function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [acceptDisclaimer, setAcceptDisclaimer] = useState(false)
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false)
   const navigate = useNavigate()
   const register = useRegister()
   const login = useLogin()
@@ -36,8 +51,9 @@ export function Register() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    if (!acceptDisclaimer) return
     try {
-      await register.mutateAsync({ email, name, password })
+      await register.mutateAsync({ email, name, password, accept_disclaimer: true })
       await login.mutateAsync({ email, password })
       // Cuenta recien creada: no vio ningun release todavia, asi que no
       // tiene sentido mostrarle "Novedades" con features que nunca usó --
@@ -164,13 +180,46 @@ export function Register() {
           </div>
         )}
 
+        <label className="flex items-start gap-2 text-[12.5px] text-muted-foreground select-none">
+          <input
+            type="checkbox"
+            required
+            checked={acceptDisclaimer}
+            onChange={(e) => setAcceptDisclaimer(e.target.checked)}
+            className="mt-0.5 flex-shrink-0"
+          />
+          <span>
+            Acepto el{' '}
+            <button
+              type="button"
+              onClick={() => setDisclaimerOpen(true)}
+              className="font-medium underline hover:no-underline"
+              style={{ color: 'var(--nl-accent-ink)' }}
+            >
+              Aviso de Privacidad
+            </button>
+            .
+          </span>
+        </label>
+
         <button
           type="submit"
-          disabled={isPending}
-          className="w-full h-11 rounded-lg text-[14px] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 mt-1"
+          disabled={isPending || !acceptDisclaimer}
+          className="group w-full h-11 rounded-lg text-[14px] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 mt-1 flex items-center justify-center gap-1.5"
           style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
         >
-          {isPending ? 'Creando...' : 'Crear cuenta'}
+          {isPending ? (
+            'Creando...'
+          ) : (
+            <>
+              Crear cuenta
+              <ArrowRight
+                size={15}
+                strokeWidth={2}
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              />
+            </>
+          )}
         </button>
 
         <p className="text-[13px] text-center text-muted-foreground mt-2">
@@ -185,6 +234,17 @@ export function Register() {
           </Link>
         </p>
       </form>
+
+      <Dialog open={disclaimerOpen} onOpenChange={setDisclaimerOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Aviso de Privacidad</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto pr-1">
+            <DisclaimerContent />
+          </div>
+        </DialogContent>
+      </Dialog>
     </AuthLayout>
   )
 }

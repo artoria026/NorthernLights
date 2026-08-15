@@ -18,7 +18,7 @@ async def _register_and_login(client: AsyncClient) -> tuple[str, uuid.UUID]:
     email = f"{uuid.uuid4()}@example.com"
     register = await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Test", "password": "supersecret123"},
+        json={"email": email, "name": "Test", "password": "supersecret123", "accept_disclaimer": True},
     )
     user_id = uuid.UUID(register.json()["data"]["id"])
     login = await client.post(

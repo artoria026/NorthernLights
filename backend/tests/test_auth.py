@@ -4,8 +4,9 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.security import hash_token
-from app.models.user import Device
+from app.models.user import Device, User
 
 pytestmark = pytest.mark.asyncio
 
@@ -14,7 +15,7 @@ async def test_register_creates_user(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
     response = await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada Lovelace", "password": "supersecret123"},
+        json={"email": email, "name": "Ada Lovelace", "password": "supersecret123", "accept_disclaimer": True},
     )
     assert response.status_code == 201
     body = response.json()["data"]
@@ -24,7 +25,7 @@ async def test_register_creates_user(client: AsyncClient):
 
 async def test_register_duplicate_email_conflicts(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
-    payload = {"email": email, "name": "Ada", "password": "supersecret123"}
+    payload = {"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True}
     first = await client.post("/api/v1/auth/register", json=payload)
     assert first.status_code == 201
     second = await client.post("/api/v1/auth/register", json=payload)
@@ -35,7 +36,7 @@ async def test_login_returns_token_pair(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
     response = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -50,7 +51,7 @@ async def test_login_wrong_password_unauthorized(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
     response = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "wrong-password"}
@@ -68,7 +69,7 @@ async def test_refresh_rotates_token(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -100,7 +101,7 @@ async def test_refresh_token_is_stored_hashed(client: AsyncClient, session_facto
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -123,7 +124,7 @@ async def test_logout_revokes_refresh_token(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -147,7 +148,7 @@ async def test_login_locks_after_too_many_failed_attempts(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
 
     for _ in range(5):
@@ -174,7 +175,7 @@ async def test_successful_login_clears_failed_attempts(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
 
     for _ in range(3):
@@ -203,7 +204,7 @@ async def test_me_returns_current_user(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -221,7 +222,7 @@ async def _register_and_login(client: AsyncClient) -> str:
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -292,6 +293,67 @@ async def test_update_settings_marks_changelog_version_as_seen(client: AsyncClie
     assert me.json()["data"]["last_seen_changelog_version"] == "2026.08.0"
 
 
+async def test_register_without_accepting_disclaimer_rejected(client: AsyncClient):
+    """DisclaimerGate (frontend) exige esto antes de crear la cuenta -- el
+    checkbox del formulario no alcanza por si solo, el backend lo valida de
+    nuevo (accept_disclaimer en RegisterRequest, ver auth_service.register)."""
+    email = f"{uuid.uuid4()}@example.com"
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "name": "Ada", "password": "supersecret123"},
+    )
+    assert response.status_code == 400
+    assert "aviso de privacidad" in response.json()["error"]
+
+    explicit_false = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "name": "Ada",
+            "password": "supersecret123",
+            "accept_disclaimer": False,
+        },
+    )
+    assert explicit_false.status_code == 400
+
+
+async def test_register_stamps_current_disclaimer_version(client: AsyncClient):
+    token = await _register_and_login(client)
+    me = await client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    data = me.json()["data"]
+    assert data["accepted_disclaimer_version"] == settings.DISCLAIMER_VERSION
+    assert data["current_disclaimer_version"] == settings.DISCLAIMER_VERSION
+
+
+async def test_accept_disclaimer_updates_existing_user(client: AsyncClient, session_factory):
+    """Simula una cuenta creada ANTES de que existiera esta feature
+    (accepted_disclaimer_version=NULL) escribiendolo directo por DB -- asi es
+    como se ve de verdad una cuenta ya existente hoy. DisclaimerGate la
+    bloquearia hasta que llame a este endpoint."""
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    me = await client.get("/api/v1/auth/me", headers=headers)
+    user_id = uuid.UUID(me.json()["data"]["id"])
+
+    async with session_factory() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one()
+        user.preferences.accepted_disclaimer_version = None
+        await session.commit()
+
+    stale = await client.get("/api/v1/auth/me", headers=headers)
+    assert stale.json()["data"]["accepted_disclaimer_version"] is None
+
+    accepted = await client.post("/api/v1/auth/accept-disclaimer", headers=headers)
+    assert accepted.status_code == 200
+    assert accepted.json()["data"]["accepted_disclaimer_version"] == settings.DISCLAIMER_VERSION
+
+    refreshed = await client.get("/api/v1/auth/me", headers=headers)
+    assert refreshed.json()["data"]["accepted_disclaimer_version"] == settings.DISCLAIMER_VERSION
+
+
 async def test_update_profile_sets_avatar(client: AsyncClient):
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -308,7 +370,7 @@ async def test_delete_account_requires_correct_password(client: AsyncClient):
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}

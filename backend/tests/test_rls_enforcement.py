@@ -108,7 +108,7 @@ async def test_register_works_under_real_row_level_security(low_priv_session_fac
     async with low_priv_session_factory() as session:
         email = f"{uuid.uuid4()}@example.com"
         user = await auth_service.register(
-            session, RegisterRequest(email=email, name="Ada", password="supersecret123")
+            session, RegisterRequest(email=email, name="Ada", password="supersecret123", accept_disclaimer=True)
         )
         await session.commit()
         assert user.email == email
@@ -140,7 +140,7 @@ async def test_get_user_by_email_does_not_trigger_preferences_query(session_fact
     email = f"{uuid.uuid4()}@example.com"
     async with session_factory() as session:
         await auth_service.register(
-            session, RegisterRequest(email=email, name="Ada", password="supersecret123")
+            session, RegisterRequest(email=email, name="Ada", password="supersecret123", accept_disclaimer=True)
         )
         await session.commit()
 
@@ -165,7 +165,7 @@ async def test_login_works_under_real_row_level_security(low_priv_session_factor
     email = f"{uuid.uuid4()}@example.com"
     async with low_priv_session_factory() as session:
         await auth_service.register(
-            session, RegisterRequest(email=email, name="Ada", password="supersecret123")
+            session, RegisterRequest(email=email, name="Ada", password="supersecret123", accept_disclaimer=True)
         )
         await session.commit()
 
@@ -190,7 +190,7 @@ async def test_me_endpoint_query_works_under_real_row_level_security(low_priv_se
     email = f"{uuid.uuid4()}@example.com"
     async with low_priv_session_factory() as session:
         user = await auth_service.register(
-            session, RegisterRequest(email=email, name="Ada", password="supersecret123")
+            session, RegisterRequest(email=email, name="Ada", password="supersecret123", accept_disclaimer=True)
         )
         user_id = user.id
         await session.commit()
@@ -217,7 +217,7 @@ async def test_refresh_works_under_real_row_level_security(low_priv_session_fact
     email = f"{uuid.uuid4()}@example.com"
     async with low_priv_session_factory() as session:
         await auth_service.register(
-            session, RegisterRequest(email=email, name="Ada", password="supersecret123")
+            session, RegisterRequest(email=email, name="Ada", password="supersecret123", accept_disclaimer=True)
         )
         await session.commit()
 

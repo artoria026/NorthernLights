@@ -46,7 +46,12 @@ export function useLogout() {
 
 export function useRegister() {
   return useMutation({
-    mutationFn: async (input: { email: string; name: string; password: string }) => {
+    mutationFn: async (input: {
+      email: string
+      name: string
+      password: string
+      accept_disclaimer: boolean
+    }) => {
       const { data } = await api.post<ApiSuccess<User>>('/auth/register', input)
       return data.data
     },
@@ -101,6 +106,20 @@ export function useDeleteAccount() {
       clearAuth()
       queryClient.clear()
     },
+  })
+}
+
+/** El backend estampa la version (settings.DISCLAIMER_VERSION) el mismo --
+ * a diferencia de useUpdateSettings, este endpoint no acepta ningun valor
+ * desde el cliente (ver DisclaimerGate.tsx). */
+export function useAcceptDisclaimer() {
+  const setUser = useAuthStore((s) => s.setUser)
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post<ApiSuccess<User>>('/auth/accept-disclaimer')
+      return data.data
+    },
+    onSuccess: (user) => setUser(user),
   })
 }
 

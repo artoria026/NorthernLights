@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  ArrowRight,
   Eye,
   EyeOff,
   Lock,
@@ -158,13 +159,24 @@ export function Login() {
         <button
           type="submit"
           disabled={login.isPending}
-          className="w-full h-11 rounded-lg text-[14px] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 mt-1"
+          className="group w-full h-11 rounded-lg text-[14px] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 mt-1 flex items-center justify-center gap-1.5"
           style={{
             background: 'var(--nl-accent)',
             color: 'var(--nl-accent-fg)',
           }}
         >
-          {login.isPending ? 'Entrando...' : 'Entrar'}
+          {login.isPending ? (
+            'Entrando...'
+          ) : (
+            <>
+              Entrar
+              <ArrowRight
+                size={15}
+                strokeWidth={2}
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              />
+            </>
+          )}
         </button>
 
         <div className="relative my-1.5">

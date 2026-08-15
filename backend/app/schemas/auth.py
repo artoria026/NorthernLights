@@ -11,6 +11,10 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     name: str = Field(min_length=1)
     password: str = Field(min_length=8)
+    # Debe venir en True -- auth_service.register lo valida explicitamente
+    # (no alcanza con que el frontend deshabilite el boton: el checkbox real
+    # es el gate legal, este campo es lo que lo hace cumplir del lado servidor).
+    accept_disclaimer: bool = False
 
 
 class DeviceInfo(BaseModel):
@@ -78,6 +82,12 @@ class UserOut(BaseModel):
     pay_cycle: str
     debt_trouble_mode: bool
     last_seen_changelog_version: str | None
+    accepted_disclaimer_version: str | None
+    # Siempre = settings.DISCLAIMER_VERSION -- se manda junto con el campo de
+    # arriba para que el frontend solo tenga que comparar los dos strings de
+    # este mismo objeto (DisclaimerGate) en vez de mantener su propia copia
+    # de "cual es la version vigente" sincronizada a mano con el backend.
+    current_disclaimer_version: str
     created_at: datetime
 
 

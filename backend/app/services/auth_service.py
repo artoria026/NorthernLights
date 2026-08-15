@@ -7,6 +7,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import raiseload
 
+from app.core.config import settings
 from app.core.redis import get_redis
 from app.core.security import (
     create_access_token,
@@ -55,6 +56,8 @@ def build_user_out(user: User) -> UserOut:
         pay_cycle=user.preferences.pay_cycle,
         debt_trouble_mode=user.preferences.debt_trouble_mode,
         last_seen_changelog_version=user.preferences.last_seen_changelog_version,
+        accepted_disclaimer_version=user.preferences.accepted_disclaimer_version,
+        current_disclaimer_version=settings.DISCLAIMER_VERSION,
         created_at=user.created_at,
     )
 
@@ -81,6 +84,11 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
 async def register(session: AsyncSession, data: RegisterRequest) -> User:
     if await get_user_by_email(session, data.email):
         raise HTTPException(status.HTTP_409_CONFLICT, "El email ya esta registrado")
+    if not data.accept_disclaimer:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Debes aceptar el aviso de privacidad para crear una cuenta",
+        )
 
     # id generado a mano (no confiar en el default=uuid.uuid4 de la columna):
     # ese default lo aplica el ORM recien al flushear el INSERT, asi que
@@ -97,7 +105,7 @@ async def register(session: AsyncSession, data: RegisterRequest) -> User:
         password_hash=hash_password(data.password),
         role="user",
         auth_provider="email",
-        preferences=UserPreferences(),
+        preferences=UserPreferences(accepted_disclaimer_version=settings.DISCLAIMER_VERSION),
     )
     # El insert en cascada de UserPreferences (FORCE ROW LEVEL SECURITY, ver
     # migracion 293528f67338) necesita app.current_user_id seteado para
@@ -301,6 +309,18 @@ async def update_settings(
     user = result.scalar_one()
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(user.preferences, field, value)
+    await session.flush()
+    return user
+
+
+async def accept_disclaimer(session: AsyncSession, user_id: UUID) -> User:
+    """A diferencia de update_settings, este NO acepta el valor desde el
+    cliente -- lo estampa el propio servidor con settings.DISCLAIMER_VERSION.
+    Es un campo de cumplimiento (DisclaimerGate bloquea la app entera hasta
+    que coincida), no una preferencia de UI como last_seen_changelog_version."""
+    result = await session.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one()
+    user.preferences.accepted_disclaimer_version = settings.DISCLAIMER_VERSION
     await session.flush()
     return user
 

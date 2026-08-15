@@ -70,7 +70,7 @@ async def test_google_callback_links_existing_email_user(client: AsyncClient, mo
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Ada", "password": "supersecret123"},
+        json={"email": email, "name": "Ada", "password": "supersecret123", "accept_disclaimer": True},
     )
 
     profile = _google_profile(email=email)

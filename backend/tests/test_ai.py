@@ -61,7 +61,7 @@ async def _register_and_login(client: AsyncClient) -> tuple[str, str]:
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Test", "password": "supersecret123"},
+        json={"email": email, "name": "Test", "password": "supersecret123", "accept_disclaimer": True},
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -96,7 +96,7 @@ async def _register_and_login_as_admin(client: AsyncClient, session_factory) -> 
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Admin", "password": _PASSWORD},
+        json={"email": email, "name": "Admin", "password": _PASSWORD, "accept_disclaimer": True},
     )
     login = await client.post("/api/v1/auth/login", json={"email": email, "password": _PASSWORD})
     token = login.json()["data"]["access_token"]

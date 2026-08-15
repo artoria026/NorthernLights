@@ -110,6 +110,15 @@ async def update_settings(
     return SuccessResponse(data=auth_service.build_user_out(user))
 
 
+@router.post("/accept-disclaimer")
+async def accept_disclaimer(
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    user = await auth_service.accept_disclaimer(session, current_user.id)
+    return SuccessResponse(data=auth_service.build_user_out(user))
+
+
 @router.post("/google/unlink")
 async def unlink_google(
     current_user: CurrentUser = Depends(get_current_user),

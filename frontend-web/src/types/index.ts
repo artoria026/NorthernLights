@@ -14,6 +14,11 @@ export interface User {
   pay_cycle: PayCycle
   debt_trouble_mode: boolean
   last_seen_changelog_version: string | null
+  accepted_disclaimer_version: string | null
+  /** Siempre = version vigente en el backend (settings.DISCLAIMER_VERSION) --
+   * comparar contra accepted_disclaimer_version es lo que decide si
+   * DisclaimerGate bloquea la app (ver components/DisclaimerGate.tsx). */
+  current_disclaimer_version: string
   created_at: string
 }
 

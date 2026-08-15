@@ -1,8 +1,10 @@
-import { Check, LogOut, Settings as SettingsIcon, ShieldCheck, Trash2, X } from 'lucide-react'
+import { Check, FileText, LogOut, Settings as SettingsIcon, ShieldCheck, Trash2, X } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DisclaimerContent } from '@/components/DisclaimerContent'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { ToggleSwitch, ViewHeader } from '@/components/nl/primitives'
 import {
@@ -393,6 +395,37 @@ function ConnectedAccountsCard() {
   )
 }
 
+/** Solo lectura -- no hay nada que "aceptar" de nuevo aqui, si llegaste a
+ * ver este boton es porque DisclaimerGate ya te dejo pasar. Sirve para
+ * releer el aviso cuando quieras, sin tener que esperar a que cambie de
+ * version. */
+function PrivacyCard() {
+  const [open, setOpen] = useState(false)
+  return (
+    <SettingsCard title="Privacidad">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center justify-center gap-1.5 rounded-md border border-border py-2 text-sm hover:bg-muted"
+      >
+        <FileText size={14} />
+        Ver Aviso de Privacidad
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Aviso de Privacidad</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto pr-1">
+            <DisclaimerContent />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </SettingsCard>
+  )
+}
+
 const GRANULAR_CATEGORIES: DataCategory[] = [
   'transactions',
   'debts',
@@ -723,6 +756,7 @@ export function Settings() {
           <div className="flex flex-col gap-5">
             <NotificationsAndPreferencesCard />
             <ConnectedAccountsCard />
+            <PrivacyCard />
           </div>
         </div>
 

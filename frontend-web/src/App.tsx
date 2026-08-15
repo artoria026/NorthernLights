@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminLayout } from '@/components/AdminLayout'
 import { ConfirmDialogHost } from '@/components/ConfirmDialogHost'
+import { DisclaimerGate } from '@/components/DisclaimerGate'
 import { Layout } from '@/components/Layout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ToastHost } from '@/components/ToastHost'
@@ -100,6 +101,7 @@ function App() {
       </BrowserRouter>
       <ToastHost />
       <ConfirmDialogHost />
+      <DisclaimerGate />
     </QueryClientProvider>
   )
 }

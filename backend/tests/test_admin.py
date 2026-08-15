@@ -12,7 +12,7 @@ _PASSWORD = "supersecret123"
 async def _register_and_login(client: AsyncClient, name: str = "Test") -> tuple[str, str]:
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
-        "/api/v1/auth/register", json={"email": email, "name": name, "password": _PASSWORD}
+        "/api/v1/auth/register", json={"email": email, "name": name, "password": _PASSWORD, "accept_disclaimer": True}
     )
     login = await client.post("/api/v1/auth/login", json={"email": email, "password": _PASSWORD})
     token = login.json()["data"]["access_token"]
