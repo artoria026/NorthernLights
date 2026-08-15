@@ -39,10 +39,15 @@ class Settings(BaseSettings):
     # termina "bien" (no lanza excepcion), asi que antes de este cambio nadie
     # se enteraba. Ver tambien el chequeo de finish_reason/stop_reason en
     # gemini.py/claude.py, que ahora avisa en el chat si de verdad se corta.
-    # 8192 (subido otra vez de 4096) para estados de cuenta largos -- ambos
-    # modelos configurados (gemini-flash-latest, claude-sonnet-4-6) soportan
-    # esto sin problema como limite de tokens de SALIDA.
-    AI_MAX_TOKENS: int = 8192
+    # 16384 (subido otra vez de 8192) para estados de cuenta largos: cada
+    # create_transaction/create_debt propuesto en el mismo turno (ver
+    # STATEMENT_INSTRUCTIONS en advisor.py) gasta ~150-250 tokens de
+    # respuesta, asi que una tarjeta con 30+ movimientos se puede comer el
+    # limite anterior facil. Ver tambien THINKING_BUDGET_TOKENS en gemini.py:
+    # el "pensamiento" interno de gemini-flash-latest sale de este MISMO
+    # limite si no se topa aparte, y sin eso un turno pesado podia agotarlo
+    # entero sin escribir nada visible (truncado silencioso).
+    AI_MAX_TOKENS: int = 16384
     AI_RATE_LIMIT_PER_USER_DAY: int = 30
 
     # Email

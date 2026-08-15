@@ -8,7 +8,7 @@ from uuid import UUID
 import structlog
 from redis.asyncio import Redis
 
-from app.ai.base import get_ai_provider
+from app.ai.base import AIProviderError, get_ai_provider
 from app.ai.tools import TOOLS, execute_tool
 from app.ai.write_tools import (
     PROPOSE_ACTION_NAME,
@@ -161,7 +161,25 @@ async def _run_tool_loop(
         # como texto (markdown, se renderiza en cursiva) en vez de un campo
         # nuevo en el protocolo SSE -- no hace falta tocar el frontend.
         if truncated:
-            notice = "\n\n_(La respuesta se acortó por el límite de longitud — pídeme que continúe si hace falta.)_"
+            if not full_response.strip() and not tool_calls_made:
+                # Nada de texto ni tool-calls en NINGUN turno hasta ahora --
+                # el modelo agoto el limite de longitud (razonando
+                # internamente, ver THINKING_BUDGET_TOKENS en gemini.py) sin
+                # llegar a producir nada visible. "Pideme que continue" no
+                # tiene sentido aqui (no hay nada de que continuar), asi que
+                # el aviso apunta a la causa mas probable: un adjunto pesado
+                # (ver STATEMENT_INSTRUCTIONS, estados de cuenta en PDF).
+                notice = (
+                    "\n\n_No alcancé a generar una respuesta: se agotó el límite de longitud "
+                    "antes de producir texto o una acción. Es más probable con archivos "
+                    "adjuntos grandes (ej. varios meses de un estado de cuenta) — intenta "
+                    "adjuntar menos meses a la vez, o vuelve a mandar el mensaje._"
+                )
+            else:
+                notice = (
+                    "\n\n_(La respuesta se acortó por el límite de longitud — "
+                    "pídeme que continúe si hace falta.)_"
+                )
             full_response += notice
             yield ("text", notice)
             break
@@ -210,7 +228,10 @@ async def _run_tool_loop(
         # truncado por tokens: sin este aviso, el ultimo tool_result
         # simplemente no tiene una respuesta de texto despues y el usuario
         # no sabe si termino o se corto.
-        notice = "\n\n_(Se alcanzó el límite de pasos automáticos para esta solicitud — pídeme que continúe si falta algo.)_"
+        notice = (
+            "\n\n_(Se alcanzó el límite de pasos automáticos para esta solicitud — "
+            "pídeme que continúe si falta algo.)_"
+        )
         full_response += notice
         yield ("text", notice)
 
@@ -329,6 +350,16 @@ async def chat(
                 tool_calls=tool_calls_made or None,
                 ai_provider=settings.AI_PROVIDER,
             )
+        except AIProviderError as e:
+            # Ya viene traducido a un mensaje para el usuario (ver
+            # _translate_error en app/ai/claude.py y app/ai/gemini.py) --
+            # distingue rate limit, proveedor caido, credenciales invalidas,
+            # etc. en vez del generico de abajo. warning, no exception: ya
+            # sabemos la causa, no es un bug de esta app.
+            logger.warning(
+                "ai_provider_error", user_id=str(user_id), error=str(e), retryable=e.retryable
+            )
+            yield f"data: {json.dumps({'error': e.user_message})}\n\n"
         except Exception:
             logger.exception("ai_chat_failed", user_id=str(user_id))
             error_payload = json.dumps(

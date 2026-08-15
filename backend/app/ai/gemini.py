@@ -6,7 +6,7 @@ from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
 
-from app.ai.base import AIProvider
+from app.ai.base import AIProvider, AIProviderError
 from app.ai.parsing import extract_json
 from app.ai.prompts import (
     generate_insights_prompt,
@@ -14,6 +14,40 @@ from app.ai.prompts import (
     review_insight_prompt,
 )
 from app.core.config import settings
+
+# Sin thinking_config, gemini-flash-latest piensa con presupuesto
+# "automatico" (thinking_budget sin setear == -1) -- ese pensamiento interno
+# sale del MISMO pool que max_output_tokens, no de uno aparte. En un turno
+# pesado (ej. extraer varias filas de un estado de cuenta en PDF, ver
+# STATEMENT_INSTRUCTIONS en advisor.py) el modelo puede gastar TODO
+# AI_MAX_TOKENS pensando y terminar con finish_reason=MAX_TOKENS sin haber
+# escrito una sola palabra visible ni un tool_call -- un truncado silencioso,
+# indistinguible en el chat de "no paso nada". Topar el presupuesto de
+# pensamiento deja el resto garantizado para el output real.
+THINKING_BUDGET_TOKENS = 1024
+
+
+def _translate_error(exc: genai_errors.APIError) -> AIProviderError:
+    if exc.code == 429:
+        return AIProviderError(
+            "Se alcanzo el limite de uso de la IA (Gemini) por ahora. "
+            "Intenta de nuevo en unos minutos."
+        )
+    if exc.code in (401, 403):
+        return AIProviderError(
+            "El asesor no esta disponible por un problema de configuracion "
+            "(credenciales de Gemini invalidas). Avisa al administrador.",
+            retryable=False,
+        )
+    if exc.code and exc.code >= 500:
+        return AIProviderError(
+            "El proveedor de IA (Gemini) no esta disponible en este momento. "
+            "Intenta de nuevo en unos minutos."
+        )
+    return AIProviderError(
+        f"La IA rechazo la solicitud ({exc.message or 'motivo desconocido'}). "
+        "Intenta reformular tu mensaje o revisa el archivo adjunto."
+    )
 
 
 def _build_tools(tools: list[dict]) -> list[types.Tool]:
@@ -102,51 +136,59 @@ class GeminiProvider(AIProvider):
             system_instruction=system,
             tools=_build_tools(tools),
             max_output_tokens=settings.AI_MAX_TOKENS,
+            thinking_config=types.ThinkingConfig(thinking_budget=THINKING_BUDGET_TOKENS),
         )
-        # google-genai ya reintenta internamente (tenacity) antes de rendirse
-        # -- esto es UN reintento mas, con una pausa mas larga, especifico
-        # para picos de demanda de pocos segundos ("Spikes in demand are
-        # usually temporary" es el mensaje literal del 503). Solo aplica
-        # ANTES de que llegue ningun chunk (abrir el stream), nunca a medio
-        # turno, para no repetir texto ya mandado.
         try:
-            stream = await self._client.aio.models.generate_content_stream(
-                model=settings.GEMINI_MODEL, contents=contents, config=config
-            )
-        except genai_errors.ServerError:
-            await asyncio.sleep(3)
-            stream = await self._client.aio.models.generate_content_stream(
-                model=settings.GEMINI_MODEL, contents=contents, config=config
-            )
-        async for chunk in stream:
-            if not chunk.candidates:
-                continue
-            candidate = chunk.candidates[0]
-            # finish_reason viene en el chunk final, que a veces no trae
-            # `content` (por eso este chequeo va ANTES del `continue` de
-            # abajo -- si estuviera despues, un chunk vacio con solo el
-            # finish_reason se saltaria sin que nadie lo revisara nunca).
-            finish_reason = getattr(candidate, "finish_reason", None)
-            if finish_reason is not None and getattr(finish_reason, "name", str(finish_reason)) == "MAX_TOKENS":
-                yield {"type": "truncated"}
-            content = candidate.content
-            if content is None or not content.parts:
-                continue
-            for part in content.parts:
-                if part.text:
-                    yield {"type": "text", "text": part.text}
-                elif part.function_call:
-                    call_id = part.function_call.id or part.function_call.name
-                    yield {
-                        "type": "tool_use",
-                        "id": call_id,
-                        "name": part.function_call.name,
-                        "input": dict(part.function_call.args or {}),
-                        # Ver docstring de AIProvider.chat_stream: campo
-                        # opaco, especifico de Gemini, que el orquestador
-                        # solo reenvia sin interpretarlo.
-                        "provider_state": part.thought_signature,
-                    }
+            # google-genai ya reintenta internamente (tenacity) antes de
+            # rendirse -- esto es UN reintento mas, con una pausa mas larga,
+            # especifico para picos de demanda de pocos segundos ("Spikes in
+            # demand are usually temporary" es el mensaje literal del 503).
+            # Solo aplica ANTES de que llegue ningun chunk (abrir el
+            # stream), nunca a medio turno, para no repetir texto ya
+            # mandado.
+            try:
+                stream = await self._client.aio.models.generate_content_stream(
+                    model=settings.GEMINI_MODEL, contents=contents, config=config
+                )
+            except genai_errors.ServerError:
+                await asyncio.sleep(3)
+                stream = await self._client.aio.models.generate_content_stream(
+                    model=settings.GEMINI_MODEL, contents=contents, config=config
+                )
+            async for chunk in stream:
+                if not chunk.candidates:
+                    continue
+                candidate = chunk.candidates[0]
+                # finish_reason viene en el chunk final, que a veces no trae
+                # `content` (por eso este chequeo va ANTES del `continue` de
+                # abajo -- si estuviera despues, un chunk vacio con solo el
+                # finish_reason se saltaria sin que nadie lo revisara nunca).
+                finish_reason = getattr(candidate, "finish_reason", None)
+                if (
+                    finish_reason is not None
+                    and getattr(finish_reason, "name", str(finish_reason)) == "MAX_TOKENS"
+                ):
+                    yield {"type": "truncated"}
+                content = candidate.content
+                if content is None or not content.parts:
+                    continue
+                for part in content.parts:
+                    if part.text:
+                        yield {"type": "text", "text": part.text}
+                    elif part.function_call:
+                        call_id = part.function_call.id or part.function_call.name
+                        yield {
+                            "type": "tool_use",
+                            "id": call_id,
+                            "name": part.function_call.name,
+                            "input": dict(part.function_call.args or {}),
+                            # Ver docstring de AIProvider.chat_stream: campo
+                            # opaco, especifico de Gemini, que el orquestador
+                            # solo reenvia sin interpretarlo.
+                            "provider_state": part.thought_signature,
+                        }
+        except genai_errors.APIError as e:
+            raise _translate_error(e) from e
 
     async def generate_insights(self, snapshot: dict) -> list[dict]:
         prompt = generate_insights_prompt(snapshot)

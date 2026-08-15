@@ -4,6 +4,20 @@ from collections.abc import AsyncGenerator
 from app.core.config import settings
 
 
+class AIProviderError(Exception):
+    """Error del proveedor de IA (Claude/Gemini) ya traducido a un mensaje
+    listo para mostrarle al usuario. Cada AIProvider concreto atrapa las
+    excepciones propias de su SDK (google-genai, anthropic) y las relanza
+    como esta -- asi advisor.py nunca necesita conocer los tipos de
+    excepcion concretos de cada SDK (mismo DIP que el resto de esta clase:
+    solo conoce esta interfaz, no un proveedor especifico)."""
+
+    def __init__(self, user_message: str, *, retryable: bool = True):
+        super().__init__(user_message)
+        self.user_message = user_message
+        self.retryable = retryable
+
+
 class AIProvider(ABC):
     """M10: abstraccion intercambiable (Claude/Gemini) usada por el chat (M10)
     y por la generacion/revision de insights (M13). Cambiar de proveedor (o
