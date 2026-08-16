@@ -72,7 +72,7 @@ async def generate_report(
 ) -> SuccessResponse:
     if body.year is not None:
         report = await report_service.generate_yearly_report(
-            session, current_user.id, body.year, generated_by="user"
+            session, current_user.id, body.year, generated_by="user", force=body.force
         )
         return SuccessResponse(data=ReportOut.model_validate(report))
 
@@ -82,7 +82,7 @@ async def generate_report(
         period_start, period_end = report_service.previous_month_bounds()
 
     report = await report_service.generate_report(
-        session, current_user.id, period_start, period_end, generated_by="user"
+        session, current_user.id, period_start, period_end, generated_by="user", force=body.force
     )
     return SuccessResponse(data=ReportOut.model_validate(report))
 

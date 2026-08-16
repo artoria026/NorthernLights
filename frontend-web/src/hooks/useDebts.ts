@@ -149,6 +149,11 @@ export interface UpdateDebtInput {
   linked_account_id?: string
   payment_source_account_id?: string
   notes?: string
+  /** Correccion manual del saldo pendiente -- current_balance es la unica
+   * fuente de verdad del saldo de una deuda (a diferencia de Account, que
+   * tiene un initial_balance separado), asi que esto ajusta directo, no por
+   * delta. Pensado para corregir el saldo despues de un backfill historico. */
+  current_balance?: string
 }
 
 /** PUT /debts/{id} (backend/app/routers/debts.py) ya existia listo desde

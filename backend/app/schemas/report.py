@@ -10,6 +10,11 @@ class ReportGenerateRequest(BaseModel):
     period_end: date | None = None
     year: int | None = None
     """Si se especifica, genera el reporte anual de ese año (ignora period_start/period_end)."""
+    force: bool = False
+    """Recalcula desde cero un periodo que ya tiene un reporte 'ready' (ej. un mes
+    que se genero casi vacio antes de que el usuario backfilleara historial viejo).
+    Sin esto, generate_report/generate_yearly_report son idempotentes y devuelven
+    el reporte existente tal cual."""
 
 
 class ReportInsightOut(BaseModel):

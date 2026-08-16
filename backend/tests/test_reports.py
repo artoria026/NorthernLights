@@ -442,3 +442,84 @@ async def test_yearly_report_merges_subcategory_breakdown_across_months(client: 
     parent_row = next(row for row in by_category if row["category"] != "Restaurantes")
     assert Decimal(str(parent_row["amount"])) == Decimal("300.00")
     assert parent_row["subcategories"] == [{"category": "Restaurantes", "amount": "300.00"}]
+
+
+async def test_force_regenerates_ready_report_without_duplicating_insights(client: AsyncClient):
+    """force=True es para el caso de backfill historico: un mes que ya se
+    genero (casi vacio) antes de que el usuario cargara transacciones viejas
+    -- sin force, generate_report es idempotente y ni se acerca a los datos
+    nuevos (ver test_generate_report_is_idempotent_for_same_period)."""
+    token, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank = await _create_account(client, headers, initial_balance="1000")
+    income_category = await _get_category_id(client, headers, "income")
+
+    first = await client.post(
+        "/api/v1/reports/generate",
+        headers=headers,
+        json={"period_start": "2026-06-01", "period_end": "2026-06-30"},
+    )
+    assert first.json()["data"]["summary"]["income"]["total"] == "0"
+    assert len(first.json()["data"]["insights"]) == 1
+    first_generated_at = first.json()["data"]["generated_at"]
+
+    # Backfill: se agrega una transaccion vieja DESPUES de que el reporte del
+    # mes ya estaba 'ready'.
+    await _confirm_income(client, headers, bank, income_category, "800.00", "2026-06-10")
+
+    without_force = await client.post(
+        "/api/v1/reports/generate",
+        headers=headers,
+        json={"period_start": "2026-06-01", "period_end": "2026-06-30"},
+    )
+    assert without_force.json()["data"]["summary"]["income"]["total"] == "0"
+
+    forced = await client.post(
+        "/api/v1/reports/generate",
+        headers=headers,
+        json={"period_start": "2026-06-01", "period_end": "2026-06-30", "force": True},
+    )
+    assert forced.status_code == 201, forced.text
+    data = forced.json()["data"]
+    assert data["id"] == first.json()["data"]["id"]
+    assert data["summary"]["income"]["total"] == "800.00"
+    assert data["generated_at"] != first_generated_at
+    # No duplica los ReportInsight ya existentes al recalcular.
+    assert len(data["insights"]) == 1
+
+
+async def test_force_yearly_regeneration_cascades_missing_months(client: AsyncClient):
+    """El agregado anual solo suma meses YA 'ready' -- forzar el año sin
+    tocar sus meses recalcularia sobre datos mensuales viejos. force=True
+    debe generar/recalcular los 12 meses primero (aqui: enero ya generado,
+    febrero ni siquiera existia todavia)."""
+    token, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank = await _create_account(client, headers, initial_balance="1000")
+    income_category = await _get_category_id(client, headers, "income")
+
+    await _confirm_income(client, headers, bank, income_category, "3000.00", "2026-01-10")
+    await client.post(
+        "/api/v1/reports/generate",
+        headers=headers,
+        json={"period_start": "2026-01-01", "period_end": "2026-01-31"},
+    )
+    yearly_before = await client.post(
+        "/api/v1/reports/generate", headers=headers, json={"year": 2026}
+    )
+    assert yearly_before.json()["data"]["summary"]["income"]["total"] == "3000.00"
+
+    # Backfill de febrero SIN generar su reporte mensual explicitamente --
+    # eso es justo lo que force=True debe resolver en el año.
+    await _confirm_income(client, headers, bank, income_category, "500.00", "2026-02-10")
+
+    yearly_forced = await client.post(
+        "/api/v1/reports/generate", headers=headers, json={"year": 2026, "force": True}
+    )
+    assert yearly_forced.status_code == 201, yearly_forced.text
+    assert yearly_forced.json()["data"]["summary"]["income"]["total"] == "3500.00"
+    assert len(yearly_forced.json()["data"]["insights"]) == 1
+
+    february = await client.get("/api/v1/reports/monthly/2026/2", headers=headers)
+    assert february.json()["data"]["status"] == "ready"
+    assert february.json()["data"]["summary"]["income"]["total"] == "500.00"
