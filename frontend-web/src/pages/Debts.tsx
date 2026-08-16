@@ -25,6 +25,8 @@ import {
 import { apiErrorMessage } from '@/services/api'
 import { debtTypeLabel, formatMoney, paymentFrequencyLabel, selectClass } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
+import { useConfirmStore } from '@/stores/confirmStore'
+import { useUiStore } from '@/stores/uiStore'
 import type { Debt, DebtDirection, DebtType, PaymentFrequency, UnplannedDebt } from '@/types'
 
 const DIRECTION_LABEL: Record<DebtDirection, string> = {
@@ -614,8 +616,76 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
   )
 }
 
+/** Ajuste directo de current_balance -- pensado para el flujo de backfill
+ * historico (ver useDebts.ts UpdateDebtInput.current_balance): en vez de
+ * registrar pago por pago de años atrás, se carga el historial de
+ * transacciones que se tenga y al final se corrige el saldo pendiente a lo
+ * que de verdad es hoy. No toca ningún pago ya registrado. */
+function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }) {
+  const updateDebt = useUpdateDebt()
+  const confirm = useConfirmStore((s) => s.ask)
+  const pushToast = useUiStore((s) => s.pushToast)
+  const isReceivable = debt.direction === 'owed_to_me'
+  const [balance, setBalance] = useState(debt.current_balance)
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    if (Number(balance) === Number(debt.current_balance)) return onDone()
+    const ok = await confirm({
+      title: 'Corregir saldo',
+      message:
+        `Vas a cambiar el saldo de "${debt.name}" de ${formatMoney(debt.current_balance)} a ` +
+        `${formatMoney(balance)} directamente -- no registra ningún pago ni modifica los que ya ` +
+        `existen, solo ajusta el número. ¿Continuar?`,
+      confirmLabel: 'Corregir saldo',
+      variant: 'danger',
+    })
+    if (!ok) return
+    try {
+      await updateDebt.mutateAsync({ id: debt.id, input: { current_balance: balance } })
+      pushToast(`Saldo de "${debt.name}" actualizado`, 'success')
+      onDone()
+    } catch {
+      // error mostrado abajo
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <p className="text-sm text-muted-foreground">
+        {isReceivable ? 'Te debe' : 'Saldo actual'}: {formatMoney(debt.current_balance)}
+      </p>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">Saldo correcto</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          required
+          value={balance}
+          onChange={(e) => setBalance(e.target.value)}
+          className={`${selectClass} h-9 w-full`}
+        />
+      </div>
+      {updateDebt.isError && (
+        <p className="text-sm text-destructive">{apiErrorMessage(updateDebt.error)}</p>
+      )}
+      <button
+        type="submit"
+        disabled={updateDebt.isPending}
+        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
+        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
+      >
+        <Check size={14} />
+        {updateDebt.isPending ? 'Guardando...' : 'Guardar'}
+      </button>
+    </form>
+  )
+}
+
 function DebtCard({ debt }: { debt: Debt }) {
   const [payOpen, setPayOpen] = useState(false)
+  const [correctOpen, setCorrectOpen] = useState(false)
   const isReceivable = debt.direction === 'owed_to_me'
   const paidRatio = Number(debt.total_amount) > 0 ? 1 - Number(debt.current_balance) / Number(debt.total_amount) : 0
   const apr = debt.interest_rate ? Number(debt.interest_rate) * 100 : 0
@@ -668,26 +738,46 @@ function DebtCard({ debt }: { debt: Debt }) {
           {debt.status === 'completed' ? 'Liquidada' : `Próximo: ${debt.next_payment_date ?? '—'}`}
         </div>
         {debt.status === 'active' && (
-          <Dialog open={payOpen} onOpenChange={setPayOpen}>
-            <DialogTrigger
-              render={
-                <button
-                  type="button"
-                  className="rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
-                >
-                  {isReceivable ? 'Registrar cobro' : 'Registrar pago'}
-                </button>
-              }
-            />
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {isReceivable ? 'Cobro' : 'Pago'} — {debt.name}
-                </DialogTitle>
-              </DialogHeader>
-              <RegisterPaymentForm debt={debt} onDone={() => setPayOpen(false)} />
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2">
+            <Dialog open={correctOpen} onOpenChange={setCorrectOpen}>
+              <DialogTrigger
+                render={
+                  <button
+                    type="button"
+                    className="rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
+                  >
+                    Corregir saldo
+                  </button>
+                }
+              />
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Corregir saldo — {debt.name}</DialogTitle>
+                </DialogHeader>
+                <CorrectBalanceForm debt={debt} onDone={() => setCorrectOpen(false)} />
+              </DialogContent>
+            </Dialog>
+            <Dialog open={payOpen} onOpenChange={setPayOpen}>
+              <DialogTrigger
+                render={
+                  <button
+                    type="button"
+                    className="rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
+                  >
+                    {isReceivable ? 'Registrar cobro' : 'Registrar pago'}
+                  </button>
+                }
+              />
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {isReceivable ? 'Cobro' : 'Pago'} — {debt.name}
+                  </DialogTitle>
+                </DialogHeader>
+                <RegisterPaymentForm debt={debt} onDone={() => setPayOpen(false)} />
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
         {debt.status === 'completed' && (
           <span className="rounded-full px-2.5 py-0.5 text-[10px]" style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}>

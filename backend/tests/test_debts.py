@@ -375,6 +375,49 @@ async def test_delete_debt_with_balance_conflicts(client: AsyncClient):
     assert response.status_code == 409
 
 
+async def test_update_debt_corrects_current_balance(client: AsyncClient):
+    """current_balance es la unica fuente de verdad del saldo de una deuda
+    (a diferencia de Account, que tiene initial_balance separado) -- pensado
+    para corregir el saldo despues de un backfill historico de pagos viejos,
+    sin tener que registrar cada pago uno a uno."""
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    debt = await client.post(
+        "/api/v1/debts",
+        headers=headers,
+        json={"name": "Prestamo viejo", "type": "personal_loan", "total_amount": "20000.00"},
+    )
+    debt_id = debt.json()["data"]["id"]
+    assert debt.json()["data"]["current_balance"] == "20000.00"
+
+    updated = await client.put(
+        f"/api/v1/debts/{debt_id}", headers=headers, json={"current_balance": "12500.00"}
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["data"]["current_balance"] == "12500.00"
+
+    fetched = await client.get(f"/api/v1/debts/{debt_id}", headers=headers)
+    assert fetched.json()["data"]["current_balance"] == "12500.00"
+
+
+async def test_update_debt_rejects_negative_current_balance(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    debt = await client.post(
+        "/api/v1/debts",
+        headers=headers,
+        json={"name": "Prestamo", "type": "personal_loan", "total_amount": "1000.00"},
+    )
+    debt_id = debt.json()["data"]["id"]
+
+    response = await client.put(
+        f"/api/v1/debts/{debt_id}", headers=headers, json={"current_balance": "-1"}
+    )
+    assert response.status_code == 422
+
+
 async def test_simulate_and_summary(client: AsyncClient):
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}

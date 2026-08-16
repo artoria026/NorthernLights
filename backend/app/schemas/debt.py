@@ -116,6 +116,12 @@ class DebtUpdate(BaseModel):
     linked_account_id: UUID | None = None
     payment_source_account_id: UUID | None = None
     notes: str | None = None
+    # Correccion manual del saldo pendiente -- no hay un "initial_balance"
+    # separado como en Account, current_balance ES la unica fuente de verdad
+    # del saldo de una deuda, asi que esto es un ajuste directo (no un
+    # delta). Pensado para corregir el saldo despues de un backfill
+    # historico de pagos/transacciones viejas.
+    current_balance: Decimal | None = Field(default=None, ge=0)
 
 
 class DebtOut(BaseModel):

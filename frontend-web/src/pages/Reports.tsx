@@ -27,6 +27,7 @@ import {
 } from '@/hooks/useReports'
 import { apiErrorMessage } from '@/services/api'
 import { formatMoney as formatMoneyBase } from '@/lib/utils'
+import { useConfirmStore } from '@/stores/confirmStore'
 import type { Report, ReportInsight, ReportInsightFlowType } from '@/types'
 
 type Period = 'month' | 'year'
@@ -205,6 +206,38 @@ export function Reports() {
   const report = periodReports[Math.min(index, periodReports.length - 1)]
   const summary = report?.summary
 
+  const confirm = useConfirmStore((s) => s.ask)
+  const regenerating = generateMonthly.isPending || generateYearly.isPending
+
+  /** Recalcula desde cero el reporte que se esta viendo -- para cuando el
+   * usuario backfillea historial viejo y este periodo ya se habia generado
+   * (casi vacio) antes de cargar esas transacciones. En 'year' cascada:
+   * el backend recalcula primero los 12 meses del año, luego el año (ver
+   * report_service.generate_yearly_report, force=True). */
+  async function regenerateCurrentReport() {
+    if (!report || regenerating) return
+    const ok = await confirm({
+      title: 'Regenerar reporte',
+      message:
+        `Esto va a recalcular el reporte de ${periodLabel(report)} desde cero con las ` +
+        `transacciones actuales, incluyendo los puntos de IA. ${
+          period === 'year' ? 'También recalcula los 12 meses de ese año. ' : ''
+        }¿Continuar?`,
+      confirmLabel: 'Regenerar',
+      variant: 'danger',
+    })
+    if (!ok) return
+    if (period === 'year') {
+      generateYearly.mutate({ year: new Date(report.period_start).getUTCFullYear(), force: true })
+    } else {
+      generateMonthly.mutate({
+        period_start: report.period_start,
+        period_end: report.period_end,
+        force: true,
+      })
+    }
+  }
+
   // 'all' incluye tambien los insights 'general'; filtrado por income/expense
   // los excluye -- ver pregunta de diseño resuelta con el usuario.
   const insights = (report?.insights ?? []).filter((i) => flow === 'all' || i.flow_type === flow)
@@ -248,7 +281,7 @@ export function Reports() {
             <button
               type="button"
               disabled={generateYearly.isPending}
-              onClick={() => generateYearly.mutate(new Date().getFullYear() - 1)}
+              onClick={() => generateYearly.mutate({ year: new Date().getFullYear() - 1 })}
               className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] font-medium disabled:opacity-60"
               style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
             >
@@ -293,6 +326,15 @@ export function Reports() {
               className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent"
             >
               <ChevronRight size={14} />
+            </button>
+            <button
+              type="button"
+              title="Regenerar este reporte desde cero"
+              disabled={regenerating}
+              onClick={() => void regenerateCurrentReport()}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 ml-1"
+            >
+              <RefreshCcw size={13} className={regenerating ? 'animate-spin' : undefined} />
             </button>
           </div>
         )}

@@ -31,6 +31,10 @@ export function useCurrentMonthSummary() {
 export interface GenerateReportInput {
   period_start?: string
   period_end?: string
+  /** Recalcula desde cero un periodo que ya tiene un reporte listo -- para
+   * cuando el usuario backfillea historial viejo y el mes/año ya se habia
+   * generado (casi vacio) antes de cargar esas transacciones. */
+  force?: boolean
 }
 
 export function useGenerateReport() {
@@ -44,11 +48,16 @@ export function useGenerateReport() {
   })
 }
 
+export interface GenerateYearlyReportInput {
+  year: number
+  force?: boolean
+}
+
 export function useGenerateYearlyReport() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (year: number) => {
-      const { data } = await api.post<ApiSuccess<Report>>('/reports/generate', { year })
+    mutationFn: async ({ year, force }: GenerateYearlyReportInput) => {
+      const { data } = await api.post<ApiSuccess<Report>>('/reports/generate', { year, force })
       return data.data
     },
     onSuccess: () => invalidateReports(queryClient),

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from redis.asyncio import Redis
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -13,7 +13,7 @@ from app.core.cache_keys import CACHE_TTL, report_key
 from app.core.config import settings
 from app.core.json_utils import json_safe
 from app.core.redis import get_redis
-from app.models.report import Report
+from app.models.report import Report, ReportInsight
 from app.schemas.report import ReportOut
 from app.services import cache_service, engine_service, notification_service, report_insight_service
 
@@ -86,17 +86,25 @@ async def generate_report(
     period_start: date,
     period_end: date,
     generated_by: str,
+    force: bool = False,
 ) -> Report:
     """Punto de entrada unico para generar un reporte: lo usa tanto el
     endpoint manual (sincrono, un solo usuario) como la tarea de Celery
     `reports.generate_for_user` (un usuario a la vez, dentro del loop del
     batch mensual). No duplica: si ya existe uno 'ready' para el periodo
-    exacto, lo retorna sin recalcular (regla de negocio M15 #2 y #3)."""
+    exacto, lo retorna sin recalcular (regla de negocio M15 #2 y #3).
+
+    `force=True` salta ese candado y recalcula igual -- pensado para un
+    periodo que ya se genero (casi vacio) antes de que el usuario
+    backfilleara historial viejo. Antes de recalcular, borra los
+    `ReportInsight` que ya tuviera: `report_insight_service.generate_for_report`
+    solo hace INSERT, nunca DELETE, asi que sin esto quedarian duplicados."""
     existing = await _get_existing_report(session, user_id, period_start, period_end)
-    if existing is not None and existing.status == "ready":
+    if existing is not None and existing.status == "ready" and not force:
         return existing
 
     if existing is not None:
+        await session.execute(delete(ReportInsight).where(ReportInsight.report_id == existing.id))
         report = existing
         report.status = "generating"
         report.error_message = None
@@ -296,15 +304,29 @@ def _aggregate_yearly_summary(
 
 
 async def generate_yearly_report(
-    session: AsyncSession, user_id: UUID, year: int, generated_by: str
+    session: AsyncSession, user_id: UUID, year: int, generated_by: str, force: bool = False
 ) -> Report:
     """Agrega los reportes mensuales `ready` ya generados de `year` (no
     recalcula desde las transacciones crudas) y genera los puntos de IA del
-    año a partir de ese agregado. Idempotente igual que `generate_report`."""
+    año a partir de ese agregado. Idempotente igual que `generate_report`.
+
+    `force=True` recalcula aunque ya este 'ready', y ademas fuerza primero la
+    regeneracion de los 12 meses de `year` (con `generate_report(...,
+    force=True)`, que crea los que falten y recalcula los que ya existan) --
+    esta funcion agrega reportes mensuales YA 'ready', asi que sin ese paso
+    el año quedaria recalculado sobre datos mensuales viejos. De paso, esto
+    resuelve de un solo llamado el backfill de todo un año."""
     period_start, period_end = _year_bounds(year)
     existing = await _get_existing_report(session, user_id, period_start, period_end)
-    if existing is not None and existing.status == "ready":
+    if existing is not None and existing.status == "ready" and not force:
         return existing
+
+    if force:
+        for month in range(1, 13):
+            month_start, month_end = _month_bounds(year, month)
+            await generate_report(
+                session, user_id, month_start, month_end, generated_by, force=True
+            )
 
     monthly_result = await session.execute(
         select(Report)
@@ -331,6 +353,7 @@ async def generate_yearly_report(
     )
 
     if existing is not None:
+        await session.execute(delete(ReportInsight).where(ReportInsight.report_id == existing.id))
         report = existing
         report.status = "generating"
         report.error_message = None

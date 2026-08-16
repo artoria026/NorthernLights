@@ -1,18 +1,11 @@
 import type { LucideIcon } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import logoMain from '@/assets/logos/main.png'
 import { Donut, GroupedBars, LineChart } from '@/lib/charts'
 // Version del build, mostrada al pie de este panel -- misma fuente de verdad
 // que el pie del sidebar (AppSidebar.tsx), no hardcodear el string aqui.
 import pkg from '../../package.json'
-
-function Logo({ size = 22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" className="flex-shrink-0">
-      <polygon points="12,2 22,12 12,22 2,12" fill="var(--nl-accent)" />
-    </svg>
-  )
-}
 
 export interface AuthValueProp {
   icon: LucideIcon
@@ -202,7 +195,11 @@ export function AuthLayout({
       <div
         className="hidden lg:flex w-[42%] flex-col justify-between p-12 relative overflow-hidden"
         style={{
-          background: 'var(--nl-bg-sidebar)',
+          // Fondo propio de este panel (no --nl-bg-sidebar, ese es el del
+          // nav real de la app) -- mas claro a proposito: los vectores
+          // grises decorativos que trae el PNG del logo (main.png) casi no
+          // se distinguian contra el negro casi puro de --nl-bg-sidebar.
+          background: '#1c1f26',
           borderRight: '1px solid var(--nl-border)',
         }}
       >
@@ -215,9 +212,18 @@ export function AuthLayout({
           style={{ background: 'var(--nl-violet)' }}
         />
 
-        <div className="relative flex items-center gap-3">
-          <Logo size={40} />
-          <span className="text-[24px] font-semibold tracking-tight">NorthernLights</span>
+        <div className="relative">
+          {/* -mt-12 -ml-12 cancela el p-12 del panel: el PNG (main.png)
+              trae el wireframe decorativo empezando practicamente en su
+              esquina (0,0) -- con el padding normal se veia flotando, con
+              un borde recto donde el canvas del PNG "cortaba" las lineas
+              a medio trazo. Pegado al borde real del panel, ese corte
+              coincide con el borde real y deja de notarse. */}
+          <img
+            src={logoMain}
+            alt="NorthernLights"
+            className="h-[440px] w-auto -mt-12 -ml-12"
+          />
         </div>
 
         <HeroCarousel heroTitle={heroTitle} heroSubtitle={heroSubtitle} valueProps={valueProps} />
@@ -243,10 +249,7 @@ export function AuthLayout({
 
         <div className="w-full max-w-[380px] relative z-10" style={formCardTransitionStyle}>
           <div className="flex lg:hidden flex-col items-center text-center gap-2 mb-8">
-            <div className="flex items-center gap-2.5">
-              <Logo size={26} />
-              <span className="text-[17px] font-semibold tracking-tight">NorthernLights</span>
-            </div>
+            <img src={logoMain} alt="NorthernLights" className="h-24 w-auto" />
             <p className="text-[12.5px] text-muted-foreground max-w-[280px]">{heroTitle}</p>
           </div>
 
