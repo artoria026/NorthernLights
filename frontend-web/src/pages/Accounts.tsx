@@ -187,11 +187,22 @@ function LogoField({ value, onChange }: { value: string | null; onChange: (value
   )
 }
 
+/** 'in'/'out' aqui es de UX (que columna/color usar), no el Debe/Haber
+ * contable -- para un pasivo (TDC) van invertidos a proposito. Contablemente
+ * un pasivo crece con un credito (increases=true), pero en un estado de
+ * cuenta de tarjeta real "Cargo" es una compra (aumenta la deuda) y "Abono"
+ * es un pago (la reduce): exactamente al reves de como "aumenta el saldo"
+ * se ve en una cuenta de activo. Sin este ajuste, un gasto con la TDC se
+ * veia como Abono en verde -- correcto en teoria contable, confuso para
+ * cualquiera acostumbrado a un estado de cuenta bancario. El balance real
+ * de la cuenta sigue calculandose aparte con la convencion contable de
+ * siempre (ver DEBIT_NORMAL_TYPES en account_service.py, backend).*/
 function lineDirection(tx: Transaction, accountId: string, accountType: Account['type']) {
   const line = tx.lines.find((l) => l.account_id === accountId)
   if (!line) return null
   const isDebitNormal = accountType === 'asset' || accountType === 'expense'
   const increases = (line.type === 'debit') === isDebitNormal
+  if (accountType === 'liability') return increases ? 'out' : 'in'
   return increases ? 'in' : 'out'
 }
 
