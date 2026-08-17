@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
+import { DialogCancelButton, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -219,24 +220,10 @@ export function EditTransactionModal({
               <p className="text-xs text-destructive">{apiErrorMessage(updateTransaction.error)}</p>
             )}
             <div className="flex items-center justify-end gap-2 pt-1">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded px-3 py-2 text-[13px] text-muted-foreground hover:text-foreground"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={!canSubmit || updateTransaction.isPending}
-                className="rounded px-4 py-2 text-[13px] font-medium disabled:cursor-not-allowed"
-                style={{
-                  background: canSubmit ? 'var(--nl-accent)' : 'var(--nl-bg-track)',
-                  color: canSubmit ? 'var(--nl-accent-fg)' : 'var(--nl-text-muted)',
-                }}
-              >
+              <DialogCancelButton onClick={onClose}>Cancelar</DialogCancelButton>
+              <DialogPrimaryButton pending={updateTransaction.isPending} disabled={!canSubmit}>
                 Guardar
-              </button>
+              </DialogPrimaryButton>
             </div>
           </form>
         )}

@@ -3,6 +3,7 @@ import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { DemoSteps, HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, SegmentedControl, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { Donut } from '@/lib/charts'
@@ -97,15 +98,9 @@ function NewUnplannedDebtForm({
         />
       </div>
       {createUnplanned.isError && <p className="text-sm text-destructive">{apiErrorMessage(createUnplanned.error)}</p>}
-      <button
-        type="submit"
-        disabled={createUnplanned.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Plus size={14} />
-        {createUnplanned.isPending ? 'Guardando...' : 'Registrar'}
-      </button>
+      <DialogPrimaryButton icon={Plus} pending={createUnplanned.isPending}>
+        Registrar
+      </DialogPrimaryButton>
     </form>
   )
 }
@@ -218,15 +213,9 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
         />
       </div>
       {activate.isError && <p className="text-sm text-destructive">{apiErrorMessage(activate.error)}</p>}
-      <button
-        type="submit"
-        disabled={activate.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Zap size={14} />
-        {activate.isPending ? 'Activando...' : 'Activar deuda'}
-      </button>
+      <DialogPrimaryButton icon={Zap} pending={activate.isPending} pendingLabel="Activando...">
+        Activar deuda
+      </DialogPrimaryButton>
     </form>
   )
 }
@@ -455,15 +444,13 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
 
       {formError && <p className="text-sm text-destructive">{formError}</p>}
       {createDebt.isError && <p className="text-sm text-destructive">{apiErrorMessage(createDebt.error)}</p>}
-      <button
-        type="submit"
-        disabled={createDebt.isPending || (needsLinkedAccount && accounts?.length === 0)}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium disabled:opacity-40"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
+      <DialogPrimaryButton
+        icon={Check}
+        pending={createDebt.isPending}
+        disabled={needsLinkedAccount && accounts?.length === 0}
       >
-        <Check size={14} />
-        {createDebt.isPending ? 'Guardando...' : 'Crear deuda'}
-      </button>
+        Crear deuda
+      </DialogPrimaryButton>
     </form>
   )
 }
@@ -523,16 +510,16 @@ function ResolveLinkedAccountForm({ debt, onResolved }: { debt: Debt; onResolved
             </Select>
           </div>
           {updateDebt.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateDebt.error)}</p>}
-          <button
+          <DialogPrimaryButton
             type="button"
             onClick={handleAssign}
-            disabled={!linkedAccountId || updateDebt.isPending}
-            className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium disabled:opacity-40"
-            style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
+            icon={Check}
+            pending={updateDebt.isPending}
+            pendingLabel="Asignando..."
+            disabled={!linkedAccountId}
           >
-            <Check size={14} />
-            {updateDebt.isPending ? 'Asignando...' : 'Asignar y continuar'}
-          </button>
+            Asignar y continuar
+          </DialogPrimaryButton>
         </>
       )}
     </div>
@@ -599,19 +586,9 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
         <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={`${selectClass} h-9 w-full`} />
       </div>
       {registerPayment.isError && <p className="text-sm text-destructive">{apiErrorMessage(registerPayment.error)}</p>}
-      <button
-        type="submit"
-        disabled={registerPayment.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Check size={14} />
-        {registerPayment.isPending
-          ? 'Guardando...'
-          : isReceivable
-            ? 'Registrar cobro'
-            : 'Registrar pago'}
-      </button>
+      <DialogPrimaryButton icon={Check} pending={registerPayment.isPending}>
+        {isReceivable ? 'Registrar cobro' : 'Registrar pago'}
+      </DialogPrimaryButton>
     </form>
   )
 }
@@ -670,15 +647,9 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
       {updateDebt.isError && (
         <p className="text-sm text-destructive">{apiErrorMessage(updateDebt.error)}</p>
       )}
-      <button
-        type="submit"
-        disabled={updateDebt.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Check size={14} />
-        {updateDebt.isPending ? 'Guardando...' : 'Guardar'}
-      </button>
+      <DialogPrimaryButton icon={Check} pending={updateDebt.isPending}>
+        Guardar
+      </DialogPrimaryButton>
     </form>
   )
 }

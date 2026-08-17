@@ -3,6 +3,7 @@ import { type FormEvent, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { DemoFlow, HelpSection, HelpTip } from '@/components/nl/Help'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
@@ -196,15 +197,9 @@ function SplitExpenseForm({ onDone }: { onDone: () => void }) {
       </p>
 
       {createSplit.isError && <p className="text-sm text-destructive">{apiErrorMessage(createSplit.error)}</p>}
-      <button
-        type="submit"
-        disabled={createSplit.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Check size={14} />
-        {createSplit.isPending ? 'Guardando...' : 'Guardar gasto compartido'}
-      </button>
+      <DialogPrimaryButton icon={Check} pending={createSplit.isPending}>
+        Guardar gasto compartido
+      </DialogPrimaryButton>
     </form>
   )
 }

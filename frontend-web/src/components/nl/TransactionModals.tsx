@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
+import { DialogCancelButton, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SegmentedControl } from '@/components/nl/primitives'
@@ -256,17 +257,9 @@ function QuickForm({
         <button type="button" onClick={onSwitchToDetailed} className="text-xs text-muted-foreground hover:text-foreground">
           Detallar →
         </button>
-        <button
-          type="submit"
-          disabled={!canSubmit || isPending}
-          className="rounded px-4 py-2 text-[13px] font-medium disabled:cursor-not-allowed"
-          style={{
-            background: canSubmit ? 'var(--nl-accent)' : 'var(--nl-bg-track)',
-            color: canSubmit ? 'var(--nl-accent-fg)' : 'var(--nl-text-muted)',
-          }}
-        >
+        <DialogPrimaryButton pending={isPending} disabled={!canSubmit}>
           Guardar
-        </button>
+        </DialogPrimaryButton>
       </div>
     </form>
   )
@@ -418,24 +411,10 @@ function DetailedForm({
       {isError && <p className="text-xs text-destructive">{apiErrorMessage(error)}</p>}
 
       <div className="flex items-center justify-end gap-2 pt-1">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded px-4 py-2 text-[13px] border border-border text-muted-foreground hover:text-foreground"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={!canSubmit || isPending}
-          className="rounded px-4 py-2 text-[13px] font-medium disabled:cursor-not-allowed"
-          style={{
-            background: canSubmit ? 'var(--nl-accent)' : 'var(--nl-bg-track)',
-            color: canSubmit ? 'var(--nl-accent-fg)' : 'var(--nl-text-muted)',
-          }}
-        >
-          {isPending ? 'Guardando...' : 'Crear transacción'}
-        </button>
+        <DialogCancelButton onClick={onClose}>Cancelar</DialogCancelButton>
+        <DialogPrimaryButton pending={isPending} pendingLabel="Guardando..." disabled={!canSubmit}>
+          Crear transacción
+        </DialogPrimaryButton>
       </div>
     </form>
   )

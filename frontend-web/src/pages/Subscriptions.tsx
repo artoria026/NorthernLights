@@ -15,6 +15,7 @@ import {
 import { type FormEvent, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { FREQUENCY_LABELS, monthlyEquivalent, STATUS_LABELS } from '@/lib/recurring'
@@ -175,15 +176,9 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
       {createItem.isError && (
         <p className="text-sm text-destructive">{apiErrorMessage(createItem.error)}</p>
       )}
-      <button
-        type="submit"
-        disabled={createItem.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Plus size={14} />
-        {createItem.isPending ? 'Guardando...' : 'Crear suscripción'}
-      </button>
+      <DialogPrimaryButton icon={Plus} pending={createItem.isPending}>
+        Crear suscripción
+      </DialogPrimaryButton>
     </form>
   )
 }
@@ -304,15 +299,9 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
         />
       </div>
       {updateItem.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateItem.error)}</p>}
-      <button
-        type="submit"
-        disabled={updateItem.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Check size={14} />
-        {updateItem.isPending ? 'Guardando...' : 'Guardar cambios'}
-      </button>
+      <DialogPrimaryButton icon={Check} pending={updateItem.isPending}>
+        Guardar cambios
+      </DialogPrimaryButton>
     </form>
   )
 }

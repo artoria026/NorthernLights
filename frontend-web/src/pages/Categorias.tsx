@@ -1,9 +1,32 @@
-import { Check, ChevronDown, ChevronRight, EyeOff, Pencil, Plus, RotateCcw, Tag, Trash2 } from 'lucide-react'
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  EyeOff,
+  Pencil,
+  Pipette,
+  Plus,
+  RotateCcw,
+  Search,
+  Tag,
+  Trash2,
+} from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
-import { CATEGORY_COLOR_CHOICES, CATEGORY_ICON_CHOICES, categoryIcon } from '@/lib/categoryIcons'
+import {
+  CATEGORY_COLOR_CHOICES,
+  CATEGORY_ICON_CHOICES,
+  CATEGORY_ICON_GROUPS,
+  categoryIcon,
+  categoryIconLabel,
+  getRecentCategoryIcons,
+  iconsInGroup,
+  matchesIconSearch,
+  recordRecentCategoryIcon,
+} from '@/lib/categoryIcons'
 import {
   useCategories,
   useCategorySummary,
@@ -22,11 +45,20 @@ import type { Category } from '@/types'
 
 type CatType = 'income' | 'expense'
 
+/** Las pastillas de siempre + una ultima "personalizado" que abre el color
+ * picker nativo del navegador (<input type="color">, sin librerias) -- el
+ * input real queda invisible encima del circulo, asi el click abre el
+ * picker del sistema operativo directo, sin un dialogo propio que
+ * mantener. Mientras el color activo no sea ninguna de las pastillas fijas,
+ * esa ultima bolita muestra el hex elegido (y el anillo de "seleccionado"
+ * se mueve ahi) en vez de quedarse en el degradado de invitacion. */
 function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
+  const isCustom = !CATEGORY_COLOR_CHOICES.includes(value)
+
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs text-muted-foreground">Color</label>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {CATEGORY_COLOR_CHOICES.map((color) => (
           <button
             key={color}
@@ -35,17 +67,71 @@ function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (colo
             className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
             style={{
               background: color,
-              outline: value === color ? '2px solid var(--nl-text-primary)' : 'none',
+              outline: !isCustom && value === color ? '2px solid var(--nl-text-primary)' : 'none',
               outlineOffset: '2px',
             }}
             aria-label={`Color ${color}`}
           />
         ))}
+        <label
+          className="relative w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center cursor-pointer"
+          style={{
+            background: isCustom
+              ? value
+              : 'conic-gradient(from 180deg, #f04e4e, #f5a623, #16a34a, #0891b2, #4e8ef0, #6366f1, #c026d3, #f04e4e)',
+            outline: isCustom ? '2px solid var(--nl-text-primary)' : 'none',
+            outlineOffset: '2px',
+          }}
+          title="Elegir cualquier color"
+        >
+          {!isCustom && <Pipette size={12} color="white" style={{ filter: 'drop-shadow(0 0 1px rgb(0 0 0 / 0.6))' }} />}
+          <input
+            type="color"
+            value={isCustom ? value : '#00c9a7'}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            aria-label="Color personalizado"
+          />
+        </label>
       </div>
     </div>
   )
 }
 
+function IconCell({
+  iconName,
+  selected,
+  onSelect,
+}: {
+  iconName: string
+  selected: boolean
+  onSelect: (icon: string) => void
+}) {
+  const Icon = categoryIcon(iconName)
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(iconName)}
+      className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
+      style={{
+        background: selected ? 'var(--nl-accent-soft-bg)' : 'var(--nl-bg-input)',
+        color: selected ? 'var(--nl-accent-ink)' : 'var(--nl-text-secondary)',
+      }}
+      title={categoryIconLabel(iconName)}
+    >
+      <Icon size={15} />
+    </button>
+  )
+}
+
+/** Buscador + "usados recientemente" + un solo scroll con secciones por tema
+ * -- reemplaza la grilla plana de antes (29 iconos sin forma de encontrar
+ * nada, ahora son 155). Buscar cruza los 8 grupos a la vez, en una grilla
+ * plana de resultados; sin busqueda, todos los grupos se ven uno debajo del
+ * otro en el mismo scroll (con su encabezado pegajoso mientras se recorre),
+ * en vez de un panel separado por seleccionar. Los recientes vienen de
+ * localStorage (ver categoryIcons.ts) y no se filtran por busqueda: son un
+ * atajo fijo, no otra vista de la misma lista. */
 function IconGridPicker({
   value,
   onChange,
@@ -53,29 +139,67 @@ function IconGridPicker({
   value: string | null
   onChange: (icon: string) => void
 }) {
+  const [query, setQuery] = useState('')
+  const [recent] = useState(getRecentCategoryIcons)
+  const searchResults = query ? CATEGORY_ICON_CHOICES.filter((name) => matchesIconSearch(name, query)) : null
+  const totalVisible = searchResults ? searchResults.length : CATEGORY_ICON_CHOICES.length
+
+  function handleSelect(iconName: string) {
+    onChange(iconName)
+    recordRecentCategoryIcon(iconName)
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-xs text-muted-foreground">Ícono</label>
-      <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5 max-h-[140px] overflow-y-auto -mx-1 px-1">
-        {CATEGORY_ICON_CHOICES.map((iconName) => {
-          const Icon = categoryIcon(iconName)
-          const selected = value === iconName
-          return (
-            <button
-              key={iconName}
-              type="button"
-              onClick={() => onChange(iconName)}
-              className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
-              style={{
-                background: selected ? 'var(--nl-accent-soft-bg)' : 'var(--nl-bg-input)',
-                color: selected ? 'var(--nl-accent-ink)' : 'var(--nl-text-secondary)',
-              }}
-              title={iconName}
-            >
-              <Icon size={15} />
-            </button>
-          )
-        })}
+      <div className="relative">
+        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar en las 8 categorías… ej. gasolina, café"
+          className={`${selectClass} h-8 w-full pl-8 text-[12.5px]`}
+        />
+      </div>
+      {!query && recent.length > 0 && (
+        <>
+          <div className="text-[10.5px] text-muted-foreground mt-0.5">Usados recientemente</div>
+          <div className="grid grid-cols-8 sm:grid-cols-11 gap-1.5">
+            {recent.map((iconName) => (
+              <IconCell key={iconName} iconName={iconName} selected={value === iconName} onSelect={handleSelect} />
+            ))}
+          </div>
+        </>
+      )}
+      {searchResults ? (
+        <div className="grid grid-cols-8 sm:grid-cols-11 gap-1.5 max-h-[220px] overflow-y-auto -mx-1 px-1">
+          {searchResults.map((iconName) => (
+            <IconCell key={iconName} iconName={iconName} selected={value === iconName} onSelect={handleSelect} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto -mx-1 px-1">
+          {CATEGORY_ICON_GROUPS.map((g) => (
+            <div key={g}>
+              <div
+                className="sticky top-0 z-[1] flex items-baseline gap-1.5 py-1 text-[10.5px] font-semibold text-muted-foreground"
+                style={{ background: 'var(--nl-bg-card)' }}
+              >
+                {g}
+                <span className="font-normal">· {iconsInGroup(g).length}</span>
+              </div>
+              <div className="grid grid-cols-8 sm:grid-cols-11 gap-1.5">
+                {iconsInGroup(g).map((iconName) => (
+                  <IconCell key={iconName} iconName={iconName} selected={value === iconName} onSelect={handleSelect} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="text-[10.5px] text-muted-foreground">
+        {totalVisible} ícono{totalVisible === 1 ? '' : 's'}
+        {query && totalVisible === 0 ? ' — sin resultados' : ''}
       </div>
     </div>
   )
@@ -130,19 +254,11 @@ function NewCategoryForm({
       {createCategory.isError && (
         <p className="text-sm text-destructive">{apiErrorMessage(createCategory.error)}</p>
       )}
-      <button
-        type="submit"
-        disabled={createCategory.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Plus size={14} />
-        {createCategory.isPending
-          ? 'Guardando...'
-          : parentId
-            ? 'Crear subcategoría'
-            : `Crear categoría de ${type === 'income' ? 'ingreso' : 'gasto'}`}
-      </button>
+      <DialogPrimaryButton icon={Plus} pending={createCategory.isPending}>
+        {parentId
+          ? 'Crear subcategoría'
+          : `Crear categoría de ${type === 'income' ? 'ingreso' : 'gasto'}`}
+      </DialogPrimaryButton>
     </form>
   )
 }
@@ -184,16 +300,169 @@ function EditCategoryForm({ category, onDone }: { category: Category; onDone: ()
       {updateCategory.isError && (
         <p className="text-sm text-destructive">{apiErrorMessage(updateCategory.error)}</p>
       )}
-      <button
-        type="submit"
-        disabled={updateCategory.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Check size={14} />
-        {updateCategory.isPending ? 'Guardando...' : 'Guardar cambios'}
-      </button>
+      <DialogPrimaryButton icon={Check} pending={updateCategory.isPending}>
+        Guardar cambios
+      </DialogPrimaryButton>
     </form>
+  )
+}
+
+/** Barra apilada proporcional al gasto de cada subcategoría (mas el
+ * "restante" sin subcategorizar, si lo hay) -- de un vistazo dice como se
+ * reparte el gasto, algo que la tarjeta no mostraba antes. Solo tiene
+ * sentido si el padre ya tiene algo gastado este mes; ver `showBar` en
+ * CategoryCard. */
+function SegmentedSpendBar({ segments }: { segments: { color: string; pct: number }[] }) {
+  return (
+    <div className="flex h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--nl-bg-track)' }}>
+      {segments.map((s, i) => (
+        <div key={i} style={{ width: `${s.pct}%`, background: s.color }} />
+      ))}
+    </div>
+  )
+}
+
+/** Conecta cada fila con el tronco vertical del contenedor (ver `pl-4` +
+ * spine en CategoryCard) -- el mismo "sale una rama del padre" que antes se
+ * insinuaba con un simple border-left, ahora explicito por fila. */
+function TreeTick() {
+  return (
+    <span
+      className="absolute h-px"
+      style={{ left: -13, width: 13, top: '50%', background: 'var(--nl-border)' }}
+      aria-hidden="true"
+    />
+  )
+}
+
+function SubcategoryRow({
+  category,
+  amount,
+  percentage,
+}: {
+  category: Category
+  amount: string
+  percentage: number | null
+}) {
+  const deleteCategory = useDeleteCategory()
+  const confirm = useConfirmStore((s) => s.ask)
+  const pushToast = useUiStore((s) => s.pushToast)
+  const [editOpen, setEditOpen] = useState(false)
+  const Icon = categoryIcon(category.icon)
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: 'Eliminar subcategoría',
+      message: `¿Eliminar "${category.name}"? Las transacciones que la usan se quedan sin categoría. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      variant: 'danger',
+    })
+    if (!ok) return
+    try {
+      await deleteCategory.mutateAsync(category.id)
+    } catch (error) {
+      pushToast(apiErrorMessage(error), 'error')
+    }
+  }
+
+  return (
+    <div className="relative flex items-center gap-2 py-1.5 group">
+      <TreeTick />
+      <span
+        className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0"
+        style={{ background: category.color }}
+      >
+        <Icon size={10} color="white" />
+      </span>
+      <span className="text-[12px] truncate flex-1">{category.name}</span>
+      {percentage !== null && (
+        <span className="text-[10.5px] text-muted-foreground tabular-nums w-8 text-right flex-shrink-0">
+          {percentage}%
+        </span>
+      )}
+      <span
+        className="text-[12px] tabular-nums flex-shrink-0 group-hover:hidden"
+        style={{ minWidth: 58, textAlign: 'right' }}
+      >
+        {formatMoney(amount)}
+      </span>
+      <div className="hidden group-hover:flex items-center gap-0.5 flex-shrink-0" style={{ minWidth: 58 }}>
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogTrigger
+            render={
+              <button
+                type="button"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info"
+                title="Editar subcategoría"
+              >
+                <Pencil size={10} />
+              </button>
+            }
+          />
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Editar subcategoría</DialogTitle>
+            </DialogHeader>
+            <EditCategoryForm category={category} onDone={() => setEditOpen(false)} />
+          </DialogContent>
+        </Dialog>
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          title="Eliminar subcategoría"
+        >
+          <Trash2 size={10} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Gasto directo en el padre que no cayo en ninguna subcategoria -- sin esto
+ * la barra tendria un tramo gris sin explicacion. Es un calculo, no una
+ * categoria real: sin acciones ni dialogo de edicion. */
+function RemainderRow({ amount, percentage }: { amount: number; percentage: number }) {
+  return (
+    <div className="relative flex items-center gap-2 py-1.5">
+      <TreeTick />
+      <span className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: 'var(--nl-bg-track)' }} />
+      <span className="text-[12px] truncate flex-1 text-muted-foreground">Sin subcategoría</span>
+      <span className="text-[10.5px] text-muted-foreground tabular-nums w-8 text-right flex-shrink-0">
+        {percentage}%
+      </span>
+      <span className="text-[12px] tabular-nums text-muted-foreground flex-shrink-0" style={{ minWidth: 58, textAlign: 'right' }}>
+        {formatMoney(String(amount))}
+      </span>
+    </div>
+  )
+}
+
+function AddSubcategoryRow({ parent }: { parent: Category }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative flex items-center py-1.5">
+      <TreeTick />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger
+          render={
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground"
+            >
+              <Plus size={12} />
+              Subcategoría
+            </button>
+          }
+        />
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nueva subcategoría de {parent.name}</DialogTitle>
+          </DialogHeader>
+          <NewCategoryForm type={parent.type} parentId={parent.id} onDone={() => setOpen(false)} />
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }
 
@@ -213,12 +482,37 @@ function CategoryCard({
   const confirm = useConfirmStore((s) => s.ask)
   const pushToast = useUiStore((s) => s.pushToast)
   const [editOpen, setEditOpen] = useState(false)
-  const [addSubOpen, setAddSubOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const Icon = categoryIcon(category.icon)
   // Un solo nivel de anidamiento: solo las categorias de primer nivel de
   // gasto pueden tener subcategorias (ver category_service.create_category).
   const canHaveSubcategories = category.parent_id === null && category.type === 'expense'
+  const subcategoryList = subcategories ?? []
+
+  // El "gastado este mes" del padre (`total`) es SOLO su gasto directo --
+  // a diferencia del desglose por categoria de Reportes, este resumen no
+  // rollea las subcategorias (confirmado en vivo: con $300 directos en el
+  // padre y $670 en una subcategoria, `total` llega en 300, no 970). La
+  // barra necesita su propio 100%: gasto directo del padre + subcategorias,
+  // no el `total` del padre solo -- si no, el porcentaje se pasa de 100.
+  const parentDirectNum = Number(total ?? '0')
+  const subSumNum = subcategoryList.reduce(
+    (sum, sub) => sum + Number(subtotals?.get(sub.id) ?? '0'),
+    0,
+  )
+  const combinedTotalNum = parentDirectNum + subSumNum
+  const showBar = canHaveSubcategories && subcategoryList.length > 0 && combinedTotalNum > 0
+  const segments = showBar
+    ? [
+        ...subcategoryList.map((sub) => ({
+          color: sub.color,
+          pct: (Number(subtotals?.get(sub.id) ?? '0') / combinedTotalNum) * 100,
+        })),
+        ...(parentDirectNum > 0
+          ? [{ color: 'var(--nl-bg-track)', pct: (parentDirectNum / combinedTotalNum) * 100 }]
+          : []),
+      ]
+    : []
 
   async function handleDelete() {
     const ok = await confirm({
@@ -286,7 +580,7 @@ function CategoryCard({
                   </button>
                 }
               />
-              <DialogContent>
+              <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Editar categoría</DialogTitle>
                 </DialogHeader>
@@ -314,6 +608,12 @@ function CategoryCard({
         {formatMoney(total ?? '0')}
       </div>
 
+      {/* La barra va siempre visible cuando hay algo que repartir (no
+          detras del toggle) -- da la senal de "como se reparte esto" de un
+          vistazo, sin tener que desplegar. La lista fila-por-fila si queda
+          detras del toggle, igual que antes. */}
+      {showBar && <SegmentedSpendBar segments={segments} />}
+
       {canHaveSubcategories && (
         <button
           type="button"
@@ -321,40 +621,44 @@ function CategoryCard({
           className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground -mt-1"
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          {subcategories && subcategories.length > 0
-            ? `${subcategories.length} subcategoría${subcategories.length === 1 ? '' : 's'}`
+          {subcategoryList.length > 0
+            ? `${subcategoryList.length} subcategoría${subcategoryList.length === 1 ? '' : 's'}`
             : 'Subcategorías'}
         </button>
       )}
 
       {canHaveSubcategories && expanded && (
-        <div className="flex flex-col gap-2 pl-3 border-l border-border">
-          {subcategories?.map((sub) => (
-            <CategoryCard key={sub.id} category={sub} total={subtotals?.get(sub.id)} />
-          ))}
-          <Dialog open={addSubOpen} onOpenChange={setAddSubOpen}>
-            <DialogTrigger
-              render={
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground"
-                >
-                  <Plus size={12} />
-                  Subcategoría
-                </button>
-              }
-            />
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Nueva subcategoría de {category.name}</DialogTitle>
-              </DialogHeader>
-              <NewCategoryForm
-                type={category.type}
-                parentId={category.id}
-                onDone={() => setAddSubOpen(false)}
+        <div className="relative pl-4">
+          {/* Tronco del arbol -- cada fila (SubcategoryRow/RemainderRow/
+              AddSubcategoryRow) dibuja su propia rama horizontal (TreeTick)
+              hacia este tronco, en vez de repetir el chrome completo de una
+              tarjeta como antes. */}
+          <span
+            className="absolute w-px"
+            style={{ left: 3, top: 0, bottom: 14, background: 'var(--nl-border)' }}
+            aria-hidden="true"
+          />
+          <div className="flex flex-col">
+            {subcategoryList.map((sub) => (
+              <SubcategoryRow
+                key={sub.id}
+                category={sub}
+                amount={subtotals?.get(sub.id) ?? '0'}
+                percentage={
+                  combinedTotalNum > 0
+                    ? Math.round((Number(subtotals?.get(sub.id) ?? '0') / combinedTotalNum) * 100)
+                    : null
+                }
               />
-            </DialogContent>
-          </Dialog>
+            ))}
+            {parentDirectNum > 0 && (
+              <RemainderRow
+                amount={parentDirectNum}
+                percentage={Math.round((parentDirectNum / combinedTotalNum) * 100)}
+              />
+            )}
+            <AddSubcategoryRow parent={category} />
+          </div>
         </div>
       )}
     </div>
@@ -492,7 +796,7 @@ export function Categorias() {
                 </button>
               }
             />
-            <DialogContent>
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Nueva categoría de {type === 'income' ? 'ingreso' : 'gasto'}</DialogTitle>
               </DialogHeader>

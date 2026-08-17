@@ -3,6 +3,7 @@ import { type FormEvent, type ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
 import { Sparkline } from '@/lib/charts'
@@ -471,17 +472,9 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
       )}
 
       {createAccount.isError && <p className="text-sm text-destructive">{apiErrorMessage(createAccount.error)}</p>}
-      <button
-        type="submit"
-        disabled={createAccount.isPending || !canSubmit}
-        className="rounded px-4 py-2 text-[13px] font-medium disabled:cursor-not-allowed"
-        style={{
-          background: canSubmit ? 'var(--nl-accent)' : 'var(--nl-bg-track)',
-          color: canSubmit ? 'var(--nl-accent-fg)' : 'var(--nl-text-muted)',
-        }}
-      >
-        {createAccount.isPending ? 'Guardando...' : 'Crear cuenta'}
-      </button>
+      <DialogPrimaryButton pending={createAccount.isPending} disabled={!canSubmit}>
+        Crear cuenta
+      </DialogPrimaryButton>
     </form>
   )
 }
@@ -661,15 +654,9 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       </Field>
 
       {updateAccount.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateAccount.error)}</p>}
-      <button
-        type="submit"
-        disabled={updateAccount.isPending}
-        className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] font-medium"
-        style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-      >
-        <Check size={14} />
-        {updateAccount.isPending ? 'Guardando...' : 'Guardar cambios'}
-      </button>
+      <DialogPrimaryButton icon={Check} pending={updateAccount.isPending}>
+        Guardar cambios
+      </DialogPrimaryButton>
     </form>
   )
 }
@@ -745,17 +732,9 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
       )}
 
       {reconcile.isError && <p className="text-sm text-destructive">{apiErrorMessage(reconcile.error)}</p>}
-      <button
-        type="submit"
-        disabled={reconcile.isPending || !hasDelta}
-        className="rounded px-4 py-2 text-[13px] font-medium disabled:cursor-not-allowed"
-        style={{
-          background: hasDelta ? 'var(--nl-accent)' : 'var(--nl-bg-track)',
-          color: hasDelta ? 'var(--nl-accent-fg)' : 'var(--nl-text-muted)',
-        }}
-      >
-        {reconcile.isPending ? 'Conciliando...' : 'Conciliar saldo'}
-      </button>
+      <DialogPrimaryButton pending={reconcile.isPending} pendingLabel="Conciliando..." disabled={!hasDelta}>
+        Conciliar saldo
+      </DialogPrimaryButton>
     </form>
   )
 }
