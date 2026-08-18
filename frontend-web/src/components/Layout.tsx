@@ -33,7 +33,12 @@ export function Layout() {
             funcionando igual -- h-screen vs min-h-screen solo importa
             para el calculo de flexbox interno, no para el overflow visible. */}
         <main
-          className="flex-1 lg:min-h-0 flex flex-col p-4 pt-4 lg:p-8 lg:pt-7 max-w-[1600px] w-full mx-auto overflow-x-hidden"
+          // pb-20 (en vez de solo p-4) deja espacio de sobra abajo en movil para
+          // que el FAB "Agregar rapido" (fixed bottom-5, ver mas abajo) nunca
+          // quede encima de contenido real al hacer scroll hasta el fondo --
+          // confirmado con el calendario de Transacciones, donde sin este
+          // padding el FAB tapaba los ultimos dias del mes.
+          className="flex-1 lg:min-h-0 flex flex-col p-4 pt-4 pb-20 lg:p-8 lg:pt-7 lg:pb-8 max-w-[1600px] w-full mx-auto overflow-x-hidden"
           style={{ animation: 'fadeInView 150ms ease' }}
         >
           <Outlet />

@@ -127,3 +127,17 @@ const PAYMENT_FREQUENCY_LABELS: Record<string, string> = {
 export function paymentFrequencyLabel(frequency: string): string {
   return PAYMENT_FREQUENCY_LABELS[frequency] ?? frequency
 }
+
+/** "2026-08-25" -> "25 ago" -- para columnas angostas donde la fecha ISO
+ * completa no cabe (ver Recurring.tsx/Subscriptions.tsx, listas de "próximos
+ * pagos/renovaciones"). Sin año a propósito: estas listas solo muestran
+ * fechas dentro de los próximos 7 días, nunca cruzan de año. timeZone: 'UTC'
+ * porque el string de entrada no trae hora -- sin esto, en zonas horarias
+ * negativas (UTC-N) el dia mostrado se recorre uno hacia atrás. */
+export function formatShortDate(value: string): string {
+  return new Date(value).toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  })
+}

@@ -2,7 +2,7 @@ import { AlertTriangle, Calendar, Droplet, Grid2x2, Home, Clock, TrendingDown, T
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { GroupedBars, LineChart } from '@/lib/charts'
-import { accountSubtypeLabel, entryTypeLabel, formatMoney as formatMoneyBase, isPositiveEntryType } from '@/lib/utils'
+import { accountSubtypeLabel, entryTypeLabel, formatMoney as formatMoneyBase, formatShortDate, isPositiveEntryType } from '@/lib/utils'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { CategoryBadge, HEADER_SECTIONS, Legend, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -403,7 +403,7 @@ export function Dashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] truncate">{bill.name}</div>
-                  <div className="text-[11px] text-muted-foreground">Vence {bill.due}</div>
+                  <div className="text-[11px] text-muted-foreground">Vence {formatShortDate(bill.due)}</div>
                 </div>
                 <div className="text-[13px] font-medium">{formatMoney(bill.amount)}</div>
               </div>

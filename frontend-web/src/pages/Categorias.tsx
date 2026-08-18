@@ -835,7 +835,7 @@ export function Categorias() {
       ) : topLevel.length === 0 ? (
         <p className="text-sm text-muted-foreground">Sin categorías todavía.</p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {topLevel.map((c, i) => (
             <CategoryCard
               key={c.id}
