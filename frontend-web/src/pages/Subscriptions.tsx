@@ -19,7 +19,7 @@ import { DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { FREQUENCY_LABELS, monthlyEquivalent, STATUS_LABELS } from '@/lib/recurring'
-import { formatMoney, selectClass } from '@/lib/utils'
+import { formatMoney, formatShortDate, selectClass } from '@/lib/utils'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
@@ -562,7 +562,7 @@ export function Subscriptions() {
               <CalendarClock size={14} className="text-muted-foreground flex-shrink-0" />
               <span className="text-[13px] font-medium flex-1 min-w-0 truncate">{item.name}</span>
               <span className="text-[13px] text-muted-foreground w-16 lg:w-24 text-right flex-shrink-0">
-                {item.next_date}
+                {formatShortDate(item.next_date)}
               </span>
               <span className="text-[13px] w-20 lg:w-28 text-right flex-shrink-0">{formatMoney(item.amount)}</span>
             </div>

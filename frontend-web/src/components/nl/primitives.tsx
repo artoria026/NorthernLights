@@ -110,7 +110,16 @@ export function ViewHeader({
           )}
           {subtitle && <p className="text-[12.5px] text-muted-foreground mt-1.5 ml-[30px]">{subtitle}</p>}
         </div>
-        {actions && <div className="flex items-center gap-3 flex-shrink-0">{actions}</div>}
+        {actions && (
+          // w-full en movil -- una vez que este bloque cae a su propia linea
+          // (el flex-wrap del row de arriba), sigue siendo flex-shrink-0 por
+          // dentro y nunca se encoge bajo el ancho natural de su contenido a
+          // menos que tenga un ancho real del cual encoger primero. En
+          // desktop vuelve a w-auto para sentarse junto al titulo como antes.
+          <div className="flex items-center gap-3 flex-wrap w-full lg:w-auto lg:flex-shrink-0">
+            {actions}
+          </div>
+        )}
       </div>
       {tourKey && tourContent && (
         <WelcomeModal

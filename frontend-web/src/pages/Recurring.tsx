@@ -25,7 +25,7 @@ import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { Donut } from '@/lib/charts'
 import { FREQUENCY_LABELS, ITEM_TYPE_LABELS, monthlyEquivalent, STATUS_LABELS, URGENCY_LABELS } from '@/lib/recurring'
-import { formatMoney, selectClass } from '@/lib/utils'
+import { formatMoney, formatShortDate, selectClass } from '@/lib/utils'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
@@ -760,7 +760,7 @@ export function Recurring() {
                     <SoftBadge severity="blue">{ITEM_TYPE_LABELS[item.item_type]}</SoftBadge>
                   </div>
                   <span className="text-[13px] text-muted-foreground w-16 lg:w-24 text-right flex-shrink-0">
-                    {item.next_date}
+                    {formatShortDate(item.next_date)}
                   </span>
                   <span
                     className="text-[13px] w-20 lg:w-28 text-right flex-shrink-0"
