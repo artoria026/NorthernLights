@@ -19,7 +19,6 @@ export type ModuleKey =
   | 'reports'
   | 'settings'
   | 'notifications'
-  | 'admin'
 
 export interface TourStepContent {
   /** Selector CSS de un elemento real de la pantalla, vía atributo
@@ -366,34 +365,6 @@ export const TOUR_CONTENT: Partial<Record<ModuleKey, TourContent>> = {
         selector: '[data-tour="notifications:list"]',
         title: 'Tu lista de avisos',
         text: 'Click en cualquiera para marcarla como leída y ver su detalle.',
-      },
-    ],
-  },
-  admin: {
-    welcome: {
-      description:
-        'Solo visible para administradores: uso general de la app y la lista completa de usuarios registrados.',
-      bullets: [
-        'Revisa cuántos usuarios totales, activos y nuevos hay',
-        'Da o quita permisos de admin, desactiva/reactiva cuentas',
-        'Da seguimiento al feedback que mandan los usuarios',
-      ],
-    },
-    steps: [
-      {
-        selector: '[data-tour="admin:stats"]',
-        title: 'Uso general de la app',
-        text: 'Usuarios totales, activos y nuevos de los últimos 7 días, de un vistazo.',
-      },
-      {
-        selector: '[data-tour="admin:users"]',
-        title: 'Gestiona usuarios',
-        text: 'Da o quita permisos de admin, o desactiva una cuenta -- no puedes hacerte esto a ti mismo, para evitar quedarte sin acceso por accidente.',
-      },
-      {
-        selector: '[data-tour="admin:feedback"]',
-        title: 'Feedback de usuarios',
-        text: 'Bugs y sugerencias enviados desde "Novedades". Cambia el estado de cada uno con el selector de su fila.',
       },
     ],
   },

@@ -1,9 +1,38 @@
-import { Bug, Lightbulb, MessageSquare, ShieldCheck } from 'lucide-react'
-import { useState } from 'react'
-import { HelpSection, HelpTip } from '@/components/nl/Help'
-import { EmptyState, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
+import {
+  Activity,
+  ArrowLeftRight,
+  Bot,
+  Bug,
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Coins,
+  KeyRound,
+  Lightbulb,
+  MessageSquare,
+  Search,
+  ShieldCheck,
+  ShieldOff,
+  TrendingUp,
+  UserCheck,
+  UserPlus,
+  Users,
+  UserX,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { EmptyState, ProgressBar, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { type AdminUser, useAdminStats, useAdminUsers, useSetUserActive, useSetUserRole } from '@/hooks/useAdmin'
+import { SimpleBars } from '@/lib/charts'
+import { formatShortDate, selectClass } from '@/lib/utils'
+import {
+  type AdminUser,
+  useAdminStats,
+  useAdminUsers,
+  useResetUserPassword,
+  useSetUserActive,
+  useSetUserRole,
+} from '@/hooks/useAdmin'
 import {
   type AdminFeedback,
   type FeedbackStatus,
@@ -19,12 +48,93 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+/** Mismos umbrales que ya usa health_score en Advisor.tsx: 70+ es sano
+ * (verde), 40-69 regular (naranja), menos de 40 mal (rojo). Solo el score
+ * compuesto -- sus componentes (DTI, tasa de ahorro, etc.) nunca llegan al
+ * front de admin, ver admin_service.list_users. */
+function healthScoreColors(score: number): { bg: string; ink: string } {
+  if (score >= 70) return { bg: 'var(--nl-accent-soft-bg)', ink: 'var(--nl-accent-ink)' }
+  if (score >= 40) return { bg: 'var(--nl-warning-soft-bg)', ink: 'var(--nl-warning-ink)' }
+  return { bg: 'var(--nl-danger-soft-bg)', ink: 'var(--nl-danger-ink)' }
+}
+
+function HealthScoreBadge({ score }: { score: number }) {
+  const colors = healthScoreColors(score)
+  return (
+    <span
+      className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      style={{ background: colors.bg, color: colors.ink }}
+    >
+      {Math.round(score)}
+    </span>
+  )
+}
+
+/** Mismo logo de Google (4 colores) que ya usa Settings.tsx en "Cuentas
+ * conectadas" -- reusado tal cual para que el stat "Con Google" se
+ * reconozca de un vistazo, en vez de un ícono generico. */
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" className="flex-shrink-0">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.6 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.3 0 10.1-2 13.7-5.3l-6.3-5.3C29.4 35.4 26.8 36 24 36c-5.3 0-9.9-3.4-11.3-8.1l-6.5 5C9.6 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.3 5.6-6.2 7.1l6.3 5.3C39.9 37.5 44 31.7 44 24c0-1.3-.1-2.7-.4-3.5z" />
+    </svg>
+  )
+}
+
+/** Fila de "Adopción de funciones" -- % de usuarios totales que ya tienen al
+ * menos 1 registro de ese tipo, calculado en el cliente (count/total ya
+ * vienen del backend, sin otra llamada). */
+function AdoptionRow({ label, count, total }: { label: string; count: number; total: number }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0
+  return (
+    <div className="flex flex-col gap-1.5 mb-3.5 last:mb-0">
+      <div className="flex items-center justify-between text-[12.5px]">
+        <span className="text-muted-foreground">{label}</span>
+        <span className="font-medium">
+          {pct}% <span className="text-muted-foreground font-normal">({count})</span>
+        </span>
+      </div>
+      <ProgressBar pct={pct} />
+    </div>
+  )
+}
+
 function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
   const setActive = useSetUserActive()
   const setRole = useSetUserRole()
+  const resetPassword = useResetUserPassword()
   const confirm = useConfirmStore((s) => s.ask)
   const pushToast = useUiStore((s) => s.pushToast)
   const busy = setActive.isPending || setRole.isPending
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
+
+  async function handleResetPassword() {
+    const ok = await confirm({
+      title: 'Restablecer contraseña',
+      message: `¿Generar una contraseña temporal para "${user.name}" (${user.email})? Su contraseña actual deja de funcionar de inmediato.`,
+      confirmLabel: 'Generar',
+    })
+    if (!ok) return
+    try {
+      const result = await resetPassword.mutateAsync(user.id)
+      setTempPassword(result.temporary_password)
+    } catch (error) {
+      pushToast(apiErrorMessage(error), 'error')
+    }
+  }
+
+  async function copyTempPassword() {
+    if (!tempPassword) return
+    try {
+      await navigator.clipboard.writeText(tempPassword)
+      pushToast('Contraseña copiada', 'success')
+    } catch {
+      pushToast('No se pudo copiar -- selecciónala manualmente', 'error')
+    }
+  }
 
   async function toggleActive() {
     if (user.is_active) {
@@ -79,19 +189,33 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
           type="button"
           disabled={busy}
           onClick={toggleRole}
-          className="rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-40"
+          title={user.role === 'admin' ? 'Quitar admin' : 'Hacer admin'}
+          className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info disabled:opacity-40"
         >
-          {user.role === 'admin' ? 'Quitar admin' : 'Hacer admin'}
+          {user.role === 'admin' ? <ShieldOff size={13} /> : <ShieldCheck size={13} />}
         </button>
       )}
       <button
         type="button"
         disabled={busy || isSelf}
-        title={isSelf ? 'No puedes desactivar tu propia cuenta' : undefined}
+        title={isSelf ? 'No puedes desactivar tu propia cuenta' : user.is_active ? 'Desactivar' : 'Reactivar'}
         onClick={toggleActive}
-        className="rounded px-2 py-1 text-[11px] border border-border text-destructive hover:opacity-80 disabled:opacity-40"
+        className={`w-7 h-7 rounded-full flex items-center justify-center disabled:opacity-40 ${
+          user.is_active
+            ? 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive'
+            : 'text-muted-foreground hover:bg-success/10 hover:text-success'
+        }`}
       >
-        {user.is_active ? 'Desactivar' : 'Reactivar'}
+        {user.is_active ? <UserX size={13} /> : <UserCheck size={13} />}
+      </button>
+      <button
+        type="button"
+        disabled={resetPassword.isPending}
+        title="Restablecer contraseña"
+        onClick={handleResetPassword}
+        className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-warning/10 hover:text-warning disabled:opacity-40"
+      >
+        <KeyRound size={13} />
       </button>
     </>
   )
@@ -99,7 +223,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
   return (
     <>
       {/* Fila de tabla -- solo lg+ */}
-      <div className="hidden lg:grid grid-cols-[1.6fr_1fr_90px_100px_110px_170px] gap-2 items-center py-3 border-t border-border first:border-0 text-[13px]">
+      <div className="hidden lg:grid grid-cols-[1.1fr_75px_85px_60px_70px_65px_85px_75px_75px] gap-2 items-center py-3 border-t border-border first:border-0 text-[13px]">
         <div className="min-w-0">
           <div className="font-medium truncate">
             {user.name} {isSelf && <span className="text-muted-foreground">(tú)</span>}
@@ -107,13 +231,17 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
           <div className="text-muted-foreground text-[12px] truncate">{user.email}</div>
         </div>
         <span className="text-muted-foreground">{formatDate(user.created_at)}</span>
+        <span className="text-muted-foreground">
+          {user.last_active_at ? formatShortDate(user.last_active_at) : 'Nunca'}
+        </span>
         <span className="text-right text-muted-foreground">{user.accounts_count}</span>
         <span className="text-right text-muted-foreground">{user.transactions_count}</span>
-        <span>{roleBadge}</span>
-        <span className="flex justify-end items-center gap-1.5">
-          {statusBadge}
-          {actionButtons}
+        <span>
+          <HealthScoreBadge score={user.health_score} />
         </span>
+        <span>{roleBadge}</span>
+        <span>{statusBadge}</span>
+        <span className="flex justify-end items-center gap-1">{actionButtons}</span>
       </div>
 
       {/* Card -- solo mobile */}
@@ -127,13 +255,41 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
         <div className="flex items-center gap-1.5 flex-wrap">
           {roleBadge}
           {statusBadge}
+          <HealthScoreBadge score={user.health_score} />
         </div>
         <div className="text-[12px] text-muted-foreground">
           Desde {formatDate(user.created_at)} · {user.accounts_count} cuenta
-          {user.accounts_count === 1 ? '' : 's'} · {user.transactions_count} transacc.
+          {user.accounts_count === 1 ? '' : 's'} · {user.transactions_count} transacc. · Última
+          conexión: {user.last_active_at ? formatShortDate(user.last_active_at) : 'Nunca'}
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">{actionButtons}</div>
       </div>
+
+      {/* Contraseña temporal -- se muestra UNA sola vez, no queda guardada
+          en ningún lado en texto plano salvo mientras este modal esta
+          abierto (estado local, se pierde al cerrarlo). */}
+      <Dialog open={tempPassword !== null} onOpenChange={(next) => !next && setTempPassword(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Contraseña temporal — {user.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-[12.5px] text-muted-foreground">
+            Pásasela al usuario ahora por fuera de la app — no se puede volver a ver.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded-md border border-border px-3 py-2 text-[13px] font-mono select-all">
+              {tempPassword}
+            </code>
+            <button
+              type="button"
+              onClick={copyTempPassword}
+              className="rounded-md border border-border px-3 py-2 text-[12.5px] text-muted-foreground hover:text-foreground"
+            >
+              Copiar
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
@@ -231,96 +387,207 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
   )
 }
 
-function AdminHelp() {
-  return (
-    <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          Solo visible para administradores: uso general de la app (usuarios totales, activos, nuevos de
-          la semana) y la lista completa de usuarios registrados.
-        </p>
-      </HelpSection>
-      <HelpSection heading="Hacer/Quitar admin">
-        <p>
-          Da o quita permisos de administración a otro usuario. No puedes quitarte el rol a ti mismo desde
-          aquí, para evitar quedarte sin acceso por accidente.
-        </p>
-      </HelpSection>
-      <HelpSection heading="Desactivar / Reactivar">
-        <p>
-          Desactivar bloquea el inicio de sesión de ese usuario sin borrar sus datos — reversible en
-          cualquier momento con "Reactivar". Tampoco puedes desactivar tu propia cuenta desde aquí.
-        </p>
-      </HelpSection>
-      <HelpSection heading="Feedback de usuarios">
-        <p>
-          Bugs y sugerencias que los usuarios mandan desde el modal de "Novedades". Cambiá el estado con
-          el selector de cada fila — <strong>Nuevo</strong> es lo que nadie revisó todavía,{' '}
-          <strong>Leído</strong> lo viste pero no decidiste, <strong>Considerado</strong> lo vas a tener
-          en cuenta y <strong>Descartado</strong> no se va a hacer. Por ahora el usuario no ve este
-          estado, solo queda registrado acá. El selector de arriba de la tabla filtra la lista por
-          estado.
-        </p>
-      </HelpSection>
-      <HelpTip>
-        Cuentas y Transacciones en la tabla son solo conteos de referencia — no puedes ver el detalle
-        financiero de otro usuario desde este panel.
-      </HelpTip>
-    </>
-  )
-}
+const USERS_PER_PAGE = 20
 
 export function Admin() {
   const currentUser = useAuthStore((s) => s.user)
   const { data: stats } = useAdminStats()
-  const { data: users, isLoading } = useAdminUsers(1, 100)
+  const [page, setPage] = useState(1)
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+
+  // Debounce de ~400ms antes de disparar la busqueda -- evita una request
+  // por cada tecla. Cambiar la busqueda reinicia a la pagina 1 (una pagina 3
+  // de una busqueda que solo tiene 1 pagina no tendria sentido).
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput)
+      setPage(1)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const { data: users, isLoading } = useAdminUsers(page, USERS_PER_PAGE, search)
   const [feedbackFilter, setFeedbackFilter] = useState<FeedbackStatus | ''>('')
   const { data: feedbackItems, isLoading: feedbackLoading } = useAdminFeedback(
     feedbackFilter || undefined,
   )
 
+  const total = users?.meta?.total ?? 0
+  const rangeStart = total === 0 ? 0 : (page - 1) * USERS_PER_PAGE + 1
+  const rangeEnd = Math.min(total, page * USERS_PER_PAGE)
+  const maxPage = Math.max(1, Math.ceil(total / USERS_PER_PAGE))
+
   // El guard de rol vive en AdminLayout (shell de esta pagina) -- ver
   // AdminLayout.tsx.
   return (
     <div>
-      <ViewHeader icon={<ShieldCheck />} title="Administración" help={<AdminHelp />} tourKey="admin" />
+      <ViewHeader icon={<ShieldCheck />} title="Administración" />
 
-      <div className="grid grid-cols-2 gap-3 lg:flex lg:gap-5 lg:flex-wrap mb-6" data-tour="admin:stats">
-        <StatCard label="Usuarios totales" value={String(stats?.total_users ?? '—')} />
-        <StatCard label="Activos" value={String(stats?.active_users ?? '—')} />
-        <StatCard label="Nuevos últimos 7 días" value={String(stats?.new_users_last_7_days ?? '—')} />
-        <StatCard label="Cuentas creadas" value={String(stats?.total_accounts ?? '—')} />
-        <StatCard label="Transacciones" value={String(stats?.total_transactions ?? '—')} />
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 lg:flex lg:gap-2.5 lg:flex-wrap mb-6">
+        <StatCard
+          compact
+          icon={<Users />}
+          label="Usuarios totales"
+          value={String(stats?.total_users ?? '—')}
+        />
+        <StatCard compact icon={<UserCheck />} label="Activos" value={String(stats?.active_users ?? '—')} />
+        <StatCard
+          compact
+          icon={<UserPlus />}
+          label="Nuevos últimos 7 días"
+          value={String(stats?.new_users_last_7_days ?? '—')}
+        />
+        <StatCard compact icon={<GoogleIcon />} label="Con Google" value={String(stats?.google_users ?? '—')} />
+        <StatCard
+          compact
+          icon={<UserX />}
+          label="Inactivos 30+ días"
+          value={String(stats?.inactive_users_30d ?? '—')}
+          valueClassName={
+            stats && stats.inactive_users_30d > 0 ? 'text-[color:var(--nl-warning-ink)]' : undefined
+          }
+        />
+        <StatCard
+          compact
+          icon={<Building2 />}
+          label="Cuentas creadas"
+          value={String(stats?.total_accounts ?? '—')}
+        />
+        <StatCard
+          compact
+          icon={<ArrowLeftRight />}
+          label="Transacciones"
+          value={String(stats?.total_transactions ?? '—')}
+        />
+        <StatCard
+          compact
+          icon={<Coins />}
+          label="Deudas registradas"
+          value={String(stats?.total_debts ?? '—')}
+        />
+        <StatCard compact icon={<Bot />} label="Consultas IA hoy" value={String(stats?.ai_queries_today ?? '—')} />
       </div>
 
-      <div className="bg-card border border-border rounded-md p-5" data-tour="admin:users">
-        <div className="text-[15px] font-medium mb-3">Usuarios</div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div className="bg-card border border-border rounded-md p-5">
+          <div className="flex items-center gap-2 text-[15px] font-medium mb-4">
+            <Activity size={15} className="text-muted-foreground" />
+            Adopción de funciones
+          </div>
+          <AdoptionRow
+            label="Con al menos 1 cuenta"
+            count={stats?.users_with_accounts ?? 0}
+            total={stats?.total_users ?? 0}
+          />
+          <AdoptionRow
+            label="Con al menos 1 deuda"
+            count={stats?.users_with_debts ?? 0}
+            total={stats?.total_users ?? 0}
+          />
+          <AdoptionRow
+            label="Con al menos 1 recurrente"
+            count={stats?.users_with_recurring ?? 0}
+            total={stats?.total_users ?? 0}
+          />
+        </div>
+
+        <div className="bg-card border border-border rounded-md p-5">
+          <div className="flex items-center gap-2 text-[15px] font-medium mb-4">
+            <TrendingUp size={15} className="text-muted-foreground" />
+            Altas de usuarios (14 días)
+          </div>
+          {stats && stats.signups_last_14_days.every((d) => d.count === 0) ? (
+            <EmptyState>Sin altas nuevas en los últimos 14 días.</EmptyState>
+          ) : (
+            <SimpleBars
+              height={140}
+              showValues
+              bars={(stats?.signups_last_14_days ?? []).map((d) => ({
+                label: new Date(d.date).toLocaleDateString('es-MX', { day: 'numeric', timeZone: 'UTC' }),
+                value: d.count,
+              }))}
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-md p-5">
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <div className="flex items-center gap-2 text-[15px] font-medium">
+            <Users size={15} className="text-muted-foreground" />
+            Usuarios
+          </div>
+          <div className="relative w-full sm:w-[260px]">
+            <Search
+              size={14}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+            />
+            <input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Buscar por nombre o correo..."
+              className={`${selectClass} h-9 w-full pl-8`}
+            />
+          </div>
+        </div>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Cargando...</p>
         ) : (users?.items.length ?? 0) === 0 ? (
-          <EmptyState>Sin usuarios.</EmptyState>
+          <EmptyState>{search ? 'Sin resultados para tu búsqueda.' : 'Sin usuarios.'}</EmptyState>
         ) : (
           <>
-            <div className="hidden lg:grid grid-cols-[1.6fr_1fr_90px_100px_110px_170px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <div className="hidden lg:grid grid-cols-[1.1fr_75px_85px_60px_70px_65px_85px_75px_75px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
               <span>Usuario</span>
               <span>Registrado</span>
+              <span>Última conexión</span>
               <span className="text-right">Cuentas</span>
               <span className="text-right">Transac.</span>
+              <span>Salud</span>
               <span>Rol</span>
-              <span className="text-right">Estado / Acción</span>
+              <span>Estado</span>
+              <span className="text-right">Acción</span>
             </div>
             {users?.items.map((u) => (
               <UserRow key={u.id} user={u} isSelf={u.id === currentUser?.id} />
             ))}
+            <div className="flex justify-between items-center mt-3.5 text-xs text-muted-foreground">
+              <span>
+                Mostrando {rangeStart}–{rangeEnd} de {total}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="flex items-center gap-1 rounded px-3 py-1.5 border border-border disabled:opacity-40"
+                >
+                  <ChevronLeft size={13} />
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= maxPage}
+                  onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
+                  className="flex items-center gap-1 rounded px-3 py-1.5 border border-border disabled:opacity-40"
+                >
+                  Siguiente
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
           </>
         )}
       </div>
 
-      <div className="bg-card border border-border rounded-md p-5 mt-4" data-tour="admin:feedback">
+      <div className="bg-card border border-border rounded-md p-5 mt-4">
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
           <div className="flex items-center gap-2 text-[15px] font-medium">
             <MessageSquare size={15} className="text-muted-foreground" />
             Feedback
+            {!!stats?.feedback_new_count && (
+              <SoftBadge severity="blue">{stats.feedback_new_count} nuevo{stats.feedback_new_count === 1 ? '' : 's'}</SoftBadge>
+            )}
           </div>
           <Select
             value={feedbackFilter || 'all'}

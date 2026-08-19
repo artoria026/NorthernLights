@@ -4,8 +4,15 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_admin_db, get_db, get_rls_db
+from app.core.redis import get_redis
 from app.core.security import CurrentUser, require_admin
-from app.schemas.admin import AdminStats, AdminUserActiveUpdate, AdminUserOut, AdminUserRoleUpdate
+from app.schemas.admin import (
+    AdminPasswordResetOut,
+    AdminStats,
+    AdminUserActiveUpdate,
+    AdminUserOut,
+    AdminUserRoleUpdate,
+)
 from app.schemas.common import Meta, SuccessResponse
 from app.schemas.feedback import FeedbackAdminOut, FeedbackStatusUpdate
 from app.services import admin_service, feedback_service
@@ -17,10 +24,11 @@ router = APIRouter()
 async def list_users(
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=20, ge=1, le=100),
+    search: str | None = Query(default=None, max_length=200),
     current_admin: CurrentUser = Depends(require_admin),
     session: AsyncSession = Depends(get_admin_db),
 ) -> SuccessResponse:
-    users, total = await admin_service.list_users(session, page, per_page)
+    users, total = await admin_service.list_users(session, page, per_page, search)
     return SuccessResponse(
         data=[AdminUserOut(**u) for u in users],
         meta=Meta(total=total, page=page, per_page=per_page),
@@ -49,12 +57,23 @@ async def set_user_role(
     return SuccessResponse(data={"id": str(user.id), "role": user.role})
 
 
+@router.post("/users/{user_id}/reset-password")
+async def reset_user_password(
+    user_id: UUID,
+    current_admin: CurrentUser = Depends(require_admin),
+    session: AsyncSession = Depends(get_db),
+) -> SuccessResponse:
+    temporary_password = await admin_service.reset_user_password(session, user_id)
+    return SuccessResponse(data=AdminPasswordResetOut(temporary_password=temporary_password))
+
+
 @router.get("/stats")
 async def get_stats(
     current_admin: CurrentUser = Depends(require_admin),
     session: AsyncSession = Depends(get_admin_db),
 ) -> SuccessResponse:
-    stats = await admin_service.get_stats(session)
+    redis = await get_redis()
+    stats = await admin_service.get_stats(session, redis)
     return SuccessResponse(data=AdminStats(**stats))
 
 
