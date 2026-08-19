@@ -308,17 +308,36 @@ const FEEDBACK_STATUS_SEVERITY: Record<FeedbackStatus, 'blue' | 'warning' | 'acc
   discarded: 'danger',
 }
 
+// Estos dos si le disparan una notificacion in-app al usuario dueño del
+// feedback (ver feedback_service._NOTIFY_STATUSES en el backend) -- por eso
+// son los unicos que abren el dialogo para pedir una nota antes de aplicar
+// el cambio; new/read son transiciones internas que no notifican a nadie.
+const _NOTIFYING_STATUSES: FeedbackStatus[] = ['considered', 'discarded']
+
 function FeedbackRow({ item }: { item: AdminFeedback }) {
   const updateStatus = useUpdateFeedbackStatus()
   const pushToast = useUiStore((s) => s.pushToast)
   const TypeIcon = item.type === 'bug' ? Bug : Lightbulb
+  const [pendingStatus, setPendingStatus] = useState<FeedbackStatus | null>(null)
+  const [note, setNote] = useState('')
 
-  async function handleStatusChange(status: FeedbackStatus) {
+  async function applyStatus(status: FeedbackStatus, adminNote?: string) {
     try {
-      await updateStatus.mutateAsync({ id: item.id, status })
+      await updateStatus.mutateAsync({ id: item.id, status, adminNote })
+      setPendingStatus(null)
+      setNote('')
     } catch (error) {
       pushToast(apiErrorMessage(error), 'error')
     }
+  }
+
+  function handleStatusChange(status: FeedbackStatus) {
+    if (_NOTIFYING_STATUSES.includes(status)) {
+      setNote(item.admin_note ?? '')
+      setPendingStatus(status)
+      return
+    }
+    void applyStatus(status)
   }
 
   const typeBadge = (
@@ -347,6 +366,11 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
       </SelectContent>
     </Select>
   )
+  const noteText = item.admin_note ? (
+    <p className="text-[12px] text-muted-foreground italic truncate" title={item.admin_note}>
+      Nota: {item.admin_note}
+    </p>
+  ) : null
 
   return (
     <>
@@ -357,9 +381,12 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
           <div className="font-medium truncate">{item.user_name}</div>
           <div className="text-muted-foreground text-[12px] truncate">{item.user_email}</div>
         </div>
-        <p className="text-muted-foreground truncate" title={item.message}>
-          {item.message}
-        </p>
+        <div className="min-w-0">
+          <p className="text-muted-foreground truncate" title={item.message}>
+            {item.message}
+          </p>
+          {noteText}
+        </div>
         <span className="text-muted-foreground text-[12px]">{formatDate(item.created_at)}</span>
         <span className="flex justify-end">{statusSelect}</span>
       </div>
@@ -378,11 +405,51 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
           </div>
         </div>
         <p className="text-muted-foreground">{item.message}</p>
+        {noteText}
         <div className="flex items-center justify-between gap-2">
           <span className="text-[12px] text-muted-foreground">{formatDate(item.created_at)}</span>
           {statusSelect}
         </div>
       </div>
+
+      <Dialog open={pendingStatus !== null} onOpenChange={(open) => !open && setPendingStatus(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {pendingStatus === 'considered' ? 'Marcar como considerado' : 'Marcar como descartado'}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-[13px] text-muted-foreground">
+            {item.user_name} recibirá una notificación de este cambio. Puedes agregar una nota
+            explicando el porqué -- es opcional, pero ayuda a que la respuesta no se sienta seca.
+          </p>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Ej. Lo agregamos al roadmap de Q4, o: no encaja con el enfoque actual de la app."
+            rows={3}
+            maxLength={2000}
+            className={`${selectClass} h-auto resize-none py-2`}
+          />
+          <div className="flex justify-end gap-2 mt-2">
+            <button
+              type="button"
+              onClick={() => setPendingStatus(null)}
+              className="px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-muted"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              disabled={updateStatus.isPending}
+              onClick={() => pendingStatus && applyStatus(pendingStatus, note.trim() || undefined)}
+              className="px-3 py-1.5 rounded-md text-[13px] bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              Confirmar
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

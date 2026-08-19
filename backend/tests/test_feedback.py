@@ -95,9 +95,9 @@ async def test_admin_sees_feedback_from_all_users(client: AsyncClient, session_f
 
 
 async def test_regular_user_cannot_see_others_feedback_directly(client: AsyncClient):
-    """Sin un endpoint de listado para usuarios normales todavia, pero esto
-    prueba que la policy RLS en si misma aisla -- no es solo el 403 de
-    require_admin lo que protege los datos de otros."""
+    """GET /feedback (abajo) ya cubre el listado propio de un usuario normal;
+    esto prueba ademas que la policy RLS en si misma aisla -- no es solo el
+    403 de require_admin lo que protege los datos de otros."""
     token_a, _, _ = await _register_and_login(client, name="Usuario A")
     headers_a = {"Authorization": f"Bearer {token_a}"}
     create = await client.post(
@@ -142,3 +142,73 @@ async def test_admin_updates_feedback_status(client: AsyncClient, session_factor
     )
     ids = {item["id"] for item in listing.json()["data"]}
     assert feedback_id in ids
+
+
+async def test_user_can_list_own_feedback(client: AsyncClient):
+    token_a, _, _ = await _register_and_login(client, name="Usuario A")
+    headers_a = {"Authorization": f"Bearer {token_a}"}
+    await client.post(
+        "/api/v1/feedback", headers=headers_a, json={"type": "bug", "message": "Solo de A"}
+    )
+
+    token_b, _, _ = await _register_and_login(client, name="Usuario B")
+    headers_b = {"Authorization": f"Bearer {token_b}"}
+    await client.post(
+        "/api/v1/feedback", headers=headers_b, json={"type": "bug", "message": "Solo de B"}
+    )
+
+    response = await client.get("/api/v1/feedback", headers=headers_a)
+    assert response.status_code == 200
+    messages = {item["message"] for item in response.json()["data"]}
+    assert messages == {"Solo de A"}
+
+
+async def test_status_change_to_considered_notifies_user(client: AsyncClient, session_factory):
+    admin_headers = await _register_admin(client, session_factory)
+    token, _, _ = await _register_and_login(client, name="Olvidadizo")
+    headers = {"Authorization": f"Bearer {token}"}
+    create = await client.post(
+        "/api/v1/feedback",
+        headers=headers,
+        json={"type": "feature", "message": "Exportar a Excel"},
+    )
+    feedback_id = create.json()["data"]["id"]
+
+    update = await client.patch(
+        f"/api/v1/admin/feedback/{feedback_id}/status",
+        headers=admin_headers,
+        json={"status": "considered", "admin_note": "Lo metemos al roadmap de Q4"},
+    )
+    assert update.status_code == 200
+    assert update.json()["data"]["admin_note"] == "Lo metemos al roadmap de Q4"
+
+    notifications = await client.get("/api/v1/notifications", headers=headers)
+    items = notifications.json()["data"]
+    assert any(
+        n["type"] == "feedback_status_changed" and n["body"] == "Lo metemos al roadmap de Q4"
+        for n in items
+    )
+
+    own_feedback = await client.get("/api/v1/feedback", headers=headers)
+    assert own_feedback.json()["data"][0]["admin_note"] == "Lo metemos al roadmap de Q4"
+
+
+async def test_status_change_to_read_does_not_notify_user(client: AsyncClient, session_factory):
+    """new/read son transiciones internas del admin -- no deben generar
+    notificacion, a diferencia de considered/discarded."""
+    admin_headers = await _register_admin(client, session_factory)
+    token, _, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    create = await client.post(
+        "/api/v1/feedback", headers=headers, json={"type": "bug", "message": "Algo menor"}
+    )
+    feedback_id = create.json()["data"]["id"]
+
+    await client.patch(
+        f"/api/v1/admin/feedback/{feedback_id}/status",
+        headers=admin_headers,
+        json={"status": "read"},
+    )
+
+    notifications = await client.get("/api/v1/notifications", headers=headers)
+    assert notifications.json()["data"] == []

@@ -31,3 +31,4 @@ class Feedback(Base, TimestampMixin):
     type: Mapped[str] = mapped_column(String, nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="new")
+    admin_note: Mapped[str | None] = mapped_column(Text, nullable=True)

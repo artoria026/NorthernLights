@@ -18,3 +18,12 @@ async def create_feedback(
 ) -> SuccessResponse:
     feedback = await feedback_service.create_feedback(session, current_user.id, data)
     return SuccessResponse(data=FeedbackOut.model_validate(feedback))
+
+
+@router.get("")
+async def list_own_feedback(
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    items = await feedback_service.list_own_feedback(session, current_user.id)
+    return SuccessResponse(data=[FeedbackOut.model_validate(item) for item in items])

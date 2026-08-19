@@ -14,6 +14,7 @@ class FeedbackOut(BaseModel):
     type: str
     message: str
     status: str
+    admin_note: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -28,3 +29,4 @@ class FeedbackAdminOut(FeedbackOut):
 
 class FeedbackStatusUpdate(BaseModel):
     status: str = Field(pattern="^(new|read|considered|discarded)$")
+    admin_note: str | None = Field(default=None, max_length=2000)
