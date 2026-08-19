@@ -18,6 +18,7 @@ NOTIFICATION_TYPES = (
     "pending_payment_reminder",
     "subscription_alert",
     "loan_overdue",
+    "feedback_status_changed",
 )
 
 

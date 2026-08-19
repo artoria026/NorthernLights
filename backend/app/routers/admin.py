@@ -97,5 +97,9 @@ async def update_feedback_status(
     current_admin: CurrentUser = Depends(require_admin),
     session: AsyncSession = Depends(get_rls_db),
 ) -> SuccessResponse:
-    feedback = await feedback_service.update_status(session, feedback_id, body.status)
-    return SuccessResponse(data={"id": str(feedback.id), "status": feedback.status})
+    feedback = await feedback_service.update_status(
+        session, feedback_id, body.status, body.admin_note, current_admin.id
+    )
+    return SuccessResponse(
+        data={"id": str(feedback.id), "status": feedback.status, "admin_note": feedback.admin_note}
+    )

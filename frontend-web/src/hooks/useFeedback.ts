@@ -13,6 +13,7 @@ export interface AdminFeedback {
   type: FeedbackType
   message: string
   status: FeedbackStatus
+  admin_note: string | null
   created_at: string
   updated_at: string
 }
@@ -43,16 +44,25 @@ export function useAdminFeedback(status?: FeedbackStatus) {
 export function useUpdateFeedbackStatus() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: FeedbackStatus }) => {
-      const { data } = await api.patch<ApiSuccess<{ id: string; status: FeedbackStatus }>>(
-        `/admin/feedback/${id}/status`,
-        { status },
-      )
+    mutationFn: async ({
+      id,
+      status,
+      adminNote,
+    }: {
+      id: string
+      status: FeedbackStatus
+      adminNote?: string
+    }) => {
+      const { data } = await api.patch<
+        ApiSuccess<{ id: string; status: FeedbackStatus; admin_note: string | null }>
+      >(`/admin/feedback/${id}/status`, { status, admin_note: adminNote })
       return data.data
     },
     onSuccess: (result) => {
       queryClient.setQueriesData<AdminFeedback[]>({ queryKey: ['admin', 'feedback'] }, (prev) =>
-        prev?.map((f) => (f.id === result.id ? { ...f, status: result.status } : f)),
+        prev?.map((f) =>
+          f.id === result.id ? { ...f, status: result.status, admin_note: result.admin_note } : f,
+        ),
       )
     },
   })
