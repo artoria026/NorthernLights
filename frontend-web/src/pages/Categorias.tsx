@@ -562,7 +562,10 @@ function CategoryCard({
         </span>
         <span className="text-[13px] font-medium flex-1 truncate">{category.name}</span>
         {category.is_system ? (
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div
+            className="flex items-center gap-2 flex-shrink-0"
+            data-tour={tourTarget ? 'categories:actions' : undefined}
+          >
             <span className="text-[10px] text-muted-foreground">Sistema</span>
             <button
               type="button"
@@ -574,7 +577,10 @@ function CategoryCard({
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div
+            className="flex items-center gap-2 flex-shrink-0"
+            data-tour={tourTarget ? 'categories:actions' : undefined}
+          >
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
               <DialogTrigger
                 render={
@@ -692,7 +698,7 @@ function HiddenCategoriesSection({ type }: { type: CatType }) {
   }
 
   return (
-    <div className="mt-6 border border-dashed border-border rounded-md p-4">
+    <div className="mt-6 border border-dashed border-border rounded-md p-4" data-tour="categories:hidden-section">
       <p className="text-[12px] font-medium text-muted-foreground mb-3">
         Categorías desactivadas (solo para ti)
       </p>
@@ -820,15 +826,17 @@ export function Categorias() {
         }
       />
 
-      <SegmentedControl
-        value={type}
-        onChange={setType}
-        options={[
-          { value: 'income', label: 'Ingresos' },
-          { value: 'expense', label: 'Gastos' },
-        ]}
-        className="mb-5"
-      />
+      <div data-tour="categories:type-toggle">
+        <SegmentedControl
+          value={type}
+          onChange={setType}
+          options={[
+            { value: 'income', label: 'Ingresos' },
+            { value: 'expense', label: 'Gastos' },
+          ]}
+          className="mb-5"
+        />
+      </div>
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>

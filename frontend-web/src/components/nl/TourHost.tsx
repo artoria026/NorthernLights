@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { TOUR_CONTENT } from '@/lib/tours'
 import { useTourStore } from '@/stores/tourStore'
 
 interface Rect {
@@ -16,6 +15,12 @@ function measure(el: Element): Rect {
 }
 
 const TOOLTIP_WIDTH = 264
+// Punto de partida para el primer render de cada step, antes de medir el
+// alto real -- los textos varian bastante en largo (algunos pasos son una
+// linea, otros cuatro), asi que un numero fijo aqui subestima seguido y deja
+// el tooltip cortado fuera del viewport en anclas de la mitad inferior de la
+// pantalla. tooltipHeight (medido con useLayoutEffect mas abajo) es la
+// fuente de verdad real para la matematica de colision.
 const TOOLTIP_HEIGHT_ESTIMATE = 170
 const PAD = 6
 
@@ -28,12 +33,26 @@ const PAD = 6
 export function TourHost() {
   const activeModuleKey = useTourStore((s) => s.activeModuleKey)
   const stepIndex = useTourStore((s) => s.stepIndex)
+  const visibleSteps = useTourStore((s) => s.visibleSteps)
   const setStep = useTourStore((s) => s.setStep)
   const stop = useTourStore((s) => s.stop)
   const [rect, setRect] = useState<Rect | null>(null)
+  const [tooltipHeight, setTooltipHeight] = useState(TOOLTIP_HEIGHT_ESTIMATE)
+  const tooltipRef = useRef<HTMLDivElement>(null)
 
-  const content = activeModuleKey ? TOUR_CONTENT[activeModuleKey] : undefined
-  const step = content?.steps[stepIndex]
+  const step = visibleSteps[stepIndex]
+
+  // Mide el alto real del tooltip despues de que el texto de este step ya
+  // se renderizo -- useLayoutEffect corre antes del paint del navegador, asi
+  // que si el alto medido difiere del estimado, el reposicionamiento de abajo
+  // ya usa el numero correcto en el mismo frame (sin parpadeo visible).
+  useLayoutEffect(() => {
+    const measured = tooltipRef.current?.getBoundingClientRect().height
+    if (measured && Math.abs(measured - tooltipHeight) > 1) setTooltipHeight(measured)
+    // Solo cuando cambia el contenido del step -- el alto del tooltip no
+    // depende de su propia posicion (top/left), solo del texto.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
 
   useEffect(() => {
     if (!step) {
@@ -63,9 +82,9 @@ export function TourHost() {
     }
   }, [step, stop])
 
-  if (!activeModuleKey || !content || !step || !rect) return null
+  if (!activeModuleKey || !step || !rect) return null
 
-  const total = content.steps.length
+  const total = visibleSteps.length
   const isLast = stepIndex === total - 1
 
   const holeStyle = {
@@ -76,9 +95,14 @@ export function TourHost() {
   }
 
   let tooltipTop = rect.top + rect.height + 14
-  if (tooltipTop + TOOLTIP_HEIGHT_ESTIMATE > window.innerHeight) {
-    tooltipTop = Math.max(10, rect.top - TOOLTIP_HEIGHT_ESTIMATE - 10)
+  if (tooltipTop + tooltipHeight > window.innerHeight) {
+    tooltipTop = Math.max(10, rect.top - tooltipHeight - 10)
   }
+  // Ni arriba ni abajo del elemento alcanzan en pantallas cortas o anclas
+  // muy cerca de un borde -- este clamp final es el que de verdad garantiza
+  // que los botones Siguiente/Atras queden alcanzables, la rama de arriba es
+  // solo la heuristica de "que lado se ve mejor".
+  tooltipTop = Math.min(Math.max(tooltipTop, 10), window.innerHeight - tooltipHeight - 10)
   const tooltipLeft = Math.min(Math.max(rect.left, 10), window.innerWidth - TOOLTIP_WIDTH - 10)
 
   return createPortal(
@@ -97,6 +121,7 @@ export function TourHost() {
         />
       </div>
       <div
+        ref={tooltipRef}
         className="fixed z-[101] flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-2xl transition-[top,left] duration-[380ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
         style={{ top: tooltipTop, left: tooltipLeft, width: TOOLTIP_WIDTH }}
       >
@@ -111,7 +136,7 @@ export function TourHost() {
           <p className="text-xs text-muted-foreground leading-relaxed">{step.text}</p>
         </div>
         <div className="flex gap-1">
-          {content.steps.map((_, i) => (
+          {visibleSteps.map((_, i) => (
             <span
               key={i}
               className="h-[5px] rounded-full transition-all duration-200"

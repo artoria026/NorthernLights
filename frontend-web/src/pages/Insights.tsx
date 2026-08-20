@@ -184,7 +184,7 @@ function ReviewsDialog({ insight }: { insight: Insight }) {
   )
 }
 
-function InsightCard({ insight }: { insight: Insight }) {
+function InsightCard({ insight, tourTarget }: { insight: Insight; tourTarget?: boolean }) {
   const dismiss = useDismissInsight()
   const resolve = useResolveInsight()
   const CategoryIcon = CATEGORY_ICONS[insight.category]
@@ -194,7 +194,10 @@ function InsightCard({ insight }: { insight: Insight }) {
       className="bg-card border border-border rounded-md p-4"
       style={{ borderLeft: `3px solid var(--nl-${PRIORITY_SEVERITY[insight.priority]})` }}
     >
-      <div className="flex items-start justify-between gap-3 mb-1.5">
+      <div
+        className="flex items-start justify-between gap-3 mb-1.5"
+        data-tour={tourTarget ? 'insights:card' : undefined}
+      >
         <div className="flex items-center gap-2 flex-wrap">
           <CategoryIcon size={15} className="text-muted-foreground flex-shrink-0" />
           <p className="font-medium text-[13px]">{insight.title}</p>
@@ -208,7 +211,7 @@ function InsightCard({ insight }: { insight: Insight }) {
           Próxima revisión: {insight.next_review_at}
           {insight.review_count > 0 && ` · revisado ${insight.review_count}x`}
         </span>
-        <div className="flex gap-2">
+        <div className="flex gap-2" data-tour={tourTarget ? 'insights:actions' : undefined}>
           {insight.review_count > 0 && <ReviewsDialog insight={insight} />}
           <button
             type="button"
@@ -321,8 +324,8 @@ export function Insights() {
         <p className="text-sm text-muted-foreground">Cargando...</p>
       ) : active && active.length > 0 ? (
         <div className="flex flex-col gap-2.5 mb-4">
-          {active.map((insight) => (
-            <InsightCard key={insight.id} insight={insight} />
+          {active.map((insight, i) => (
+            <InsightCard key={insight.id} insight={insight} tourTarget={i === 0} />
           ))}
         </div>
       ) : (

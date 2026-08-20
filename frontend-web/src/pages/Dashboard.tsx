@@ -252,7 +252,7 @@ export function Dashboard() {
       />
 
       {dueSoonItems.length > 0 && (
-        <div className="bg-card border border-border rounded-md p-3.5 mb-4">
+        <div className="bg-card border border-border rounded-md p-3.5 mb-4" data-tour="dashboard:due-soon">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={15} className="text-muted-foreground flex-shrink-0" />
             <span className="text-[13px] font-medium">
@@ -318,6 +318,7 @@ export function Dashboard() {
               label="Ingresos del mes"
               value={formatMoney(monthIncome)}
               note={<MonthDelta pct={incomeDelta} goodDirection="up" />}
+              dataTour="dashboard:month-summary"
             />
             <StatCard
               compact
@@ -470,7 +471,7 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
+        <div className="lg:col-span-2 bg-card border border-border rounded-md p-4" data-tour="dashboard:cashflow">
           <div className="text-[15px] font-medium mb-1">Flujo de caja de la semana</div>
           <p className="text-xs text-muted-foreground mb-2">Ingresos vs. gastos, últimos 7 días</p>
           <GroupedBars groups={weeklyBars} height={110} />
@@ -482,7 +483,7 @@ export function Dashboard() {
           />
         </div>
 
-        <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
+        <div className="lg:col-span-2 bg-card border border-border rounded-md p-4" data-tour="dashboard:networth">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[15px] font-medium">Patrimonio neto</span>
             <Link to="/reports" className="text-xs text-muted-foreground hover:text-foreground">
@@ -499,11 +500,12 @@ export function Dashboard() {
           )}
         </div>
 
-        {topInsights.map((insight) => (
+        {topInsights.map((insight, i) => (
           <div
             key={insight.id}
             className="lg:col-span-2 bg-card border border-border rounded-md p-3.5"
             style={{ borderLeft: `3px solid ${insight.priority === 'high' ? 'var(--nl-danger)' : 'var(--nl-accent)'}` }}
+            data-tour={i === 0 ? 'dashboard:insights-preview' : undefined}
           >
             <p className="text-[13px]">{insight.description}</p>
             <Link to="/insights" className="text-xs mt-2 inline-block" style={{ color: 'var(--nl-accent-ink)' }}>
