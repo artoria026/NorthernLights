@@ -3,6 +3,7 @@ import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CategorySelect } from '@/components/nl/CategorySelect'
 import { DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { DemoSteps, HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, SegmentedControl, StatCard, ViewHeader } from '@/components/nl/primitives'
@@ -407,20 +408,13 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
         <>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Categoría del gasto</label>
-            <Select value={categoryId || null} onValueChange={(v) => setCategoryId(v ?? '')}>
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="Selecciona categoría">
-                  {(v: string | null) => categories?.find((c) => c.id === v)?.name}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {categories?.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategorySelect
+              categories={categories}
+              value={categoryId}
+              onValueChange={setCategoryId}
+              placeholder="Selecciona categoría"
+              triggerClassName="h-9 w-full"
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">TDC donde se cargó</label>

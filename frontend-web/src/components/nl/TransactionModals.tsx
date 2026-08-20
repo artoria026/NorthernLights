@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { DialogCancelButton, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CategorySelect } from '@/components/nl/CategorySelect'
 import { SegmentedControl } from '@/components/nl/primitives'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
@@ -9,7 +10,7 @@ import { useCreateTransaction } from '@/hooks/useTransactions'
 import { apiErrorMessage } from '@/services/api'
 import { selectClass } from '@/lib/utils'
 import { useTransactionModalStore } from '@/stores/transactionModalStore'
-import type { EntryType } from '@/types'
+import type { Category, EntryType } from '@/types'
 
 type SimpleType = 'expense' | 'income'
 type DetailedType = 'expense' | 'income' | 'transfer'
@@ -174,7 +175,7 @@ interface SharedFormProps {
   form: FormState
   setForm: React.Dispatch<React.SetStateAction<FormState>>
   setType: (type: DetailedType) => void
-  categories: { id: string; name: string }[] | undefined
+  categories: Category[] | undefined
   payingAccounts: { id: string; name: string }[]
   canSubmit: boolean
   isPending: boolean
@@ -223,20 +224,13 @@ function QuickForm({
         className={`${selectClass} h-9`}
       />
       <div className="flex gap-2">
-        <Select value={form.categoryId || null} onValueChange={(v) => setForm({ ...form, categoryId: v ?? '' })}>
-          <SelectTrigger className="flex-1 h-9">
-            <SelectValue placeholder="Categoría">
-              {(v: string | null) => categories?.find((c) => c.id === v)?.name}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {categories?.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <CategorySelect
+          categories={categories}
+          value={form.categoryId}
+          onValueChange={(v) => setForm({ ...form, categoryId: v })}
+          placeholder="Categoría"
+          triggerClassName="flex-1 h-9"
+        />
         <Select value={form.accountId || null} onValueChange={(v) => setForm({ ...form, accountId: v ?? '' })}>
           <SelectTrigger className="flex-1 h-9">
             <SelectValue placeholder="Cuenta">
@@ -307,20 +301,12 @@ function DetailedForm({
       <div className="grid grid-cols-2 gap-3">
         {form.type !== 'transfer' ? (
           <Field label="Categoría">
-            <Select value={form.categoryId || null} onValueChange={(v) => setForm({ ...form, categoryId: v ?? '' })}>
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="Selecciona...">
-                  {(v: string | null) => categories?.find((c) => c.id === v)?.name}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {categories?.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CategorySelect
+              categories={categories}
+              value={form.categoryId}
+              onValueChange={(v) => setForm({ ...form, categoryId: v })}
+              triggerClassName="h-9 w-full"
+            />
           </Field>
         ) : (
           <Field label="Categoría">

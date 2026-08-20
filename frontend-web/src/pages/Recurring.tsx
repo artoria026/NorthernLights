@@ -20,6 +20,7 @@ import {
 import { type FormEvent, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CategorySelect } from '@/components/nl/CategorySelect'
 import { DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
@@ -187,20 +188,13 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">Categoría</label>
-        <Select value={form.category_id || null} onValueChange={(v) => setForm({ ...form, category_id: v ?? '' })}>
-          <SelectTrigger className={selectClass}>
-            <SelectValue placeholder="Selecciona categoría">
-              {(v: string | null) => categories?.find((c) => c.id === v)?.name}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {categories?.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <CategorySelect
+          categories={categories}
+          value={form.category_id}
+          onValueChange={(v) => setForm({ ...form, category_id: v })}
+          placeholder="Selecciona categoría"
+          triggerClassName={selectClass}
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
@@ -314,20 +308,13 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">Categoría</label>
-        <Select value={form.category_id || null} onValueChange={(v) => setForm({ ...form, category_id: v ?? '' })}>
-          <SelectTrigger className={selectClass}>
-            <SelectValue placeholder="Selecciona categoría">
-              {(v: string | null) => categories?.find((c) => c.id === v)?.name}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {categories?.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <CategorySelect
+          categories={categories}
+          value={form.category_id}
+          onValueChange={(v) => setForm({ ...form, category_id: v })}
+          placeholder="Selecciona categoría"
+          triggerClassName={selectClass}
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
