@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { DialogCancelButton, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CategorySelect } from '@/components/nl/CategorySelect'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useUpdateTransaction } from '@/hooks/useTransactions'
@@ -134,20 +135,12 @@ export function EditTransactionModal({
             <div className="grid grid-cols-2 gap-3">
               {!isTransfer ? (
                 <Field label="Categoría">
-                  <Select value={categoryId || null} onValueChange={(v) => setCategoryId(v ?? '')}>
-                    <SelectTrigger className="h-9 w-full">
-                      <SelectValue placeholder="Selecciona...">
-                        {(v: string | null) => categories?.find((c) => c.id === v)?.name}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories?.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <CategorySelect
+                    categories={categories}
+                    value={categoryId}
+                    onValueChange={setCategoryId}
+                    triggerClassName="h-9 w-full"
+                  />
                 </Field>
               ) : (
                 <Field label="Categoría">

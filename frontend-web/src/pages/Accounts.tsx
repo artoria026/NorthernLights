@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DialogPrimaryButton } from '@/components/nl/DialogActions'
+import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
 import { Sparkline } from '@/lib/charts'
@@ -20,9 +21,16 @@ import {
   useUpdateAccount,
 } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
-import { useTransactions } from '@/hooks/useTransactions'
+import { useDeleteTransaction, useTransactions } from '@/hooks/useTransactions'
 import { apiErrorMessage } from '@/services/api'
-import { accountSubtypeLabel, amountColor, entryTypeLabel, formatMoney, selectClass } from '@/lib/utils'
+import {
+  accountSubtypeLabel,
+  amountColor,
+  entryTypeLabel,
+  formatMoney,
+  isTransactionEditable,
+  selectClass,
+} from '@/lib/utils'
 import { useConfirmStore } from '@/stores/confirmStore'
 import { useTransactionModalStore } from '@/stores/transactionModalStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -874,9 +882,11 @@ export function Accounts() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [segment, setSegment] = useState<Segment>('ALL')
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const pushToast = useUiStore((s) => s.pushToast)
   const confirm = useConfirmStore((s) => s.ask)
   const deleteAccount = useDeleteAccount()
+  const deleteTransaction = useDeleteTransaction()
   const openDetailed = useTransactionModalStore((s) => s.openDetailed)
 
   const assetAccounts = accounts?.filter((a) => a.type === 'asset') ?? []
@@ -916,6 +926,21 @@ export function Accounts() {
     try {
       await deleteAccount.mutateAsync(account.id)
       if (selectedAccountId === account.id) setSelectedAccountId(null)
+    } catch (error) {
+      pushToast(apiErrorMessage(error), 'error')
+    }
+  }
+
+  async function handleDeleteTransaction(tx: Transaction) {
+    const ok = await confirm({
+      title: 'Eliminar transacción',
+      message: `¿Eliminar la transacción "${tx.description}"? Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      variant: 'danger',
+    })
+    if (!ok) return
+    try {
+      await deleteTransaction.mutateAsync(tx.id)
     } catch (error) {
       pushToast(apiErrorMessage(error), 'error')
     }
@@ -1128,24 +1153,49 @@ export function Accounts() {
                 </p>
               ) : (
                 <div className="rounded-md overflow-hidden border border-border">
-                  <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_90px_90px] gap-2 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_90px_90px_70px] gap-2 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
                     <span>Fecha</span>
                     <span>Descripción</span>
                     <span>Categoría</span>
                     <span className="text-right">Cargo</span>
                     <span className="text-right">Abono</span>
+                    <span className="text-right">Acciones</span>
                   </div>
                   {visibleRows.map((tx) => {
                     const dir = lineDirection(tx, selectedAccount.id, selectedAccount.type)
+                    const editable = isTransactionEditable(tx)
                     const categoryBadge = (
                       <CategoryBadge
                         name={tx.category_name ?? entryTypeLabel(tx.entry_type)}
                         color={tx.category_id ? categoryColorById.get(tx.category_id) : undefined}
                       />
                     )
+                    const rowActions = (
+                      <>
+                        {editable && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingTx(tx)}
+                            title="Editar"
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTransaction(tx)}
+                          disabled={deleteTransaction.isPending}
+                          title="Eliminar"
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    )
                     return (
                       <div key={tx.id}>
-                        <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_90px_90px] gap-2 px-3 py-2.5 text-[13px] border-t border-border items-center">
+                        <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_90px_90px_70px] gap-2 px-3 py-2.5 text-[13px] border-t border-border items-center">
                           <span className="text-muted-foreground">{tx.date}</span>
                           <span className="truncate">{tx.description}</span>
                           <span>{categoryBadge}</span>
@@ -1155,6 +1205,7 @@ export function Accounts() {
                           <span className="text-right" style={{ color: 'var(--nl-accent-ink)' }}>
                             {dir === 'in' ? formatMoney(tx.amount ?? '0') : ''}
                           </span>
+                          <span className="flex items-center justify-end gap-0.5">{rowActions}</span>
                         </div>
                         <div className="lg:hidden flex flex-col gap-1.5 px-3 py-2.5 text-[13px] border-t border-border">
                           <div className="flex items-center justify-between gap-2">
@@ -1171,6 +1222,7 @@ export function Accounts() {
                             {categoryBadge}
                             <span className="text-muted-foreground text-[12px] flex-shrink-0">{tx.date}</span>
                           </div>
+                          <div className="self-end flex items-center gap-0.5">{rowActions}</div>
                         </div>
                       </div>
                     )
@@ -1196,6 +1248,7 @@ export function Accounts() {
           )}
         </div>
       </div>
+      <EditTransactionModal transaction={editingTx} onClose={() => setEditingTx(null)} />
     </div>
   )
 }
