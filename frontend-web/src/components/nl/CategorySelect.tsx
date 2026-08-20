@@ -4,13 +4,13 @@ import { categoryIcon } from '@/lib/categoryIcons'
 import { cn } from '@/lib/utils'
 import type { Category } from '@/types'
 
-/** Reemplazo de <Select> para elegir categoría/subcategoría ("Propuesta 3 --
- * buscador tipo comando" de categorias-propuestas.html) -- un <Select> plano
- * no dice a qué padre pertenece cada subcategoría. Aquí cada fila de
- * subcategoría muestra "en <Padre>" en gris, y se puede filtrar escribiendo
- * el nombre de cualquiera de los dos. `useCategories` ya trae padres e hijos
- * en una sola lista plana (con `parent_id`), así que arma el mapa de padres
- * una sola vez por render en vez de requerir que el caller lo pre-procese. */
+/** Reemplazo de <Select> para elegir categoría/subcategoría -- un <Select>
+ * plano no dice a qué padre pertenece cada subcategoría. Aquí las
+ * subcategorías quedan agrupadas debajo de su padre (con encabezado), y se
+ * puede filtrar escribiendo el nombre de cualquiera de los dos. `useCategories`
+ * ya trae padres e hijos en una sola lista plana (con `parent_id`), así que
+ * arma los grupos una sola vez por render en vez de requerir que el caller
+ * los pre-procese. */
 
 interface CategorySelectProps {
   categories: Category[] | undefined
@@ -19,6 +19,13 @@ interface CategorySelectProps {
   placeholder?: string
   triggerClassName?: string
   disabled?: boolean
+}
+
+interface CategoryGroup {
+  parent: Category
+  /** [padre, ...hijos] -- el padre va primero para poder elegirlo como "sin
+   * subcategoría" sin salir del grupo. Si no tiene hijos, queda solo el. */
+  items: Category[]
 }
 
 function CategorySwatch({ category, size = 18 }: { category: Category; size?: number }) {
@@ -41,13 +48,24 @@ export function CategorySelect({
   triggerClassName,
   disabled,
 }: CategorySelectProps) {
-  const items = categories ?? []
-  const parentById = new Map(items.filter((c) => !c.parent_id).map((c) => [c.id, c]))
-  const selected = items.find((c) => c.id === value) ?? null
+  const flat = categories ?? []
+  const parentById = new Map(flat.filter((c) => !c.parent_id).map((c) => [c.id, c]))
+  const selected = flat.find((c) => c.id === value) ?? null
+
+  const childrenByParent = new Map<string, Category[]>()
+  for (const c of flat) {
+    if (!c.parent_id) continue
+    const list = childrenByParent.get(c.parent_id) ?? []
+    list.push(c)
+    childrenByParent.set(c.parent_id, list)
+  }
+  const groups: CategoryGroup[] = flat
+    .filter((c) => !c.parent_id)
+    .map((parent) => ({ parent, items: [parent, ...(childrenByParent.get(parent.id) ?? [])] }))
 
   return (
     <Combobox.Root<Category>
-      items={items}
+      items={groups}
       value={selected}
       onValueChange={(next) => onValueChange(next?.id ?? '')}
       isItemEqualToValue={(a, b) => a.id === b.id}
@@ -103,23 +121,47 @@ export function CategorySelect({
               Sin resultados
             </Combobox.Empty>
             <Combobox.List className="max-h-64 overflow-y-auto p-1">
-              {(cat: Category) => {
-                const parent = cat.parent_id ? parentById.get(cat.parent_id) : undefined
+              {(group: CategoryGroup) => {
+                const hasChildren = group.items.length > 1
                 return (
-                  <Combobox.Item
-                    key={cat.id}
-                    value={cat}
-                    className="relative flex cursor-default items-center gap-2 rounded-md py-1.5 pr-6 pl-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+                  <Combobox.Group
+                    key={group.parent.id}
+                    items={group.items}
+                    // data-list-empty se marca cuando el filtro no dejo
+                    // ningun item del grupo -- sin esto el grupo entero
+                    // (encabezado incluido) queda montado vacio, mismo bug
+                    // que Combobox.Empty de arriba pero por grupo.
+                    className="data-[list-empty]:hidden mb-1 last:mb-0"
                   >
-                    <CategorySwatch category={cat} />
-                    <span className="min-w-0 flex-1 truncate">{cat.name}</span>
-                    {parent && (
-                      <span className="shrink-0 text-[11px] text-muted-foreground">en {parent.name}</span>
+                    {hasChildren && (
+                      <Combobox.GroupLabel className="flex items-center gap-1.5 px-2 pt-2 pb-1 text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">
+                        <CategorySwatch category={group.parent} size={13} />
+                        {group.parent.name}
+                      </Combobox.GroupLabel>
                     )}
-                    <Combobox.ItemIndicator className="absolute right-2 flex items-center text-primary">
-                      <Check size={14} />
-                    </Combobox.ItemIndicator>
-                  </Combobox.Item>
+                    <Combobox.Collection>
+                      {(cat: Category) => {
+                        const isParentRow = hasChildren && cat.id === group.parent.id
+                        return (
+                          <Combobox.Item
+                            key={cat.id}
+                            value={cat}
+                            className="relative flex cursor-default items-center gap-2 rounded-md py-1.5 pr-6 pl-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+                          >
+                            <CategorySwatch category={cat} size={hasChildren ? 15 : 18} />
+                            <span
+                              className={cn('min-w-0 flex-1 truncate', isParentRow && 'text-muted-foreground italic')}
+                            >
+                              {isParentRow ? 'General' : cat.name}
+                            </span>
+                            <Combobox.ItemIndicator className="absolute right-2 flex items-center text-primary">
+                              <Check size={14} />
+                            </Combobox.ItemIndicator>
+                          </Combobox.Item>
+                        )
+                      }}
+                    </Combobox.Collection>
+                  </Combobox.Group>
                 )
               }}
             </Combobox.List>
