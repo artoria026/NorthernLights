@@ -121,7 +121,7 @@ export function Notifications() {
         )}
       </div>
       {data && data.meta && data.meta.total > 0 && (
-        <div className="mt-3 flex justify-end">
+        <div className="mt-3 flex justify-end" data-tour="notifications:total-badge">
           <SoftBadge severity="accent">{data.meta.total} en total</SoftBadge>
         </div>
       )}

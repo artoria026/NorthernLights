@@ -671,6 +671,7 @@ export function Advisor() {
                 onClick={() => setMoreOpen(true)}
                 disabled={isStreaming}
                 title="Más formas de traer datos (Excel, prompt para otra IA)"
+                data-tour="advisor:more"
                 className="flex-shrink-0 w-11 h-11 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40"
               >
                 <Plus size={16} />
@@ -703,7 +704,7 @@ export function Advisor() {
                 escribiendo lo que necesita) y solo le restan alto util al
                 historial. */}
             {messages.length === 0 && (
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap" data-tour="advisor:suggestions">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
@@ -729,6 +730,7 @@ export function Advisor() {
         <div
           className="border-t lg:border-t-0 lg:border-l border-border overflow-hidden p-4 lg:p-5 lg:flex-[0_0_40%]"
           style={{ background: 'var(--sidebar)' }}
+          data-tour="advisor:context"
         >
           <div className="text-[11px] tracking-wide text-muted-foreground font-semibold mb-2">
             RESUMEN FINANCIERO

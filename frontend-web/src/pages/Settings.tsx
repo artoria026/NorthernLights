@@ -306,7 +306,7 @@ function DebtTroubleCard() {
   const updateSettings = useUpdateSettings()
 
   return (
-    <SettingsCard title="Deudas en problemas">
+    <SettingsCard title="Deudas en problemas" dataTour="settings:debt-trouble">
       <div className="flex items-center justify-between py-1">
         <div className="pr-3">
           <p className="text-sm">Tengo una deuda con problemas de pago</p>
@@ -364,7 +364,7 @@ function ConnectedAccountsCard() {
   const isGoogleLinked = user?.auth_provider === 'google'
 
   return (
-    <SettingsCard title="Cuentas conectadas">
+    <SettingsCard title="Cuentas conectadas" dataTour="settings:connected-accounts">
       <div className="flex items-center gap-2.5 py-2.5">
         <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" className="flex-shrink-0">
           <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" />
@@ -609,7 +609,7 @@ function DeleteAccountCard() {
   }
 
   return (
-    <SettingsCard title="Eliminar cuenta">
+    <SettingsCard title="Eliminar cuenta" dataTour="settings:delete-account">
       <p className="text-xs text-muted-foreground mb-3">
         Borra el acceso a tu cuenta y cierra todas tus sesiones. No se puede deshacer.
       </p>

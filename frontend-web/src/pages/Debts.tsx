@@ -715,6 +715,7 @@ function DebtCard({ debt }: { debt: Debt }) {
                 render={
                   <button
                     type="button"
+                    data-tour="debts:correct-balance"
                     className="rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
                   >
                     Corregir saldo
@@ -773,6 +774,7 @@ function UnplannedDebtRow({ unplanned }: { unplanned: UnplannedDebt }) {
         render={
           <button
             type="button"
+            data-tour="debts:activate-button"
             className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] font-medium"
             style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
           >
@@ -907,7 +909,11 @@ export function Debts() {
               <Dialog open={unplannedOpen} onOpenChange={setUnplannedOpen}>
                 <DialogTrigger
                   render={
-                    <button type="button" className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground">
+                    <button
+                      type="button"
+                      data-tour="debts:unplanned-button"
+                      className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground"
+                    >
                       <Plus size={14} />
                       Deuda sin plan
                     </button>

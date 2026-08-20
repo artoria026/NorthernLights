@@ -408,9 +408,11 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
           </span>
           <span className="text-right">≈ {formatMoney(monthlyEquivalent(item.amount, item.frequency))}/mes</span>
           <span className="text-right text-muted-foreground">{item.next_date}</span>
-          <span className="flex justify-end items-center gap-1.5">{actions}</span>
+          <span className="flex justify-end items-center gap-1.5" data-tour="subscriptions:item-actions">
+            {actions}
+          </span>
         </div>
-        {meta}
+        <div data-tour="subscriptions:aging">{meta}</div>
       </div>
     )
   }
@@ -573,16 +575,18 @@ export function Subscriptions() {
       <div className="bg-card border border-border rounded-md p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
           <div className="text-[15px] font-medium">Todas tus suscripciones</div>
-          <SegmentedControl
-            value={status}
-            onChange={setStatus}
-            options={[
-              { value: 'active', label: 'Activas' },
-              { value: 'paused', label: 'Pausadas' },
-              { value: 'cancelled', label: 'Canceladas' },
-              { value: 'all', label: 'Todas' },
-            ]}
-          />
+          <div data-tour="subscriptions:status-filter">
+            <SegmentedControl
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: 'active', label: 'Activas' },
+                { value: 'paused', label: 'Pausadas' },
+                { value: 'cancelled', label: 'Canceladas' },
+                { value: 'all', label: 'Todas' },
+              ]}
+            />
+          </div>
         </div>
 
         {isLoading ? (

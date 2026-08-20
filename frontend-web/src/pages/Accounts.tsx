@@ -744,7 +744,10 @@ function TdcCycleCard({ accountId }: { accountId: string }) {
   if (isLoading || !cycle) return null
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 rounded-md border border-border bg-card p-3.5">
+    <div
+      className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 rounded-md border border-border bg-card p-3.5"
+      data-tour="accounts:tdc-cycle"
+    >
       <div>
         <div className="text-[10px] tracking-wider text-muted-foreground">DÍA DE CORTE</div>
         <div className="text-[15px] font-medium">{cycle.billing_cycle_day ?? '—'}</div>
@@ -1012,7 +1015,7 @@ export function Accounts() {
                     {formatMoney(selectedAccount.balance)}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2" data-tour="accounts:actions">
                   <Dialog
                     open={editingAccount?.id === selectedAccount.id}
                     onOpenChange={(next, eventDetails) => {

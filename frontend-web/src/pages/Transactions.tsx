@@ -260,7 +260,7 @@ function TransactionRow({
         >
           {formatMoney(tx.amount)}
         </span>
-        <span className="text-right flex items-center justify-end gap-0.5">
+        <span className="text-right flex items-center justify-end gap-0.5" data-tour="transactions:row-actions">
           {editable && (
             <button
               type="button"
@@ -439,6 +439,7 @@ export function Transactions() {
                 render={
                   <button
                     type="button"
+                    data-tour="transactions:split-button"
                     className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground"
                   >
                     <Users size={14} />
@@ -560,6 +561,7 @@ export function Transactions() {
               <button
                 type="button"
                 onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                data-tour="transactions:sort"
                 className="text-left hover:text-foreground"
               >
                 Fecha {sortDir === 'asc' ? '▲' : '▼'}

@@ -541,7 +541,9 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
             </span>
           </SoftBadge>
         </span>
-        <span className="flex justify-end items-center gap-1.5">{actions}</span>
+        <span className="flex justify-end items-center gap-1.5" data-tour="recurring:item-actions">
+          {actions}
+        </span>
       </div>
     )
   }
@@ -774,7 +776,7 @@ export function Recurring() {
           )}
         </div>
 
-        <div className="bg-card border border-border rounded-md p-4">
+        <div className="bg-card border border-border rounded-md p-4" data-tour="recurring:breakdown">
           <div className="text-[15px] font-medium mb-2">Desglose por categoría</div>
           {categoryBreakdown.length > 0 ? (
             <div className="flex flex-col items-center gap-3">
@@ -806,16 +808,18 @@ export function Recurring() {
       <div className="bg-card border border-border rounded-md p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
           <div className="text-[15px] font-medium">Servicios e ingresos recurrentes</div>
-          <SegmentedControl
-            value={status}
-            onChange={setStatus}
-            options={[
-              { value: 'active', label: 'Activos' },
-              { value: 'paused', label: 'Pausados' },
-              { value: 'cancelled', label: 'Cancelados' },
-              { value: 'all', label: 'Todos' },
-            ]}
-          />
+          <div data-tour="recurring:status-filter">
+            <SegmentedControl
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: 'active', label: 'Activos' },
+                { value: 'paused', label: 'Pausados' },
+                { value: 'cancelled', label: 'Cancelados' },
+                { value: 'all', label: 'Todos' },
+              ]}
+            />
+          </div>
         </div>
 
         {loadingItems ? (

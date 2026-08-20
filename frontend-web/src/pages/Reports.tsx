@@ -363,7 +363,7 @@ export function Reports() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2.5 mb-4 lg:flex lg:gap-3 lg:flex-wrap">
+          <div className="grid grid-cols-2 gap-2.5 mb-4 lg:flex lg:gap-3 lg:flex-wrap" data-tour="reports:stats">
             <StatCard compact icon={<TrendingUp />} label="Ingresos" value={formatMoney(summary?.income.total)} />
             <StatCard
               compact
@@ -413,6 +413,7 @@ export function Reports() {
             <div
               className="flex items-center gap-3 rounded-md border p-3.5 mb-4"
               style={{ background: 'var(--nl-bg-card)', borderColor: 'var(--nl-border)' }}
+              data-tour="reports:adjustments"
             >
               <RefreshCcw size={16} className="text-muted-foreground flex-shrink-0" />
               <span className="text-[13px] flex-1">
@@ -435,7 +436,7 @@ export function Reports() {
             </div>
           )}
 
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-end mb-4" data-tour="reports:flow-filter">
             <SegmentedControl
               value={flow}
               onChange={setFlow}
@@ -448,7 +449,7 @@ export function Reports() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start mb-4">
-            <div className="bg-card border border-border rounded-md p-4">
+            <div className="bg-card border border-border rounded-md p-4" data-tour="reports:categories">
               <div className="flex items-center gap-2 mb-2">
                 <PieChart size={15} className="text-muted-foreground" />
                 <div className="text-[15px] font-medium">
@@ -612,6 +613,7 @@ export function Reports() {
             open={netWorthOpen}
             onToggle={(e) => setNetWorthOpen(e.currentTarget.open)}
             className="bg-card border border-border rounded-md p-4"
+            data-tour="reports:networth"
           >
             <summary className="flex items-center gap-2 text-[15px] font-medium cursor-pointer select-none">
               <TrendingUp size={15} className="text-muted-foreground" />

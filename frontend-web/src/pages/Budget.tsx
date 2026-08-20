@@ -216,7 +216,10 @@ function CategoryRow({
       </div>
 
       {showSuggestion && (
-        <div className="flex items-center gap-2 flex-wrap mt-1.5 pl-4 text-[11px] text-muted-foreground">
+        <div
+          className="flex items-center gap-2 flex-wrap mt-1.5 pl-4 text-[11px] text-muted-foreground"
+          data-tour="budget:suggestion"
+        >
           <span>
             Promedio últimos 3 meses: <span className="font-medium">{formatMoney(category.average_last_3_months)}</span>
             {average > limit ? ' (por arriba de tu límite)' : ' (por debajo de tu límite)'}
@@ -467,11 +470,12 @@ export function Budget() {
           label="Comprometido fijo"
           value={formatMoney(current?.committed_fixed ?? '0')}
           note="Deudas y recurrentes activos"
+          dataTour="budget:committed"
         />
       </div>
 
       {isCurrentMonth && alertCategories.length > 0 && (
-        <div className="bg-card border border-border rounded-md p-3.5 mb-4">
+        <div className="bg-card border border-border rounded-md p-3.5 mb-4" data-tour="budget:alerts">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={15} className="text-muted-foreground flex-shrink-0" />
             <span className="text-[13px] font-medium">
@@ -525,7 +529,7 @@ export function Budget() {
           )}
         </div>
 
-        <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
+        <div className="lg:col-span-2 bg-card border border-border rounded-md p-4" data-tour="budget:distribution">
           <div className="text-[15px] font-medium mb-2">Distribución de gasto</div>
           {donutSlices.length > 0 ? (
             <div className="flex flex-col items-center gap-3">
@@ -606,7 +610,7 @@ export function Budget() {
         )}
 
         {trendBars.length > 0 && (
-          <div className="lg:col-span-4 bg-card border border-border rounded-md p-3.5">
+          <div className="lg:col-span-4 bg-card border border-border rounded-md p-3.5" data-tour="budget:trend">
             <div className="text-[13px] font-medium mb-1.5">Tendencia · % del presupuesto usado por mes</div>
             <SimpleBars bars={trendBars} height={70} showValues formatValue={(v) => `${Math.round(v)}%`} />
           </div>
