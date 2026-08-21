@@ -56,14 +56,6 @@ class DebtActivationRequest(BaseModel):
     due_date: date_type | None = None
 
 
-class InitialCharge(BaseModel):
-    """Para MSI: crea tambien la transaccion de la compra inicial (M04)."""
-
-    category_id: UUID
-    paying_account_id: UUID  # la TDC que se carga
-    description: str
-
-
 class DebtCreate(BaseModel):
     name: str = Field(min_length=1)
     creditor: str | None = None
@@ -87,7 +79,7 @@ class DebtCreate(BaseModel):
     # Cuenta real donde entro/salio el efectivo al originarse esta deuda (p.ej.
     # tu cuenta de banco cuando alguien te presta, o de la que sale cuando tu
     # prestas). Opcional: una deuda que ya traias antes de usar la app no
-    # necesita esto. No aplica a type='credit_card' (usa linked_account_id).
+    # necesita esto.
     funding_account_id: UUID | None = None
     # Cuenta de la que sale/entra cada pago periodico. Sin esto, la deuda
     # queda en flujo 100% manual -- con esto, debts.process_due_payments
@@ -101,8 +93,6 @@ class DebtCreate(BaseModel):
     is_shared: bool = False
     responsible_party: str | None = None
     notes: str | None = None
-
-    initial_charge: InitialCharge | None = None  # solo para type='installment' (MSI)
 
 
 class DebtUpdate(BaseModel):

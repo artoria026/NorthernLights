@@ -1,7 +1,8 @@
 from datetime import UTC, date, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
 
+from dateutil.relativedelta import relativedelta
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,8 +10,10 @@ from sqlalchemy.orm import selectinload
 
 from app.core.redis import get_redis
 from app.models.account import Account
+from app.models.debt import InstallmentPlan
 from app.models.transaction import JournalEntry, JournalLine
 from app.schemas.transaction import (
+    InstallmentInfo,
     JournalLineIn,
     SplitExpenseCreate,
     TransactionCreate,
@@ -29,14 +32,48 @@ async def get_category_name_map(
     return await category_service.get_names_by_ids(session, ids)
 
 
+async def _get_installment_map(
+    session: AsyncSession, entries: list[JournalEntry]
+) -> dict[UUID, InstallmentInfo]:
+    entry_ids = [e.id for e in entries]
+    if not entry_ids:
+        return {}
+    result = await session.execute(
+        select(InstallmentPlan).where(InstallmentPlan.journal_entry_id.in_(entry_ids))
+    )
+    plans = {p.journal_entry_id: p for p in result.scalars().all()}
+    if not plans:
+        return {}
+
+    entries_by_id = {e.id: e for e in entries}
+    today = date.today()
+    out: dict[UUID, InstallmentInfo] = {}
+    for entry_id, plan in plans.items():
+        entry = entries_by_id[entry_id]
+        elapsed = relativedelta(today, entry.date)
+        months_elapsed = max(elapsed.years * 12 + elapsed.months, 0)
+        monthly_amount = (
+            ((entry.amount or Decimal("0")) / plan.total_installments)
+            .quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        )
+        out[entry_id] = InstallmentInfo(
+            total_installments=plan.total_installments,
+            paid_installments=min(months_elapsed, plan.total_installments),
+            monthly_amount=monthly_amount,
+        )
+    return out
+
+
 async def to_transaction_out_list(
     session: AsyncSession, entries: list[JournalEntry]
 ) -> list[TransactionOut]:
     names = await get_category_name_map(session, entries)
+    installments = await _get_installment_map(session, entries)
     out = []
     for entry in entries:
         item = TransactionOut.model_validate(entry)
         item.category_name = names.get(entry.category_id) if entry.category_id else None
+        item.installment = installments.get(entry.id)
         out.append(item)
     return out
 
@@ -132,6 +169,17 @@ async def _validate_line_accounts(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Cuenta no encontrada")
 
 
+async def _validate_installment_account(
+    session: AsyncSession, user_id: UUID, account_id: UUID
+) -> None:
+    account = await account_service.get_account(session, user_id, account_id)
+    if account.type != "liability" or account.subtype != "credit_card":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Una compra a meses sin intereses solo aplica pagando con una tarjeta de credito",
+        )
+
+
 async def _invalidate_cache(user_id: UUID) -> None:
     """M09: invalidar snapshot/reportes cacheados en cada transaccion confirmed
     (creacion, edicion, borrado o confirmacion de un draft/pending)."""
@@ -168,6 +216,8 @@ async def create_transaction(
     debt_id: UUID | None = None,
 ) -> JournalEntry:
     await _validate_category(session, user_id, data.entry_type, data.category_id)
+    if data.installment_total is not None:
+        await _validate_installment_account(session, user_id, data.account_id)  # type: ignore[arg-type]
     resolved_lines = await _resolve_lines(session, user_id, data)
     await _validate_line_accounts(session, user_id, resolved_lines)
 
@@ -199,6 +249,16 @@ async def create_transaction(
     ]
     session.add_all(lines)
     await session.flush()
+
+    if data.installment_total is not None:
+        session.add(
+            InstallmentPlan(
+                user_id=user_id,
+                journal_entry_id=entry.id,
+                total_installments=data.installment_total,
+            )
+        )
+        await session.flush()
 
     if entry_status == "confirmed":
         await _apply_lines(session, lines)

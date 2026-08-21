@@ -114,11 +114,6 @@ export interface CreateDebtInput {
   start_date?: string
   is_shared?: boolean
   responsible_party?: string
-  initial_charge?: {
-    category_id: string
-    paying_account_id: string
-    description: string
-  }
 }
 
 export function useCreateDebt() {
@@ -130,9 +125,9 @@ export function useCreateDebt() {
     },
     onSuccess: (_debt, input) => {
       invalidateDebts(queryClient)
-      // initial_charge (MSI) o funding_account_id son los unicos casos que
-      // generan una transaccion real -- ahi si cambian cuentas/transacciones.
-      if (input.initial_charge || input.funding_account_id) {
+      // funding_account_id es el unico caso que genera una transaccion real
+      // -- ahi si cambian cuentas/transacciones.
+      if (input.funding_account_id) {
         queryClient.invalidateQueries({ queryKey: ['accounts'] })
         queryClient.invalidateQueries({ queryKey: ['transactions'] })
       }

@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Check, ChevronLeft, ChevronRight, Pencil, Plus, Trash2, UserPlus, Users } from 'lucide-react'
+import { ArrowLeftRight, Check, ChevronLeft, ChevronRight, CreditCard, Pencil, Plus, Trash2, UserPlus, Users } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -8,6 +8,7 @@ import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { DemoFlow, HelpSection, HelpTip } from '@/components/nl/Help'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
+import { PayCreditCardForm } from '@/components/nl/PayCreditCardForm'
 import { TransactionsCalendar } from '@/components/nl/TransactionsCalendar'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
@@ -375,6 +376,10 @@ export function Transactions() {
   const { data: allCategories } = useCategories()
   const categoryColorById = new Map((allCategories ?? []).map((c) => [c.id, c.color]))
   const [splitOpen, setSplitOpen] = useState(false)
+  const [payOpen, setPayOpen] = useState(false)
+  const [payCardId, setPayCardId] = useState<string | null>(null)
+  const creditCards = accounts?.filter((a) => a.type === 'liability' && a.subtype === 'credit_card') ?? []
+  const payingAccount = creditCards.find((a) => a.id === payCardId) ?? (creditCards.length === 1 ? creditCards[0] : null)
   const [editingTx, setEditingTx] = useState<Transaction | null>(null)
   const openDetailed = useTransactionModalStore((s) => s.openDetailed)
   const [searchParams] = useSearchParams()
@@ -450,6 +455,50 @@ export function Transactions() {
                 <SplitExpenseForm onDone={() => setSplitOpen(false)} />
               </DialogContent>
             </Dialog>
+            {creditCards.length > 0 && (
+              <Dialog
+                open={payOpen}
+                onOpenChange={(next) => {
+                  setPayOpen(next)
+                  if (!next) setPayCardId(null)
+                }}
+              >
+                <DialogTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground"
+                    >
+                      <CreditCard size={14} />
+                      Pagar tarjeta
+                    </button>
+                  }
+                />
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Pagar tarjeta{payingAccount ? ` — ${payingAccount.name}` : ''}</DialogTitle>
+                  </DialogHeader>
+                  {payingAccount ? (
+                    <PayCreditCardForm account={payingAccount} onDone={() => setPayOpen(false)} />
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-sm text-muted-foreground">Elige la tarjeta a pagar</p>
+                      {creditCards.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => setPayCardId(a.id)}
+                          className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-[13px] hover:bg-muted"
+                        >
+                          <span>{a.name}</span>
+                          <span className="text-muted-foreground">{formatMoney(a.balance)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
+            )}
             <button
               type="button"
               onClick={() => openDetailed()}

@@ -25,6 +25,8 @@ interface FormState {
   date: string
   status: 'confirmed' | 'draft'
   notes: string
+  isMsi: boolean
+  installmentTotal: string
 }
 
 function todayIso() {
@@ -42,6 +44,8 @@ function defaultForm(accountId?: string): FormState {
     date: todayIso(),
     status: 'confirmed',
     notes: '',
+    isMsi: false,
+    installmentTotal: '',
   }
 }
 
@@ -74,10 +78,12 @@ export function TransactionModals() {
   const amountValid = parseFloat(form.amount) > 0
   const missingCategory = form.type !== 'transfer' && !form.categoryId
   const missingDestination = form.type === 'transfer' && !form.contraAccountId
-  const canSubmit = amountValid && !!form.accountId && !missingCategory && !missingDestination
+  const invalidInstallments = form.isMsi && !(parseInt(form.installmentTotal, 10) >= 2)
+  const canSubmit =
+    amountValid && !!form.accountId && !missingCategory && !missingDestination && !invalidInstallments
 
   function setType(type: DetailedType) {
-    setForm((f) => ({ ...f, type, contraAccountId: '' }))
+    setForm((f) => ({ ...f, type, contraAccountId: '', isMsi: false, installmentTotal: '' }))
   }
 
   async function submit() {
@@ -109,6 +115,8 @@ export function TransactionModals() {
           category_id: form.categoryId,
           account_id: form.accountId,
           amount: form.amount,
+          installment_total:
+            form.type === 'expense' && form.isMsi ? parseInt(form.installmentTotal, 10) : undefined,
         })
       }
       close()
@@ -176,7 +184,7 @@ interface SharedFormProps {
   setForm: React.Dispatch<React.SetStateAction<FormState>>
   setType: (type: DetailedType) => void
   categories: Category[] | undefined
-  payingAccounts: { id: string; name: string }[]
+  payingAccounts: { id: string; name: string; type: string; subtype: string | null }[]
   canSubmit: boolean
   isPending: boolean
   isError: boolean
@@ -278,6 +286,9 @@ function DetailedForm({
   onSubmit,
   onClose,
 }: SharedFormProps & { onClose: () => void }) {
+  const selectedAccount = payingAccounts.find((a) => a.id === form.accountId)
+  const canBeMsi = form.type === 'expense' && selectedAccount?.type === 'liability' && selectedAccount?.subtype === 'credit_card'
+
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
       <SegmentedControl
@@ -325,7 +336,10 @@ function DetailedForm({
           </Field>
         )}
         <Field label="Cuenta">
-          <Select value={form.accountId || null} onValueChange={(v) => setForm({ ...form, accountId: v ?? '' })}>
+          <Select
+            value={form.accountId || null}
+            onValueChange={(v) => setForm({ ...form, accountId: v ?? '', isMsi: false, installmentTotal: '' })}
+          >
             <SelectTrigger className="h-9 w-full">
               <SelectValue placeholder="Selecciona...">
                 {(v: string | null) => payingAccounts.find((a) => a.id === v)?.name}
@@ -396,6 +410,31 @@ function DetailedForm({
           className={`${selectClass} w-full py-2 resize-none`}
         />
       </Field>
+
+      {canBeMsi && (
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.isMsi}
+              onChange={(e) => setForm({ ...form, isMsi: e.target.checked })}
+            />
+            ¿A meses sin intereses?
+          </label>
+          {form.isMsi && (
+            <Field label="¿A cuántos meses?">
+              <input
+                type="number"
+                min={2}
+                step={1}
+                value={form.installmentTotal}
+                onChange={(e) => setForm({ ...form, installmentTotal: e.target.value })}
+                className={`${selectClass} h-9 w-full`}
+              />
+            </Field>
+          )}
+        </div>
+      )}
 
       {form.type === 'transfer' && !form.contraAccountId && (
         <p className="text-xs text-muted-foreground">Ojo: para transferencias, elige la cuenta destino arriba.</p>

@@ -97,11 +97,15 @@ export function Dashboard() {
   const categoryColorById = new Map((categories ?? []).map((c) => [c.id, c.color]))
 
   const liquidAccounts = accounts?.filter((a) => a.type === 'asset') ?? []
-  const revolvingDebts = debts?.filter((d) => d.type === 'credit_card' && d.status === 'active') ?? []
-  const revolvingTotal = revolvingDebts.reduce((sum, d) => sum + Number(d.current_balance), 0)
+  // Deuda revolvente viene de Account, no de Debt: una TDC es una cuenta
+  // completa por si sola (ver rediseno que saco tarjetas de credito del
+  // modelo de Deudas) -- filtrar por Debt.type dejaba fuera cualquier TDC
+  // sin overlay opcional en Deudas, que era la mayoria.
+  const creditCardAccounts = accounts?.filter((a) => a.type === 'liability' && a.subtype === 'credit_card') ?? []
+  const revolvingTotal = creditCardAccounts.reduce((sum, a) => sum + Number(a.balance), 0)
   const avgApr =
-    revolvingDebts.length > 0
-      ? revolvingDebts.reduce((sum, d) => sum + Number(d.interest_rate || 0), 0) / revolvingDebts.length
+    creditCardAccounts.length > 0
+      ? creditCardAccounts.reduce((sum, a) => sum + Number(a.interest_rate || 0), 0) / creditCardAccounts.length
       : 0
 
   const monthPct =

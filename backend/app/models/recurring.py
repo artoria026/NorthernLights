@@ -70,8 +70,7 @@ class RecurringItem(Base, TimestampMixin, SoftDeleteMixin):
 
     # Cuenta de cobro/pago (banco, efectivo o TDC) y su contrapartida contable
     # (cuenta type=expense o type=income). El spec de Notion solo modela un
-    # account_id; aqui hacen falta dos porque M04 exige doble entrada real
-    # (ver el mismo patron en Debt.initial_charge / debt_service.py).
+    # account_id; aqui hacen falta dos porque M04 exige doble entrada real.
     account_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=False
     )

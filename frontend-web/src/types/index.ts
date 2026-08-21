@@ -105,6 +105,12 @@ export interface JournalLine {
   type: 'debit' | 'credit'
 }
 
+export interface InstallmentInfo {
+  total_installments: number
+  paid_installments: number
+  monthly_amount: string
+}
+
 export interface Transaction {
   id: string
   date: string
@@ -119,13 +125,14 @@ export interface Transaction {
   is_recurring: boolean
   created_at: string
   lines: JournalLine[]
+  /** Solo presente si la compra se registro "a meses sin intereses" contra
+   * una TDC -- ver installment_total en useCreateTransaction. */
+  installment: InstallmentInfo | null
 }
 
 export type DebtType =
-  | 'credit_card'
   | 'personal_loan'
   | 'payroll_loan'
-  | 'installment'
   | 'informal'
   | 'civic'
   | 'loan_received'

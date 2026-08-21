@@ -20,7 +20,7 @@ from app.models.account import ACCOUNT_SUBTYPES, ACCOUNT_TYPES
 from app.models.debt import DEBT_TYPES, PAYMENT_FREQUENCIES
 from app.models.recurring import FREQUENCIES, ITEM_TYPES
 from app.schemas.account import AccountCreate
-from app.schemas.debt import DebtCreate, InitialCharge, UnplannedDebtCreate
+from app.schemas.debt import DebtCreate, UnplannedDebtCreate
 from app.schemas.recurring import RecurringItemCreate
 from app.schemas.transaction import TransactionCreate
 from app.services import (
@@ -139,33 +139,12 @@ WRITE_TOOLS = [
                 "linked_account_name": {
                     "type": "string",
                     "description": (
-                        "Nombre de la cuenta desde la que se paga, si se menciono. "
-                        "OBLIGATORIO para type='credit_card' -- la deuda ES la cuenta real, "
-                        "sin esto no se puede crear. Si el usuario no la tiene creada "
-                        "todavia, usa create_account primero (o preguntale los datos)."
+                        "Nombre de la cuenta desde la que se paga, si se menciono. Si el "
+                        "usuario no la tiene creada todavia, usa create_account primero "
+                        "(o preguntale los datos)."
                     ),
                 },
                 "notes": {"type": "string"},
-                "initial_charge": {
-                    "type": "object",
-                    "description": (
-                        "Solo para type='installment' (compra a meses/MSI): registra la "
-                        "transaccion de la compra completa contra la TDC en el mismo paso "
-                        "que crea la deuda -- total_amount es el monto TOTAL de la compra."
-                    ),
-                    "properties": {
-                        "category_name": {
-                            "type": "string",
-                            "description": "Categoria de gasto exacta para la compra",
-                        },
-                        "paying_account_name": {
-                            "type": "string",
-                            "description": "Nombre de la TDC/cuenta que se carga",
-                        },
-                        "description": {"type": "string"},
-                    },
-                    "required": ["category_name", "paying_account_name", "description"],
-                },
             },
             "required": ["name", "type", "total_amount"],
         },
@@ -440,25 +419,6 @@ async def _dispatch_write_tool(
                     return resolved
                 linked_account_id = resolved
 
-            initial_charge = None
-            charge_input = tool_input.get("initial_charge")
-            if charge_input:
-                charge_category_id = await _resolve_category_id(
-                    session, user_id, charge_input["category_name"], "expense"
-                )
-                if isinstance(charge_category_id, dict):
-                    return charge_category_id
-                charge_account_id = await _resolve_account_id(
-                    session, user_id, charge_input["paying_account_name"]
-                )
-                if isinstance(charge_account_id, dict):
-                    return charge_account_id
-                initial_charge = InitialCharge(
-                    category_id=charge_category_id,
-                    paying_account_id=charge_account_id,
-                    description=charge_input["description"],
-                )
-
             debt = await debt_service.create_debt(
                 session,
                 user_id,
@@ -478,7 +438,6 @@ async def _dispatch_write_tool(
                     next_payment_date=tool_input.get("next_payment_date"),
                     linked_account_id=linked_account_id,
                     notes=tool_input.get("notes"),
-                    initial_charge=initial_charge,
                 ),
                 current_user_role=role,
             )
