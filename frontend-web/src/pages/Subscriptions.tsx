@@ -16,7 +16,7 @@ import { type FormEvent, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
-import { DialogPrimaryButton } from '@/components/nl/DialogActions'
+import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { FREQUENCY_LABELS, monthlyEquivalent, STATUS_LABELS } from '@/lib/recurring'
@@ -170,9 +170,11 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
       {createItem.isError && (
         <p className="text-sm text-destructive">{apiErrorMessage(createItem.error)}</p>
       )}
-      <DialogPrimaryButton icon={Plus} pending={createItem.isPending}>
-        Crear suscripción
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Plus} pending={createItem.isPending}>
+          Crear suscripción
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }
@@ -286,9 +288,11 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
         />
       </div>
       {updateItem.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateItem.error)}</p>}
-      <DialogPrimaryButton icon={Check} pending={updateItem.isPending}>
-        Guardar cambios
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Check} pending={updateItem.isPending}>
+          Guardar cambios
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }

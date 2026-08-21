@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
-import { DialogPrimaryButton } from '@/components/nl/DialogActions'
+import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { DemoSteps, HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, SegmentedControl, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { Donut } from '@/lib/charts'
@@ -99,9 +99,11 @@ function NewUnplannedDebtForm({
         />
       </div>
       {createUnplanned.isError && <p className="text-sm text-destructive">{apiErrorMessage(createUnplanned.error)}</p>}
-      <DialogPrimaryButton icon={Plus} pending={createUnplanned.isPending}>
-        Registrar
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Plus} pending={createUnplanned.isPending}>
+          Registrar
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }
@@ -214,9 +216,11 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
         />
       </div>
       {activate.isError && <p className="text-sm text-destructive">{apiErrorMessage(activate.error)}</p>}
-      <DialogPrimaryButton icon={Zap} pending={activate.isPending} pendingLabel="Activando...">
-        Activar deuda
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Zap} pending={activate.isPending} pendingLabel="Activando...">
+          Activar deuda
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }
@@ -438,13 +442,15 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
 
       {formError && <p className="text-sm text-destructive">{formError}</p>}
       {createDebt.isError && <p className="text-sm text-destructive">{apiErrorMessage(createDebt.error)}</p>}
-      <DialogPrimaryButton
-        icon={Check}
-        pending={createDebt.isPending}
-        disabled={needsLinkedAccount && accounts?.length === 0}
-      >
-        Crear deuda
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton
+          icon={Check}
+          pending={createDebt.isPending}
+          disabled={needsLinkedAccount && accounts?.length === 0}
+        >
+          Crear deuda
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }
@@ -580,9 +586,11 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
         <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={`${selectClass} h-9 w-full`} />
       </div>
       {registerPayment.isError && <p className="text-sm text-destructive">{apiErrorMessage(registerPayment.error)}</p>}
-      <DialogPrimaryButton icon={Check} pending={registerPayment.isPending}>
-        {isReceivable ? 'Registrar cobro' : 'Registrar pago'}
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Check} pending={registerPayment.isPending}>
+          {isReceivable ? 'Registrar cobro' : 'Registrar pago'}
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }
@@ -641,9 +649,11 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
       {updateDebt.isError && (
         <p className="text-sm text-destructive">{apiErrorMessage(updateDebt.error)}</p>
       )}
-      <DialogPrimaryButton icon={Check} pending={updateDebt.isPending}>
-        Guardar
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Check} pending={updateDebt.isPending}>
+          Guardar
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }

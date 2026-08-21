@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { DialogCancelButton, DialogPrimaryButton } from '@/components/nl/DialogActions'
+import { DialogCancelButton, DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
@@ -212,12 +212,12 @@ export function EditTransactionModal({
             {updateTransaction.isError && (
               <p className="text-xs text-destructive">{apiErrorMessage(updateTransaction.error)}</p>
             )}
-            <div className="flex items-center justify-end gap-2 pt-1">
+            <DialogFooter>
               <DialogCancelButton onClick={onClose}>Cancelar</DialogCancelButton>
               <DialogPrimaryButton pending={updateTransaction.isPending} disabled={!canSubmit}>
                 Guardar
               </DialogPrimaryButton>
-            </div>
+            </DialogFooter>
           </form>
         )}
       </DialogContent>

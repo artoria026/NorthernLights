@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { DialogPrimaryButton } from '@/components/nl/DialogActions'
+import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
 import {
@@ -254,11 +254,13 @@ function NewCategoryForm({
       {createCategory.isError && (
         <p className="text-sm text-destructive">{apiErrorMessage(createCategory.error)}</p>
       )}
-      <DialogPrimaryButton icon={Plus} pending={createCategory.isPending}>
-        {parentId
-          ? 'Crear subcategoría'
-          : `Crear categoría de ${type === 'income' ? 'ingreso' : 'gasto'}`}
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Plus} pending={createCategory.isPending}>
+          {parentId
+            ? 'Crear subcategoría'
+            : `Crear categoría de ${type === 'income' ? 'ingreso' : 'gasto'}`}
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }
@@ -300,9 +302,11 @@ function EditCategoryForm({ category, onDone }: { category: Category; onDone: ()
       {updateCategory.isError && (
         <p className="text-sm text-destructive">{apiErrorMessage(updateCategory.error)}</p>
       )}
-      <DialogPrimaryButton icon={Check} pending={updateCategory.isPending}>
-        Guardar cambios
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Check} pending={updateCategory.isPending}>
+          Guardar cambios
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }

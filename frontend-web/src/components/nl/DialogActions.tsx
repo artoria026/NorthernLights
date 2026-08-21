@@ -5,12 +5,12 @@ type IconComp = ComponentType<{ size?: number; className?: string }>
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/.test(navigator.userAgent)
 
-/** Va debajo de todo DialogPrimaryButton que sea type="submit" (el default)
- * -- FormSubmitShortcut.tsx es lo que de verdad hace el envio, esto solo lo
- * anuncia. Los que pasan type="button" a mano (ej. AssignAccountForm en
- * Debts.tsx) no viven dentro de un <form>, asi que el atajo no aplicaria y
- * el hint no se muestra ahi. */
-function SubmitShortcutHint() {
+/** Anuncia el atajo de FormSubmitShortcut.tsx (eso es lo que de verdad envia
+ * el form, esto solo lo anuncia). Va dentro de <DialogFooter>, nunca pegado
+ * al boton -- apilarlo debajo del boton primario lo corria de su lugar de
+ * siempre y lo desalineaba de Cancelar ("Propuesta 2 -- misma fila, extremo
+ * opuesto" de atajo-guardar-propuestas.html). */
+export function SubmitShortcutHint() {
   return (
     <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
       <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 py-[1px] font-sans leading-none">
@@ -22,6 +22,20 @@ function SubmitShortcutHint() {
       </kbd>
       <span>para guardar</span>
     </p>
+  )
+}
+
+/** Fila estandar del pie de un dialogo: la pista de Ctrl/Cmd+Enter en el
+ * extremo izquierdo, los botones (Cancelar/Guardar, o solo Guardar cuando el
+ * form no tiene Cancelar propio y depende de la X del encabezado) agrupados
+ * en el derecho. Usar esto en vez de armar el `<div className="flex justify-end...">`
+ * a mano en cada pantalla -- es el unico lugar que sabe donde va el hint. */
+export function DialogFooter({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return (
+    <div className={`flex items-center justify-between gap-2 pt-1 ${className}`}>
+      <SubmitShortcutHint />
+      <div className="flex items-center gap-2">{children}</div>
+    </div>
   )
 }
 
@@ -52,7 +66,7 @@ export function DialogPrimaryButton({
   pendingLabel?: string
   children: ReactNode
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
-  const button = (
+  return (
     <button
       type={type}
       disabled={pending || disabled}
@@ -66,16 +80,6 @@ export function DialogPrimaryButton({
       ) : null}
       {pending ? (pendingLabel ?? 'Guardando...') : children}
     </button>
-  )
-
-  // type="button" a mano == no vive en un <form> == el atajo no aplica ahi.
-  if (type !== 'submit') return button
-
-  return (
-    <div className="flex flex-col items-end gap-1">
-      {button}
-      <SubmitShortcutHint />
-    </div>
   )
 }
 

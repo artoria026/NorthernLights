@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
-import { DialogPrimaryButton } from '@/components/nl/DialogActions'
+import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { DemoFlow, HelpSection, HelpTip } from '@/components/nl/Help'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
@@ -191,9 +191,11 @@ function SplitExpenseForm({ onDone }: { onDone: () => void }) {
       </p>
 
       {createSplit.isError && <p className="text-sm text-destructive">{apiErrorMessage(createSplit.error)}</p>}
-      <DialogPrimaryButton icon={Check} pending={createSplit.isPending}>
-        Guardar gasto compartido
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Check} pending={createSplit.isPending}>
+          Guardar gasto compartido
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }

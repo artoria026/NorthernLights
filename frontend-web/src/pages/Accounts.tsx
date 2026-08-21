@@ -3,7 +3,7 @@ import { type FormEvent, type ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { DialogPrimaryButton } from '@/components/nl/DialogActions'
+import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
@@ -526,9 +526,11 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
       )}
 
       {createAccount.isError && <p className="text-sm text-destructive">{apiErrorMessage(createAccount.error)}</p>}
-      <DialogPrimaryButton pending={createAccount.isPending} disabled={!canSubmit}>
-        Crear cuenta
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton pending={createAccount.isPending} disabled={!canSubmit}>
+          Crear cuenta
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }
@@ -708,9 +710,11 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       </Field>
 
       {updateAccount.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateAccount.error)}</p>}
-      <DialogPrimaryButton icon={Check} pending={updateAccount.isPending}>
-        Guardar cambios
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Check} pending={updateAccount.isPending}>
+          Guardar cambios
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }
@@ -786,9 +790,11 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
       )}
 
       {reconcile.isError && <p className="text-sm text-destructive">{apiErrorMessage(reconcile.error)}</p>}
-      <DialogPrimaryButton pending={reconcile.isPending} pendingLabel="Conciliando..." disabled={!hasDelta}>
-        Conciliar saldo
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton pending={reconcile.isPending} pendingLabel="Conciliando..." disabled={!hasDelta}>
+          Conciliar saldo
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }

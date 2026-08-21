@@ -14,7 +14,7 @@ import {
 import { type FormEvent, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { DialogPrimaryButton } from '@/components/nl/DialogActions'
+import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, ProgressBar, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { Donut, SimpleBars } from '@/lib/charts'
@@ -136,9 +136,11 @@ function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewi
         )}
       </div>
       {setLimits.isError && <p className="text-sm text-destructive">{apiErrorMessage(setLimits.error)}</p>}
-      <DialogPrimaryButton icon={Check} pending={setLimits.isPending}>
-        Guardar cambios
-      </DialogPrimaryButton>
+      <DialogFooter>
+        <DialogPrimaryButton icon={Check} pending={setLimits.isPending}>
+          Guardar cambios
+        </DialogPrimaryButton>
+      </DialogFooter>
     </form>
   )
 }

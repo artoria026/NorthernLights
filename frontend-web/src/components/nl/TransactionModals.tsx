@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { DialogCancelButton, DialogPrimaryButton } from '@/components/nl/DialogActions'
+import { DialogCancelButton, DialogFooter, DialogPrimaryButton, SubmitShortcutHint } from '@/components/nl/DialogActions'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
@@ -247,13 +247,19 @@ function QuickForm({
         </Select>
       </div>
       {isError && <p className="text-xs text-destructive">{apiErrorMessage(error)}</p>}
+      {/* "Detallar" ya ocupa el extremo izquierdo de siempre -- el hint se
+          agrupa junto al boton en el derecho en vez de competir por el mismo
+          espacio que ese link. */}
       <div className="flex items-center justify-between pt-1">
         <button type="button" onClick={onSwitchToDetailed} className="text-xs text-muted-foreground hover:text-foreground">
           Detallar →
         </button>
-        <DialogPrimaryButton pending={isPending} disabled={!canSubmit}>
-          Guardar
-        </DialogPrimaryButton>
+        <div className="flex items-center gap-3">
+          <SubmitShortcutHint />
+          <DialogPrimaryButton pending={isPending} disabled={!canSubmit}>
+            Guardar
+          </DialogPrimaryButton>
+        </div>
       </div>
     </form>
   )
@@ -396,12 +402,12 @@ function DetailedForm({
       )}
       {isError && <p className="text-xs text-destructive">{apiErrorMessage(error)}</p>}
 
-      <div className="flex items-center justify-end gap-2 pt-1">
+      <DialogFooter>
         <DialogCancelButton onClick={onClose}>Cancelar</DialogCancelButton>
         <DialogPrimaryButton pending={isPending} pendingLabel="Guardando..." disabled={!canSubmit}>
           Crear transacción
         </DialogPrimaryButton>
-      </div>
+      </DialogFooter>
     </form>
   )
 }
