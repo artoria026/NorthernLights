@@ -5,6 +5,7 @@ import { AdminLayout } from '@/components/AdminLayout'
 import { ConfirmDialogHost } from '@/components/ConfirmDialogHost'
 import { DisclaimerGate } from '@/components/DisclaimerGate'
 import { Layout } from '@/components/Layout'
+import { FormSubmitShortcut } from '@/components/nl/FormSubmitShortcut'
 import { TourHost } from '@/components/nl/TourHost'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { ToastHost } from '@/components/ToastHost'
@@ -104,6 +105,7 @@ function App() {
       <ConfirmDialogHost />
       <DisclaimerGate />
       <TourHost />
+      <FormSubmitShortcut />
     </QueryClientProvider>
   )
 }
