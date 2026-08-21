@@ -1,7 +1,29 @@
-import { Loader2 } from 'lucide-react'
+import { CornerDownLeft, Loader2 } from 'lucide-react'
 import type { ButtonHTMLAttributes, ComponentType, ReactNode } from 'react'
 
 type IconComp = ComponentType<{ size?: number; className?: string }>
+
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/.test(navigator.userAgent)
+
+/** Va debajo de todo DialogPrimaryButton que sea type="submit" (el default)
+ * -- FormSubmitShortcut.tsx es lo que de verdad hace el envio, esto solo lo
+ * anuncia. Los que pasan type="button" a mano (ej. AssignAccountForm en
+ * Debts.tsx) no viven dentro de un <form>, asi que el atajo no aplicaria y
+ * el hint no se muestra ahi. */
+function SubmitShortcutHint() {
+  return (
+    <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
+      <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 py-[1px] font-sans leading-none">
+        {IS_MAC ? '⌘' : 'Ctrl'}
+      </kbd>
+      <span>+</span>
+      <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 py-[1px] leading-none">
+        <CornerDownLeft size={9} />
+      </kbd>
+      <span>para guardar</span>
+    </p>
+  )
+}
 
 /** Botonera estandar de los modales de la app ("Contorno tranquilo", elegida
  * junto con el usuario tras comparar 5 propuestas -- ver
@@ -30,7 +52,7 @@ export function DialogPrimaryButton({
   pendingLabel?: string
   children: ReactNode
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
+  const button = (
     <button
       type={type}
       disabled={pending || disabled}
@@ -44,6 +66,16 @@ export function DialogPrimaryButton({
       ) : null}
       {pending ? (pendingLabel ?? 'Guardando...') : children}
     </button>
+  )
+
+  // type="button" a mano == no vive en un <form> == el atajo no aplica ahi.
+  if (type !== 'submit') return button
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      {button}
+      <SubmitShortcutHint />
+    </div>
   )
 }
 

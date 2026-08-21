@@ -900,6 +900,7 @@ export function Accounts() {
   })
   const { data: allCategories } = useCategories()
   const categoryColorById = new Map((allCategories ?? []).map((c) => [c.id, c.color]))
+  const categoryById = new Map((allCategories ?? []).map((c) => [c.id, c]))
 
   const LEDGER_PREVIEW_LIMIT = 8
   const filteredRows = (ledger?.data ?? []).filter((tx) => {
@@ -1164,11 +1165,29 @@ export function Accounts() {
                   {visibleRows.map((tx) => {
                     const dir = lineDirection(tx, selectedAccount.id, selectedAccount.type)
                     const editable = isTransactionEditable(tx)
+                    // El padre solo aparece si la transaccion cayo en una
+                    // subcategoria -- una categoria de primer nivel no tiene
+                    // padre que mostrar arriba, se queda solo con la badge
+                    // de siempre.
+                    const category = tx.category_id ? categoryById.get(tx.category_id) : undefined
+                    const parentName = category?.parent_id
+                      ? categoryById.get(category.parent_id)?.name
+                      : undefined
                     const categoryBadge = (
                       <CategoryBadge
                         name={tx.category_name ?? entryTypeLabel(tx.entry_type)}
                         color={tx.category_id ? categoryColorById.get(tx.category_id) : undefined}
                       />
+                    )
+                    const categoryCell = (
+                      <div className="min-w-0 flex flex-col gap-0.5">
+                        {parentName && (
+                          <span className="truncate text-[9.5px] leading-none text-muted-foreground">
+                            {parentName}
+                          </span>
+                        )}
+                        {categoryBadge}
+                      </div>
                     )
                     const rowActions = (
                       <>
@@ -1198,7 +1217,7 @@ export function Accounts() {
                         <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_90px_90px_70px] gap-2 px-3 py-2.5 text-[13px] border-t border-border items-center">
                           <span className="text-muted-foreground">{tx.date}</span>
                           <span className="truncate">{tx.description}</span>
-                          <span>{categoryBadge}</span>
+                          <span className="min-w-0">{categoryCell}</span>
                           <span className="text-right" style={{ color: 'var(--nl-danger-ink)' }}>
                             {dir === 'out' ? formatMoney(tx.amount ?? '0') : ''}
                           </span>
@@ -1219,7 +1238,7 @@ export function Accounts() {
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-2">
-                            {categoryBadge}
+                            {categoryCell}
                             <span className="text-muted-foreground text-[12px] flex-shrink-0">{tx.date}</span>
                           </div>
                           <div className="self-end flex items-center gap-0.5">{rowActions}</div>
