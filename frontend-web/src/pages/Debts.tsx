@@ -3,13 +3,11 @@ import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CategorySelect } from '@/components/nl/CategorySelect'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { DemoSteps, HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, SegmentedControl, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { Donut } from '@/lib/charts'
 import { useAccounts } from '@/hooks/useAccounts'
-import { useCategories } from '@/hooks/useCategories'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import {
   type ActivateDebtInput,
@@ -37,10 +35,8 @@ const DIRECTION_LABEL: Record<DebtDirection, string> = {
 }
 
 const DEBT_TYPES: DebtType[] = [
-  'credit_card',
   'personal_loan',
   'payroll_loan',
-  'installment',
   'informal',
   'civic',
   'loan_received',
@@ -227,9 +223,7 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
 
 function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: () => void }) {
   const { data: accounts } = useAccounts()
-  const { data: categories } = useCategories('expense')
   const createDebt = useCreateDebt()
-  const [isMsi, setIsMsi] = useState(false)
   const isReceivable = direction === 'owed_to_me'
 
   const [form, setForm] = useState<CreateDebtInput>({
@@ -241,33 +235,13 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
     payment_frequency: 'monthly',
     funding_account_id: '',
   })
-  const [categoryId, setCategoryId] = useState('')
-  const [payingAccountId, setPayingAccountId] = useState('')
-  // Validacion propia, distinta del error del servidor (createDebt.isError):
-  // el backend igual la exige (debt_service.create_debt), pero avisar antes
-  // de mandar la request evita el viaje redondo y el mensaje generico.
-  const [formError, setFormError] = useState<string | null>(null)
-  const needsLinkedAccount = !isReceivable && form.type === 'credit_card'
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    setFormError(null)
-    if (needsLinkedAccount && !form.linked_account_id) {
-      setFormError('Selecciona la cuenta de la tarjeta -- si todavía no la das de alta, créala primero en Cuentas.')
-      return
-    }
     try {
       await createDebt.mutateAsync({
         ...form,
         funding_account_id: form.funding_account_id || undefined,
-        linked_account_id: form.linked_account_id || undefined,
-        initial_charge: isMsi
-          ? {
-              category_id: categoryId,
-              paying_account_id: payingAccountId,
-              description: `Compra MSI: ${form.name}`,
-            }
-          : undefined,
       })
       onDone()
     } catch {
@@ -339,190 +313,39 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
           </SelectContent>
         </Select>
       </div>
-      {needsLinkedAccount && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-muted-foreground">
-            Cuenta vinculada (la TDC real) -- obligatoria
-          </label>
-          {accounts && accounts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Todavía no tienes cuentas.{' '}
-              <Link to="/accounts" className="underline hover:no-underline">
-                Crea la tarjeta en Cuentas
-              </Link>{' '}
-              y regresa aquí.
-            </p>
-          ) : (
-            <Select
-              value={form.linked_account_id || null}
-              onValueChange={(v) => setForm({ ...form, linked_account_id: v ?? '' })}
-            >
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="Selecciona la tarjeta">
-                  {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {accounts?.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      )}
-      {(isReceivable || form.type !== 'credit_card') && (
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-muted-foreground">
-            {isReceivable
-              ? '¿De cuál cuenta sale el dinero? (opcional)'
-              : '¿A cuál cuenta entró el dinero? (opcional)'}
-          </label>
-          <Select
-            value={form.funding_account_id || null}
-            onValueChange={(v) => setForm({ ...form, funding_account_id: v ?? '' })}
-          >
-            <SelectTrigger className="h-9 w-full">
-              <SelectValue placeholder="Ninguna, ya lo traía antes de usar la app">
-                {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Ninguna</SelectItem>
-              {accounts?.map((a) => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {!isReceivable && form.type === 'installment' && (
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={isMsi} onChange={(e) => setIsMsi(e.target.checked)} />
-          Es una compra a meses (MSI): también registrar el cargo inicial
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">
+          {isReceivable
+            ? '¿De cuál cuenta sale el dinero? (opcional)'
+            : '¿A cuál cuenta entró el dinero? (opcional)'}
         </label>
-      )}
+        <Select
+          value={form.funding_account_id || null}
+          onValueChange={(v) => setForm({ ...form, funding_account_id: v ?? '' })}
+        >
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder="Ninguna, ya lo traía antes de usar la app">
+              {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">Ninguna</SelectItem>
+            {accounts?.map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      {isMsi && (
-        <>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">Categoría del gasto</label>
-            <CategorySelect
-              categories={categories}
-              value={categoryId}
-              onValueChange={setCategoryId}
-              placeholder="Selecciona categoría"
-              triggerClassName="h-9 w-full"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">TDC donde se cargó</label>
-            <Select value={payingAccountId || null} onValueChange={(v) => setPayingAccountId(v ?? '')}>
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="Selecciona cuenta">
-                  {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {accounts?.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </>
-      )}
-
-      {formError && <p className="text-sm text-destructive">{formError}</p>}
       {createDebt.isError && <p className="text-sm text-destructive">{apiErrorMessage(createDebt.error)}</p>}
       <DialogFooter>
-        <DialogPrimaryButton
-          icon={Check}
-          pending={createDebt.isPending}
-          disabled={needsLinkedAccount && accounts?.length === 0}
-        >
+        <DialogPrimaryButton icon={Check} pending={createDebt.isPending}>
           Crear deuda
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
-  )
-}
-
-/** Si la TDC quedo creada sin cuenta vinculada (NewDebtForm ya lo exige para
- * deudas nuevas, pero esto resuelve las que ya hayan quedado asi -- ver
- * debt_service._resolve_debt_side_account), el pago no se puede registrar
- * hasta asignarla. En vez de mandar al usuario a buscar donde arreglarlo (no
- * habia donde, ver bug reportado), se resuelve aqui mismo con useUpdateDebt
- * y se sigue directo al formulario de pago normal. */
-function ResolveLinkedAccountForm({ debt, onResolved }: { debt: Debt; onResolved: () => void }) {
-  const { data: accounts } = useAccounts()
-  const updateDebt = useUpdateDebt()
-  const [linkedAccountId, setLinkedAccountId] = useState('')
-
-  async function handleAssign() {
-    if (!linkedAccountId) return
-    try {
-      await updateDebt.mutateAsync({ id: debt.id, input: { linked_account_id: linkedAccountId } })
-      onResolved()
-    } catch {
-      // error mostrado abajo
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">
-        Esta tarjeta todavía no tiene una cuenta vinculada -- necesitamos saber cuál es antes de poder
-        registrar el pago.
-      </p>
-      {accounts && accounts.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Todavía no tienes cuentas.{' '}
-          <Link to="/accounts" className="underline hover:no-underline">
-            Crea la tarjeta en Cuentas
-          </Link>{' '}
-          y regresa aquí.
-        </p>
-      ) : (
-        <>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">Cuenta de esta tarjeta</label>
-            <Select value={linkedAccountId || null} onValueChange={(v) => setLinkedAccountId(v ?? '')}>
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue placeholder="Selecciona una cuenta">
-                  {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {accounts?.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {updateDebt.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateDebt.error)}</p>}
-          <DialogPrimaryButton
-            type="button"
-            onClick={handleAssign}
-            icon={Check}
-            pending={updateDebt.isPending}
-            pendingLabel="Asignando..."
-            disabled={!linkedAccountId}
-          >
-            Asignar y continuar
-          </DialogPrimaryButton>
-        </>
-      )}
-    </div>
   )
 }
 
@@ -533,15 +356,6 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
   const [accountId, setAccountId] = useState('')
   const [amount, setAmount] = useState(debt.payment_amount ?? '')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
-  // Resuelto en cuanto onResolved invalida ['debts'] y el `debt` de arriba
-  // (viene del listado, no de un fetch propio de este form) llega con
-  // linked_account_id ya asignado -- este flag solo cubre el instante entre
-  // el click de "Asignar y continuar" y que ese refetch termine.
-  const [justResolved, setJustResolved] = useState(false)
-
-  if (debt.type === 'credit_card' && !debt.linked_account_id && !justResolved) {
-    return <ResolveLinkedAccountForm debt={debt} onResolved={() => setJustResolved(true)} />
-  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -622,7 +436,12 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
     if (!ok) return
     try {
       await updateDebt.mutateAsync({ id: debt.id, input: { current_balance: balance } })
-      pushToast(`Saldo de "${debt.name}" actualizado`, 'success')
+      pushToast(
+        <>
+          Saldo de <strong className="font-bold">{debt.name}</strong> actualizado
+        </>,
+        'success',
+      )
       onDone()
     } catch {
       // error mostrado abajo
@@ -825,18 +644,18 @@ function DebtsHelp() {
     <>
       <HelpSection heading="Qué es esta pantalla">
         <p>
-          Todo lo que involucra deber dinero, en cualquier dirección: tarjetas de crédito, préstamos
-          personales, nómina, crédito de tienda, o algo tan informal como que le prestaste $100 a un
-          amigo o tu abuelo te prestó $100,000. La pestaña de arriba cambia entre{' '}
-          <strong>Yo debo</strong> y <strong>Me deben</strong> — mismo modelo, misma pantalla, solo
-          cambia quién le debe a quién.
+          Todo lo que involucra deber dinero, en cualquier dirección: préstamos personales, nómina,
+          crédito de tienda, o algo tan informal como que le prestaste $100 a un amigo o tu abuelo te
+          prestó $100,000. Las tarjetas de crédito no viven aquí -- se pagan y se ve el progreso de tus
+          compras a meses desde Cuentas. La pestaña de arriba cambia entre <strong>Yo debo</strong> y{' '}
+          <strong>Me deben</strong> — mismo modelo, misma pantalla, solo cambia quién le debe a quién.
         </p>
       </HelpSection>
       <HelpSection heading="Agregar deuda">
         <p>
           Registra una deuda con su plan completo: monto, frecuencia de pago y, opcionalmente, de/a qué
-          cuenta se movió el efectivo cuando se originó. En "Yo debo" también eliges el tipo (tarjeta,
-          préstamo personal, informal, etc.) — en "Me deben" siempre es un préstamo informal.
+          cuenta se movió el efectivo cuando se originó. En "Yo debo" también eliges el tipo (préstamo
+          personal, informal, etc.) — en "Me deben" siempre es un préstamo informal.
         </p>
       </HelpSection>
       <HelpSection heading="Deuda sin plan">

@@ -101,10 +101,8 @@ export function accountSubtypeLabel(subtype: string | null | undefined): string 
 
 /** Etiqueta en espanol para Debt.type -- mismo patron que ACCOUNT_SUBTYPE_LABELS. */
 const DEBT_TYPE_LABELS: Record<string, string> = {
-  credit_card: "Tarjeta de crédito",
   personal_loan: "Préstamo personal",
   payroll_loan: "Crédito de nómina",
-  installment: "Meses sin intereses",
   informal: "Préstamo informal",
   civic: "Crédito cívico",
   loan_received: "Préstamo recibido",

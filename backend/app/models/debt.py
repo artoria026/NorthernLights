@@ -11,10 +11,8 @@ from app.core.database import Base
 from app.models.mixins import SoftDeleteMixin, TimestampMixin
 
 DEBT_TYPES = (
-    "credit_card",
     "personal_loan",
     "payroll_loan",
-    "installment",
     "informal",
     "civic",
     "loan_received",
@@ -165,3 +163,27 @@ class DebtPayment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     debt: Mapped["Debt"] = relationship(back_populates="payments")
+
+
+class InstallmentPlan(Base, TimestampMixin):
+    """Metadata de una compra a meses sin intereses (MSI) hecha con una TDC.
+
+    1:1 con el journal_entry que representa la compra real -- no duplica su
+    monto ni su fecha. `monthly_amount` y en que cuota va se calculan al
+    vuelo a partir de esa transaccion (ver transaction_service), nunca se
+    guardan aqui, para que nunca puedan desincronizarse de ella.
+    """
+
+    __tablename__ = "installment_plans"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    journal_entry_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("journal_entries.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    total_installments: Mapped[int] = mapped_column(nullable=False)

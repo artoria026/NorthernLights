@@ -239,7 +239,7 @@ export const TOUR_CONTENT: Partial<Record<ModuleKey, TourContent>> = {
   debts: {
     welcome: {
       description:
-        'Todo lo que involucra deber dinero, en cualquier dirección: tarjetas de crédito, préstamos personales, o algo tan informal como prestarle $100 a un amigo.',
+        'Todo lo que involucra deber dinero, en cualquier dirección: préstamos personales, formales o informales, o algo tan informal como prestarle $100 a un amigo. Las tarjetas de crédito viven en Cuentas -- ahí se pagan y se ve el progreso de tus compras a meses.',
       bullets: [
         'Registra deudas con su plan completo: monto, frecuencia y cuenta',
         'Cambia entre "Yo debo" y "Me deben" -- misma pantalla, distinta dirección',

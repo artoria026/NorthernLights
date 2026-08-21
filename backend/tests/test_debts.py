@@ -37,11 +37,6 @@ async def _create_account(client: AsyncClient, headers: dict, **overrides) -> st
     return response.json()["data"]["id"]
 
 
-async def _get_category_id(client: AsyncClient, headers: dict, type_: str) -> str:
-    response = await client.get(f"/api/v1/categories?type={type_}", headers=headers)
-    return response.json()["data"][0]["id"]
-
-
 async def test_create_and_list_unplanned_debt(client: AsyncClient):
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -119,20 +114,18 @@ async def test_register_payment_updates_balances_and_creates_journal_entry(clien
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    tdc_id = await _create_account(
-        client, headers, name="TDC Stori", type="liability", subtype="credit_card"
-    )
+    payable_id = await _create_account(client, headers, name="Prestamo vinculado", initial_balance="0")
     bank_id = await _create_account(client, headers, name="Banco", initial_balance="5000")
 
     debt = await client.post(
         "/api/v1/debts",
         headers=headers,
         json={
-            "name": "TDC Stori",
-            "type": "credit_card",
+            "name": "Prestamo Franco",
+            "type": "personal_loan",
             "total_amount": "4000.00",
             "current_balance": "4000.00",
-            "linked_account_id": tdc_id,
+            "linked_account_id": payable_id,
             "payment_amount": "1000.00",
             "payment_frequency": "monthly",
             "next_payment_date": "2026-08-01",
@@ -217,127 +210,6 @@ async def test_informal_debt_payment_works_without_linked_account(client: AsyncC
 
     bank = await client.get(f"/api/v1/accounts/{bank_id}", headers=headers)
     assert bank.json()["data"]["balance"] == "400.00"
-
-
-async def test_credit_card_debt_creation_without_linked_account_rejected(client: AsyncClient):
-    """Antes se podia crear la TDC sin cuenta vinculada y el problema recien
-    aparecia al intentar pagar -- sin ninguna forma de arreglarlo desde la UI
-    (bug real reportado). Ahora se corta aqui, al crear."""
-    token = await _register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    debt = await client.post(
-        "/api/v1/debts",
-        headers=headers,
-        json={"name": "TDC sin vincular", "type": "credit_card", "total_amount": "500.00"},
-    )
-    assert debt.status_code == 400
-    assert "cuenta vinculada" in debt.json()["error"]
-
-
-async def test_credit_card_payment_without_linked_account_rejected_and_fixable(
-    client: AsyncClient, session_factory
-):
-    """Red de seguridad para deudas que hayan quedado en ese estado ANTES del
-    chequeo de test_credit_card_debt_creation_without_linked_account_rejected
-    (ej. datos ya existentes en produccion) -- simula una asi insertandola
-    directo por el service, sin pasar por create_debt. Ademas confirma que
-    PUT /debts/{id} (ya expuesto, ver debt_service.update_debt) es
-    suficiente para arreglarla sin tener que borrarla y recrearla."""
-    token, uid = await _register_and_login_with_id(client)
-    headers = {"Authorization": f"Bearer {token}"}
-    bank_id = await _create_account(client, headers, initial_balance="500")
-    tdc_id = await _create_account(client, headers, type="liability", subtype="credit_card")
-
-    from app.models.debt import Debt
-
-    async with rls_session(session_factory, uid) as session:
-        debt = Debt(
-            user_id=uid,
-            name="TDC legacy sin vincular",
-            type="credit_card",
-            direction="owed_by_me",
-            total_amount=Decimal("500.00"),
-            current_balance=Decimal("500.00"),
-        )
-        session.add(debt)
-        await session.flush()
-        debt_id = str(debt.id)
-
-    payment = await client.post(
-        f"/api/v1/debts/{debt_id}/payments",
-        headers=headers,
-        json={"account_id": bank_id, "amount": "100.00", "date": "2026-08-01"},
-    )
-    assert payment.status_code == 400
-    assert "cuenta vinculada" in payment.json()["error"]
-
-    updated = await client.put(
-        f"/api/v1/debts/{debt_id}", headers=headers, json={"linked_account_id": tdc_id}
-    )
-    assert updated.status_code == 200
-    assert updated.json()["data"]["linked_account_id"] == tdc_id
-
-    retry = await client.post(
-        f"/api/v1/debts/{debt_id}/payments",
-        headers=headers,
-        json={"account_id": bank_id, "amount": "100.00", "date": "2026-08-01"},
-    )
-    assert retry.status_code == 201
-
-
-async def test_msi_creates_debt_and_initial_journal_entry(client: AsyncClient):
-    token = await _register_and_login(client)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    tdc_id = await _create_account(client, headers, type="liability", subtype="credit_card")
-    bank_id = await _create_account(client, headers, name="Banco", initial_balance="5000")
-    category_id = await _get_category_id(client, headers, "expense")
-
-    debt = await client.post(
-        "/api/v1/debts",
-        headers=headers,
-        json={
-            "name": "TV Pantalla MSI",
-            "type": "installment",
-            "total_amount": "8999.00",
-            "current_balance": "8999.00",
-            "linked_account_id": tdc_id,
-            "payment_amount": "499.94",
-            "payment_frequency": "monthly",
-            "total_installments": 18,
-            "start_date": "2026-07-08",
-            "initial_charge": {
-                "category_id": category_id,
-                "paying_account_id": tdc_id,
-                "description": "Compra TV a 18 MSI",
-            },
-        },
-    )
-    assert debt.status_code == 201
-    debt_id = debt.json()["data"]["id"]
-
-    tdc = await client.get(f"/api/v1/accounts/{tdc_id}", headers=headers)
-    assert tdc.json()["data"]["balance"] == "8999.00"
-
-    transactions = await client.get("/api/v1/transactions", headers=headers)
-    assert transactions.json()["meta"]["total"] == 1
-
-    # Regresion: una MSI (type='installment') vinculada a una TDC real debe
-    # pagarse contra ESA cuenta, no contra el ledger oculto de deudas
-    # informales -- de lo contrario el saldo de la TDC nunca baja aunque la
-    # deuda en Deudas si muestre progreso.
-    payment = await client.post(
-        f"/api/v1/debts/{debt_id}/payments",
-        headers=headers,
-        json={"account_id": bank_id, "amount": "499.94", "date": "2026-08-08"},
-    )
-    assert payment.status_code == 201
-
-    tdc_after = await client.get(f"/api/v1/accounts/{tdc_id}", headers=headers)
-    bank_after = await client.get(f"/api/v1/accounts/{bank_id}", headers=headers)
-    assert tdc_after.json()["data"]["balance"] == "8499.06"
-    assert bank_after.json()["data"]["balance"] == "4500.06"
 
 
 async def test_shared_debt_fields_ignored_for_non_admin(client: AsyncClient):
@@ -667,62 +539,6 @@ async def test_process_due_debt_payments_skips_debt_without_payment_source(
     async with rls_session(session_factory, uid) as session:
         generated = await debt_service.process_due_debt_payments(session, uid, date(2026, 8, 5))
     assert generated == []
-
-
-async def test_confirming_pending_debt_payment_applies_balance_and_msi_hits_real_tdc(
-    client: AsyncClient, session_factory
-):
-    """Cubre el caso completo de una MSI: el borrador automatico debe pagarse
-    contra la TDC real (linked_account_id), no el ledger oculto -- misma
-    regresion que test_msi_creates_debt_and_initial_journal_entry pero para
-    el flujo automatico."""
-    token, uid = await _register_and_login_with_id(client)
-    headers = {"Authorization": f"Bearer {token}"}
-    tdc_id = await _create_account(client, headers, type="liability", subtype="credit_card")
-    bank_id = await _create_account(client, headers, name="Banco", initial_balance="5000")
-    category_id = await _get_category_id(client, headers, "expense")
-
-    debt = await client.post(
-        "/api/v1/debts",
-        headers=headers,
-        json={
-            "name": "TV MSI",
-            "type": "installment",
-            "total_amount": "6000.00",
-            "current_balance": "6000.00",
-            "linked_account_id": tdc_id,
-            "payment_source_account_id": bank_id,
-            "payment_amount": "500.00",
-            "payment_frequency": "monthly",
-            "total_installments": 12,
-            "start_date": "2026-07-08",
-            "next_payment_date": "2026-08-08",
-            "initial_charge": {
-                "category_id": category_id,
-                "paying_account_id": tdc_id,
-                "description": "Compra TV 12 MSI",
-            },
-        },
-    )
-    debt_id = debt.json()["data"]["id"]
-
-    async with rls_session(session_factory, uid) as session:
-        await debt_service.process_due_debt_payments(session, uid, date(2026, 8, 8))
-
-    pending = (await client.get("/api/v1/debts/pending", headers=headers)).json()["data"]
-    assert len(pending) == 1
-    entry_id = pending[0]["id"]
-
-    confirm = await client.post(f"/api/v1/transactions/{entry_id}/confirm", headers=headers)
-    assert confirm.status_code == 200
-
-    tdc = await client.get(f"/api/v1/accounts/{tdc_id}", headers=headers)
-    bank = await client.get(f"/api/v1/accounts/{bank_id}", headers=headers)
-    debt_after = await client.get(f"/api/v1/debts/{debt_id}", headers=headers)
-    assert tdc.json()["data"]["balance"] == "5500.00"  # 6000 - 500, la TDC real baja
-    assert bank.json()["data"]["balance"] == "4500.00"
-    assert debt_after.json()["data"]["current_balance"] == "5500.00"
-    assert debt_after.json()["data"]["paid_installments"] == 1
 
 
 async def test_rejecting_pending_debt_payment_does_not_change_balance(

@@ -1,6 +1,8 @@
 import uuid
+from datetime import date
 
 import pytest
+from dateutil.relativedelta import relativedelta
 from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
@@ -344,6 +346,69 @@ async def test_split_expense_accumulates_same_person(client: AsyncClient):
     debts = (await client.get("/api/v1/debts?direction=owed_to_me", headers=headers)).json()["data"]
     assert len(debts) == 1  # "erick" repetido no crea una deuda nueva
     assert debts[0]["current_balance"] == "100.00"
+
+
+async def test_installment_purchase_creates_plan_with_progress(client: AsyncClient):
+    """Una compra a meses sin intereses (installment_total) no crea una Deuda
+    aparte -- es metadata de la transaccion real contra la TDC, y el progreso
+    (paid_installments/monthly_amount) se calcula al vuelo a partir de la
+    fecha de esa transaccion (ver transaction_service._get_installment_map)."""
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    tdc_id = await _create_account(
+        client, headers, name="TDC", type="liability", subtype="credit_card", initial_balance="0"
+    )
+    category_id = await _get_category_id(client, headers, "expense")
+    purchase_date = date.today() - relativedelta(months=3)
+
+    created = await client.post(
+        "/api/v1/transactions",
+        headers=headers,
+        json={
+            "date": purchase_date.isoformat(),
+            "description": "Laptop a 12 meses",
+            "entry_type": "expense",
+            "category_id": category_id,
+            "account_id": tdc_id,
+            "amount": "12000.00",
+            "installment_total": 12,
+        },
+    )
+    assert created.status_code == 201, created.text
+
+    tdc = await client.get(f"/api/v1/accounts/{tdc_id}", headers=headers)
+    assert tdc.json()["data"]["balance"] == "12000.00"  # cargo completo, de una vez
+
+    listing = await client.get("/api/v1/transactions", headers=headers)
+    entry = listing.json()["data"][0]
+    assert entry["installment"] == {
+        "total_installments": 12,
+        "paid_installments": 3,
+        "monthly_amount": "1000.00",
+    }
+
+
+async def test_installment_purchase_rejected_without_credit_card_account(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    checking_id = await _create_account(client, headers, name="Banco", initial_balance="0")
+    category_id = await _get_category_id(client, headers, "expense")
+
+    response = await client.post(
+        "/api/v1/transactions",
+        headers=headers,
+        json={
+            "date": "2026-07-01",
+            "description": "Laptop a 12 meses",
+            "entry_type": "expense",
+            "category_id": category_id,
+            "account_id": checking_id,
+            "amount": "12000.00",
+            "installment_total": 12,
+        },
+    )
+    assert response.status_code == 400
+    assert "tarjeta de credito" in response.json()["error"]
 
 
 async def test_update_transaction_changes_amount_and_account(client: AsyncClient):

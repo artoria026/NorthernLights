@@ -38,6 +38,12 @@ class TransactionCreate(BaseModel):
     # Forma explicita (requerida para transfer/prestamos, disponible para
     # cualquier caso de uso avanzado): el caller arma los renglones el mismo.
     lines: list[JournalLineIn] | None = None
+    # Solo para entry_type='expense' en forma simple, pagando con una TDC:
+    # marca la compra como a meses sin intereses -- ver
+    # transaction_service.create_transaction, que valida la cuenta y crea el
+    # InstallmentPlan. Cuantas cuotas van pagadas y la mensualidad se calculan
+    # al vuelo a partir de esta transaccion, nunca se guardan aparte.
+    installment_total: int | None = Field(default=None, ge=2)
 
     @model_validator(mode="after")
     def validate_shape(self) -> "TransactionCreate":
@@ -53,6 +59,14 @@ class TransactionCreate(BaseModel):
                 raise ValueError("account_id y amount son requeridos sin 'lines'")
         else:
             raise ValueError(f"entry_type='{self.entry_type}' requiere 'lines' explicitas")
+
+        if self.installment_total is not None and (
+            self.entry_type != "expense" or self.account_id is None
+        ):
+            raise ValueError(
+                "installment_total solo aplica a entry_type='expense' en forma simple "
+                "(account_id/amount, no 'lines')"
+            )
         return self
 
 
@@ -71,6 +85,12 @@ class TransactionUpdate(BaseModel):
     lines: list[JournalLineIn] | None = None
 
 
+class InstallmentInfo(BaseModel):
+    total_installments: int
+    paid_installments: int
+    monthly_amount: Decimal
+
+
 class TransactionOut(BaseModel):
     id: UUID
     date: date_type
@@ -85,6 +105,7 @@ class TransactionOut(BaseModel):
     is_recurring: bool
     created_at: datetime
     lines: list[JournalLineOut] = []
+    installment: InstallmentInfo | None = None
 
     model_config = {"from_attributes": True}
 

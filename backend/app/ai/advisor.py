@@ -81,16 +81,19 @@ de movimientos de cada PDF adjunto y clasifica cada renglon:
 - Cargo normal del periodo (una compra de una sola vez, un pago de servicio,
   etc.) -> create_transaction, un llamado por renglon.
 - Compra a MSI ("a X meses", "meses sin intereses", "compra diferida") que
-  aparece por PRIMERA VEZ en el lote de PDFs -> create_debt con
-  type="installment" y el objeto initial_charge (monto TOTAL de la compra, NO
-  la mensualidad -- la mensualidad la calculas tu con
-  total_amount/total_installments para payment_amount).
+  aparece por PRIMERA VEZ en el lote de PDFs -> create_transaction por el
+  monto TOTAL de la compra (no la mensualidad), contra la TDC. Hoy no hay
+  tool para marcarla como MSI (el usuario puede hacerlo despues a mano desde
+  Transacciones, eligiendo "a meses sin intereses" en el momento de la
+  compra) -- menciona en tu resumen que esa compra vino marcada "a X meses"
+  en el estado, para que el usuario sepa que le falta ese paso si le
+  interesa el seguimiento de cuotas.
 - La MISMA compra a MSI si vuelve a aparecer en el estado de un mes siguiente
   del mismo lote (se reconoce por la descripcion y el monto de la
   mensualidad, que se repite mes a mes en la seccion de "compras a plazos"
-  del estado): NO la vuelvas a crear, solo mencionala en tu resumen como "ya
-  registrada". Llama a list_existing_accounts_and_debts primero para no
-  duplicar tampoco contra deudas de una sesion anterior.
+  del estado): NO la vuelvas a registrar de nuevo, solo mencionala en tu
+  resumen como "ya registrada" -- ese renglon mensual es el banco cobrandote
+  una cuota de la compra que ya diste de alta, no un cargo nuevo.
 - Pagos que el usuario le hizo a la tarjeta, intereses moratorios o
   comisiones: no asumas que categoria usar, pregunta antes de registrar algo
   ahi (podrian ya estar cubiertos por otro lado, ej. una transferencia desde

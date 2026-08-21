@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { PayCreditCardForm } from '@/components/nl/PayCreditCardForm'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
 import { categoryIcon } from '@/lib/categoryIcons'
 import { Sparkline } from '@/lib/charts'
@@ -346,7 +347,12 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
     }
     try {
       await createAccount.mutateAsync(payload)
-      pushToast(`Cuenta "${payload.name}" agregada`, 'success')
+      pushToast(
+        <>
+          Cuenta <strong className="font-bold">{payload.name}</strong> agregada
+        </>,
+        'success',
+      )
       onDone()
     } catch {
       // error mostrado abajo
@@ -600,7 +606,12 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
     }
     try {
       await updateAccount.mutateAsync({ id: account.id, input: payload })
-      pushToast(`Cuenta "${payload.name}" actualizada`, 'success')
+      pushToast(
+        <>
+          Cuenta <strong className="font-bold">{payload.name}</strong> actualizada
+        </>,
+        'success',
+      )
       onDone()
     } catch {
       // error mostrado abajo
@@ -619,8 +630,12 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       </Field>
 
       <Field
-        label="Saldo inicial"
-        tip="El saldo con el que arrancó esta cuenta. Cambiarlo no toca ninguna transacción, solo desplaza el saldo actual por la misma diferencia."
+        label={isCreditCard ? 'Saldo inicial (crédito usado)' : 'Saldo inicial'}
+        tip={
+          isCreditCard
+            ? 'El crédito que ya tenías usado en esta tarjeta cuando la registraste -- no el límite de crédito. Cambiarlo no toca ninguna transacción, solo desplaza el saldo actual por la misma diferencia.'
+            : 'El dinero que ya tenías en esta cuenta cuando la registraste. Cambiarlo no toca ninguna transacción, solo desplaza el saldo actual por la misma diferencia.'
+        }
       >
         <input
           type="number"
@@ -931,6 +946,7 @@ export function Accounts() {
   const [open, setOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [reconcilingAccount, setReconcilingAccount] = useState<Account | null>(null)
+  const [payingAccount, setPayingAccount] = useState<Account | null>(null)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [segment, setSegment] = useState<Segment>('ALL')
@@ -966,6 +982,17 @@ export function Accounts() {
   })
   const visibleRows = filteredRows.slice(0, LEDGER_PREVIEW_LIMIT)
   const hasMoreInAccount = (ledger?.meta?.total ?? 0) > LEDGER_PREVIEW_LIMIT
+
+  // Compras a meses activas de esta TDC, sobre la ventana de transacciones ya
+  // cargada (per_page:50 arriba) -- suficiente para un resumen visual, no
+  // pretende ser un total historico exacto.
+  const activeInstallments = (ledger?.data ?? []).filter(
+    (tx) => tx.installment && tx.installment.paid_installments < tx.installment.total_installments,
+  )
+  const installmentMonthlyTotal = activeInstallments.reduce(
+    (sum, tx) => sum + Number(tx.installment?.monthly_amount ?? 0),
+    0,
+  )
 
   async function handleDeleteAccount(account: Account) {
     const ok = await confirm({
@@ -1149,6 +1176,33 @@ export function Accounts() {
                         </DialogContent>
                       </Dialog>
                     )}
+                  {selectedAccount.type === 'liability' && selectedAccount.subtype === 'credit_card' && (
+                    <Dialog
+                      open={payingAccount?.id === selectedAccount.id}
+                      onOpenChange={(next, eventDetails) => {
+                        if (!next && eventDetails.reason === 'outside-press') return
+                        setPayingAccount(next ? selectedAccount : null)
+                      }}
+                    >
+                      <DialogTrigger
+                        render={
+                          <button
+                            type="button"
+                            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
+                          >
+                            <CreditCard size={13} />
+                            Pagar tarjeta
+                          </button>
+                        }
+                      />
+                      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Pagar tarjeta — {selectedAccount.name}</DialogTitle>
+                        </DialogHeader>
+                        <PayCreditCardForm account={selectedAccount} onDone={() => setPayingAccount(null)} />
+                      </DialogContent>
+                    </Dialog>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleDeleteAccount(selectedAccount)}
@@ -1177,6 +1231,14 @@ export function Accounts() {
 
               {selectedAccount.subtype === 'credit_card' && selectedAccount.billing_cycle_day != null && (
                 <TdcCycleCard accountId={selectedAccount.id} />
+              )}
+
+              {selectedAccount.subtype === 'credit_card' && activeInstallments.length > 0 && (
+                <p className="text-[12px] text-muted-foreground mb-4">
+                  {activeInstallments.length}{' '}
+                  {activeInstallments.length === 1 ? 'compra a meses activa' : 'compras a meses activas'} ·{' '}
+                  {formatMoney(String(installmentMonthlyTotal))} comprometido este mes
+                </p>
               )}
 
               <div className="flex gap-2 mb-4 flex-wrap">
@@ -1226,6 +1288,14 @@ export function Accounts() {
                     ) : (
                       <CategoryBadge name={entryTypeLabel(tx.entry_type)} />
                     )
+                    const installmentBadge = tx.installment && (
+                      <span
+                        className="flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
+                        style={{ background: 'var(--nl-bg-track)' }}
+                      >
+                        MSI {tx.installment.paid_installments}/{tx.installment.total_installments}
+                      </span>
+                    )
                     const rowActions = (
                       <>
                         {editable && (
@@ -1253,7 +1323,10 @@ export function Accounts() {
                       <div key={tx.id}>
                         <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_90px_90px_70px] gap-2 px-3 py-2.5 text-[13px] border-t border-border items-center">
                           <span className="text-muted-foreground">{tx.date}</span>
-                          <span className="truncate">{tx.description}</span>
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <span className="truncate">{tx.description}</span>
+                            {installmentBadge}
+                          </span>
                           <span className="min-w-0">{categoryCell}</span>
                           <span className="text-right" style={{ color: 'var(--nl-danger-ink)' }}>
                             {dir === 'out' ? formatMoney(tx.amount ?? '0') : ''}
@@ -1265,7 +1338,10 @@ export function Accounts() {
                         </div>
                         <div className="lg:hidden flex flex-col gap-1.5 px-3 py-2.5 text-[13px] border-t border-border">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="truncate">{tx.description}</span>
+                            <span className="flex items-center gap-1.5 min-w-0">
+                              <span className="truncate">{tx.description}</span>
+                              {installmentBadge}
+                            </span>
                             <span
                               className="flex-shrink-0"
                               style={{ color: dir === 'out' ? 'var(--nl-danger-ink)' : 'var(--nl-accent-ink)' }}

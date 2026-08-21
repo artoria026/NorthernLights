@@ -37,6 +37,10 @@ export interface CreateTransactionInput {
   amount?: string
   /** Forma explícita, solo para transfer: dos cuentas reales del usuario. */
   lines?: { account_id: string; amount: string; type: 'debit' | 'credit' }[]
+  /** Solo para entry_type='expense' en forma simple, pagando con una TDC:
+   * marca la compra como a meses sin intereses. El backend valida la cuenta
+   * y calcula el progreso al vuelo -- ver Transaction.installment. */
+  installment_total?: number
 }
 
 export function useCreateTransaction() {

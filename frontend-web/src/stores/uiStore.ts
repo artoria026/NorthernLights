@@ -1,14 +1,18 @@
 import { create } from 'zustand'
+import type { ReactNode } from 'react'
 
-interface Toast {
+export interface Toast {
   id: number
-  message: string
+  /** ReactNode (no solo string) para poder resaltar una parte del mensaje
+   * (ej. el nombre de una cuenta en negritas) en vez de envolverla en
+   * comillas -- ver ToastHost.tsx. */
+  message: ReactNode
   variant: 'error' | 'success'
 }
 
 interface UiState {
   toasts: Toast[]
-  pushToast: (message: string, variant?: Toast['variant']) => void
+  pushToast: (message: ReactNode, variant?: Toast['variant']) => void
   dismissToast: (id: number) => void
   /** AppSidebar dibuja el icono de "Novedades" dos veces (barra movil y
    * sidebar de escritorio), pero el modal en si (con su auto-apertura al
