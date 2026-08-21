@@ -7,6 +7,7 @@ import { DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
+import { categoryIcon } from '@/lib/categoryIcons'
 import { Sparkline } from '@/lib/charts'
 import { fileToNormalizedDataUrl, validateImageFile } from '@/lib/image'
 import {
@@ -34,7 +35,7 @@ import {
 import { useConfirmStore } from '@/stores/confirmStore'
 import { useTransactionModalStore } from '@/stores/transactionModalStore'
 import { useUiStore } from '@/stores/uiStore'
-import type { Account, Transaction } from '@/types'
+import type { Account, Category, Transaction } from '@/types'
 
 type Segment = 'ALL' | 'IN' | 'OUT'
 
@@ -213,6 +214,51 @@ function lineDirection(tx: Transaction, accountId: string, accountType: Account[
   const increases = (line.type === 'debit') === isDebitNormal
   if (accountType === 'liability') return increases ? 'out' : 'in'
   return increases ? 'in' : 'out'
+}
+
+function hexToRgba(hex: string, alpha: number) {
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+/** Pill de categoria con el padre integrado ("Propuesta 3 -- breadcrumb con
+ * separador ›" de categoria-columna-propuestas.html) -- una sola linea con
+ * el color real de la categoria en vez de dos textos sueltos que no se ven
+ * conectados. Solo se usa aqui (ledger de una cuenta); el resto de la app
+ * sigue con CategoryBadge tal cual, que no necesita mostrar el padre.
+ *
+ * El padre y el hijo son DOS spans, no uno solo con truncate -- con nombres
+ * largos, un solo texto trunca por el final y se come justo lo que mas
+ * importa (la subcategoria). Aqui solo el padre encoge/trunca primero
+ * (min-w-0 + flex-1); el hijo (shrink-0) se queda completo salvo que la
+ * pill entera ya no quepa ni con el padre en cero. */
+function CategoryBreadcrumb({ category, parentName }: { category: Category; parentName?: string }) {
+  const Icon = categoryIcon(category.icon)
+  return (
+    <span
+      className="inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5 text-[11px] font-medium"
+      style={{ background: hexToRgba(category.color, 0.14), border: `1px solid ${hexToRgba(category.color, 0.35)}` }}
+    >
+      <span
+        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px]"
+        style={{ background: category.color }}
+      >
+        <Icon size={10} color="white" strokeWidth={2} />
+      </span>
+      <span className="flex min-w-0 items-center" style={{ color: category.color }}>
+        {parentName && (
+          <span className="min-w-0 truncate opacity-55">
+            {parentName}
+            <span> › </span>
+          </span>
+        )}
+        <span className="shrink-0 whitespace-nowrap">{category.name}</span>
+      </span>
+    </span>
+  )
 }
 
 interface WizardState {
@@ -899,7 +945,6 @@ export function Accounts() {
     per_page: 50,
   })
   const { data: allCategories } = useCategories()
-  const categoryColorById = new Map((allCategories ?? []).map((c) => [c.id, c.color]))
   const categoryById = new Map((allCategories ?? []).map((c) => [c.id, c]))
 
   const LEDGER_PREVIEW_LIMIT = 8
@@ -1167,27 +1212,13 @@ export function Accounts() {
                     const editable = isTransactionEditable(tx)
                     // El padre solo aparece si la transaccion cayo en una
                     // subcategoria -- una categoria de primer nivel no tiene
-                    // padre que mostrar arriba, se queda solo con la badge
-                    // de siempre.
+                    // padre que mostrar, se queda con la pill de siempre.
                     const category = tx.category_id ? categoryById.get(tx.category_id) : undefined
-                    const parentName = category?.parent_id
-                      ? categoryById.get(category.parent_id)?.name
-                      : undefined
-                    const categoryBadge = (
-                      <CategoryBadge
-                        name={tx.category_name ?? entryTypeLabel(tx.entry_type)}
-                        color={tx.category_id ? categoryColorById.get(tx.category_id) : undefined}
-                      />
-                    )
-                    const categoryCell = (
-                      <div className="min-w-0 flex flex-col gap-0.5">
-                        {parentName && (
-                          <span className="truncate text-[9.5px] leading-none text-muted-foreground">
-                            {parentName}
-                          </span>
-                        )}
-                        {categoryBadge}
-                      </div>
+                    const parent = category?.parent_id ? categoryById.get(category.parent_id) : undefined
+                    const categoryCell = category ? (
+                      <CategoryBreadcrumb category={category} parentName={parent?.name} />
+                    ) : (
+                      <CategoryBadge name={entryTypeLabel(tx.entry_type)} />
                     )
                     const rowActions = (
                       <>
