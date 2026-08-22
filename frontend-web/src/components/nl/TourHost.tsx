@@ -39,6 +39,7 @@ export function TourHost() {
   const [rect, setRect] = useState<Rect | null>(null)
   const [tooltipHeight, setTooltipHeight] = useState(TOOLTIP_HEIGHT_ESTIMATE)
   const tooltipRef = useRef<HTMLDivElement>(null)
+  const nextButtonRef = useRef<HTMLButtonElement>(null)
 
   const step = visibleSteps[stepIndex]
 
@@ -81,6 +82,18 @@ export function TourHost() {
       window.removeEventListener('scroll', reflow, true)
     }
   }, [step, stop])
+
+  // Foco automatico en "Siguiente"/"Listo" cada vez que se abre un paso --
+  // asi Enter solo (sin tocar el mouse) avanza el recorrido completo, sea
+  // cual sea el elemento que tenia el foco antes (el botón que abrió el
+  // tour, un input de la pantalla de atrás, etc.). Depende de `rect` y no
+  // solo de `step` porque el boton todavia no existe en el DOM en el primer
+  // render de cada paso (el componente completo retorna null hasta que
+  // `rect` se resuelve mas abajo) -- este efecto vuelve a correr en cuanto
+  // `rect` cambia y el boton ya esta montado.
+  useEffect(() => {
+    nextButtonRef.current?.focus()
+  }, [step, rect])
 
   if (!activeModuleKey || !step || !rect) return null
 
@@ -168,6 +181,7 @@ export function TourHost() {
               Saltar
             </button>
             <button
+              ref={nextButtonRef}
               type="button"
               onClick={() => (isLast ? stop() : setStep(stepIndex + 1))}
               className="rounded-md px-3 py-1.5 text-[11.5px] font-semibold"
