@@ -345,12 +345,17 @@ export function Donut({
   strokeWidth = 30,
   centerLabel,
   centerSub,
+  centerFontSize = 18,
 }: {
   slices: { value: number; color: string }[]
   size?: number
   strokeWidth?: number
   centerLabel?: string
   centerSub?: string
+  /** Tamano de fuente del centerLabel -- el default (18) asume un donut
+   * grande (>=64px); en usos chicos (ej. DebtCard compacto) hay que bajarlo
+   * o el texto se sale del circulo. */
+  centerFontSize?: number
 }) {
   const r = (size - strokeWidth) / 2
   const c = 2 * Math.PI * r
@@ -381,7 +386,14 @@ export function Donut({
         )
       })}
       {centerLabel && (
-        <text x={center} y={center - 2} textAnchor="middle" fontSize={18} fontWeight={300} fill="var(--nl-text-primary)">
+        <text
+          x={center}
+          y={center - 2}
+          textAnchor="middle"
+          fontSize={centerFontSize}
+          fontWeight={300}
+          fill="var(--nl-text-primary)"
+        >
           {centerLabel}
         </text>
       )}

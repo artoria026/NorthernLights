@@ -17,7 +17,7 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
@@ -27,7 +27,7 @@ import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, Vie
 import { Donut } from '@/lib/charts'
 import { FREQUENCY_LABELS, ITEM_TYPE_LABELS, monthlyEquivalent, STATUS_LABELS, URGENCY_LABELS } from '@/lib/recurring'
 import { formatMoney, formatShortDate, selectClass } from '@/lib/utils'
-import { useAccounts } from '@/hooks/useAccounts'
+import { useAccounts, useTdcCycle } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import {
@@ -44,8 +44,9 @@ import {
   useUpcomingRecurring,
   useUpdateRecurringItem,
 } from '@/hooks/useRecurring'
+import { useTransactions } from '@/hooks/useTransactions'
 import { apiErrorMessage } from '@/services/api'
-import type { AlertUrgency, RecurringFrequency, RecurringItem, RecurringItemType, Transaction } from '@/types'
+import type { Account, AlertUrgency, RecurringFrequency, RecurringItem, RecurringItemType, Transaction } from '@/types'
 
 // 'subscription' vive en su propia pagina dedicada (/subscriptions) -- este
 // formulario general solo cubre servicios/utilities/ingresos recurrentes.
@@ -570,6 +571,130 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
   )
 }
 
+/** Ultima fecha (YYYY-MM-DD) en que cortó una TDC con este dia de corte,
+ * on/antes de hoy -- espejo en JS de account_service._last_occurrence
+ * (mismo clamp de fin de mes). Comparacion de fechas como string ISO en vez
+ * de Date evita el desfase de zona horaria de `new Date("YYYY-MM-DD")`
+ * (se parsea como medianoche UTC, no local). */
+function lastCycleBoundary(billingCycleDay: number, today: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const daysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate()
+  let year = today.getFullYear()
+  let month = today.getMonth()
+  let day = Math.min(billingCycleDay, daysInMonth(year, month))
+  const todayStr = `${year}-${pad(month + 1)}-${pad(today.getDate())}`
+  let candidate = `${year}-${pad(month + 1)}-${pad(day)}`
+  if (candidate > todayStr) {
+    month -= 1
+    if (month < 0) {
+      month = 11
+      year -= 1
+    }
+    day = Math.min(billingCycleDay, daysInMonth(year, month))
+    candidate = `${year}-${pad(month + 1)}-${pad(day)}`
+  }
+  return candidate
+}
+
+/** Fila de una TDC dentro de CreditCardCommitments -- cada una consulta su
+ * propio ciclo y sus propias transacciones (ambas ya filtradas por
+ * account_id en el backend -- nunca depende de en que posicion de `lines`
+ * cae la cuenta real, para gastos esa posicion varia, ver
+ * transaction_service._resolve_lines). Reporta su total a
+ * CreditCardCommitments via onTotal para el gran total.
+ *
+ * El "gasto del corte" NO usa cycle.current_cycle_balance (ese es neto de
+ * pagos hechos en el corte, pensado para el detalle de Cuentas) -- aqui se
+ * suma solo el gasto bruto, sin contar las compras MSI (esas ya estan
+ * representadas por su mensualidad en `installmentTotal`, sumarlas tambien
+ * aqui las contaria dos veces) ni los pagos (un pago a la tarjeta bajaria
+ * este numero, dando la impresion de que debes menos el proximo corte). */
+function CreditCardCommitmentRow({
+  account,
+  onTotal,
+}: {
+  account: Account
+  onTotal: (accountId: string, total: number) => void
+}) {
+  const { data: cycle } = useTdcCycle(account.id, true)
+  const { data: ledger } = useTransactions({ account_id: account.id, per_page: 50 })
+
+  const activeInstallments = (ledger?.data ?? []).filter(
+    (tx) => tx.installment && tx.installment.paid_installments < tx.installment.total_installments,
+  )
+  const installmentTotal = activeInstallments.reduce(
+    (sum, tx) => sum + Number(tx.installment?.monthly_amount ?? 0),
+    0,
+  )
+  const boundary = cycle?.billing_cycle_day ? lastCycleBoundary(cycle.billing_cycle_day, new Date()) : null
+  const cycleSpend = boundary
+    ? (ledger?.data ?? [])
+        .filter((tx) => tx.entry_type === 'expense' && !tx.installment && tx.date > boundary)
+        .reduce((sum, tx) => sum + Number(tx.amount ?? 0), 0)
+    : 0
+  const total = installmentTotal + cycleSpend
+
+  useEffect(() => {
+    onTotal(account.id, total)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account.id, total])
+
+  if (total <= 0) return null
+
+  return (
+    <div className="flex items-center justify-between gap-2 py-2 border-t border-border first:border-0 text-[13px]">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: account.color }} />
+        <span className="truncate">{account.name}</span>
+      </div>
+      <div className="flex items-center gap-3 flex-shrink-0 text-[12px] text-muted-foreground">
+        {installmentTotal > 0 && <span>MSI {formatMoney(String(installmentTotal))}</span>}
+        {cycleSpend > 0 && <span>corte {formatMoney(String(cycleSpend))}</span>}
+        <span className="text-[13px] font-medium text-foreground">{formatMoney(String(total))}</span>
+      </div>
+    </div>
+  )
+}
+
+/** Compromiso de las TDC del usuario de cara al proximo corte -- mensualidad
+ * MSI (fija, se paga si o si) + lo que ya lleva gastado en el corte abierto
+ * (variable, sube hasta que corte). Puramente informativo: NO se suma al
+ * "Comprometido / mes" de arriba (eso son solo Deudas + Recurrentes reales) --
+ * sumarlo ahi doble-contaria el gasto, que ya se registro como su propia
+ * transaccion y ya cuenta en "gastado" del presupuesto del mes. Decision
+ * explicita del usuario: la TDC se queda fuera de la maquinaria de deuda/
+ * compromiso salvo que se vuelva una deuda vencida en negociacion. */
+function CreditCardCommitments({ creditCards }: { creditCards: Account[] }) {
+  const [totals, setTotals] = useState<Record<string, number>>({})
+  const handleTotal = useCallback((accountId: string, total: number) => {
+    setTotals((prev) => (prev[accountId] === total ? prev : { ...prev, [accountId]: total }))
+  }, [])
+  const grandTotal = Object.values(totals).reduce((a, b) => a + b, 0)
+
+  return (
+    <div className="bg-card border border-border rounded-md p-4 mb-4" data-tour="recurring:card-commitments">
+      <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 text-[15px] font-medium">
+          <CreditCard size={15} />
+          Lo que ya deben tus tarjetas el próximo corte
+        </div>
+        {grandTotal > 0 && (
+          <span className="text-[15px] font-medium" style={{ color: 'var(--nl-warning-ink)' }}>
+            {formatMoney(String(grandTotal))}
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground mb-1">
+        Mensualidades de compras a meses sin intereses + lo que llevas gastado en el corte abierto de cada
+        tarjeta. Informativo -- no está incluido en "Comprometido / mes" de arriba.
+      </p>
+      {creditCards.map((account) => (
+        <CreditCardCommitmentRow key={account.id} account={account} onTotal={handleTotal} />
+      ))}
+    </div>
+  )
+}
+
 function RecurringHelp() {
   return (
     <>
@@ -602,6 +727,15 @@ function RecurringHelp() {
           suscripciones ni ingresos) para ver en qué se va ese dinero.
         </p>
       </HelpSection>
+      <HelpSection heading="Lo que ya deben tus tarjetas">
+        <p>
+          Solo aparece si tienes al menos una tarjeta de crédito. Suma las mensualidades de tus compras a
+          meses sin intereses activas (fijo, se paga sí o sí) más lo que ya llevas gastado en el corte
+          abierto de cada tarjeta (variable, sigue subiendo hasta que corte). Es solo informativo -- no se
+          suma al "Comprometido / mes" de arriba, porque ese gasto ya se contó en el presupuesto del mes en
+          que lo hiciste; sumarlo aquí también lo contaría dos veces.
+        </p>
+      </HelpSection>
       <HelpTip>
         La urgencia de alerta (normal/alta/crítica) controla qué tan insistente es el aviso antes de la
         fecha de cobro — no afecta el monto ni la fecha en sí. Los "Servicios esenciales" son la
@@ -617,6 +751,8 @@ export function Recurring() {
   const { data: items, isLoading: loadingItems } = useRecurringItems()
   const { data: upcoming } = useUpcomingRecurring(7)
   const { data: expenseCategories } = useCategories('expense')
+  const { data: accounts } = useAccounts()
+  const creditCards = accounts?.filter((a) => a.type === 'liability' && a.subtype === 'credit_card') ?? []
   const [status, setStatus] = useState<StatusFilter>('active')
   const [open, setOpen] = useState(false)
 
@@ -718,6 +854,8 @@ export function Recurring() {
         />
         <StatCard compact icon={<CheckCircle2 />} label="Items activos" value={String(active.length)} />
       </div>
+
+      {creditCards.length > 0 && <CreditCardCommitments creditCards={creditCards} />}
 
       {!loadingPending && pendingEntries.length > 0 && (
         <div className="bg-card border border-border rounded-md p-4 mb-4">

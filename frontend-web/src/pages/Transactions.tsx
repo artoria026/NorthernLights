@@ -340,7 +340,15 @@ function TransactionsHelp() {
         <p>
           Registra un ingreso, gasto o transferencia entre dos de tus cuentas. Para ingreso/gasto solo
           eliges cuenta, categoría y monto — la app resuelve sola la contraparte contable, nunca tienes que
-          elegirla.
+          elegirla. Si el gasto es con una tarjeta de crédito, puedes marcarlo "¿A meses sin intereses?" —
+          eso no crea una deuda aparte, solo etiqueta esa compra para ver su progreso en Cuentas.
+        </p>
+      </HelpSection>
+      <HelpSection heading="Pagar tarjeta">
+        <p>
+          Solo aparece si tienes al menos una tarjeta de crédito registrada. Registra una transferencia
+          real desde cualquier otra cuenta tuya hacia la tarjeta — es el mismo botón que hay en el detalle
+          de la cuenta, disponible aquí para no tener que ir a Cuentas primero.
         </p>
       </HelpSection>
       <HelpSection heading="Gasto compartido">
@@ -467,6 +475,7 @@ export function Transactions() {
                   render={
                     <button
                       type="button"
+                      data-tour="transactions:pay-card-button"
                       className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground"
                     >
                       <CreditCard size={14} />

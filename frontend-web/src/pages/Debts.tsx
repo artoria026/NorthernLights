@@ -1,11 +1,27 @@
-import { AlertTriangle, Check, Coins, Plus, Zap } from 'lucide-react'
+import {
+  AlertTriangle,
+  Briefcase,
+  Calendar,
+  Check,
+  Coins,
+  HandCoins,
+  Landmark,
+  Plus,
+  Scale,
+  TrendingDown,
+  TrendingUp,
+  Users,
+  Wallet,
+  Zap,
+  type LucideIcon,
+} from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { DemoSteps, HelpSection, HelpTip } from '@/components/nl/Help'
-import { HEADER_SECTIONS, SegmentedControl, StatCard, ViewHeader } from '@/components/nl/primitives'
+import { HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
 import { Donut } from '@/lib/charts'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
@@ -43,6 +59,26 @@ const DEBT_TYPES: DebtType[] = [
 ]
 
 const FREQUENCIES: PaymentFrequency[] = ['weekly', 'biweekly', 'monthly', 'irregular']
+
+/** Icono + color por tipo -- puramente categorico (identifica de un
+ * vistazo, no implica riesgo/estado; eso ya lo cubre el borde rojo de
+ * DebtCard cuando la TAE pasa de 25%). "Me deben" siempre es informal, pero
+ * usa su propio icono (gente que te debe, no tu prestamo) via isReceivable
+ * en vez de este mapa. */
+const DEBT_TYPE_ICONS: Record<DebtType, LucideIcon> = {
+  personal_loan: Wallet,
+  payroll_loan: Briefcase,
+  informal: Users,
+  civic: Landmark,
+  loan_received: HandCoins,
+}
+const DEBT_TYPE_COLORS: Record<DebtType, { bg: string; ink: string }> = {
+  personal_loan: { bg: 'var(--nl-blue-soft-bg)', ink: 'var(--nl-blue-ink)' },
+  payroll_loan: { bg: 'var(--nl-violet-soft-bg)', ink: 'var(--nl-violet-ink)' },
+  informal: { bg: 'var(--nl-warning-soft-bg)', ink: 'var(--nl-warning-ink)' },
+  civic: { bg: 'var(--nl-accent-soft-bg)', ink: 'var(--nl-accent-ink)' },
+  loan_received: { bg: 'var(--nl-blue-soft-bg)', ink: 'var(--nl-blue-ink)' },
+}
 
 function NewUnplannedDebtForm({
   direction,
@@ -485,63 +521,81 @@ function DebtCard({ debt }: { debt: Debt }) {
   const apr = debt.interest_rate ? Number(debt.interest_rate) * 100 : 0
   const risk = !isReceivable && apr > 25
   const balanceColor = isReceivable ? 'var(--nl-accent-ink)' : 'var(--nl-danger-ink)'
+  const TypeIcon = isReceivable ? Users : DEBT_TYPE_ICONS[debt.type]
+  const typeColor = isReceivable
+    ? { bg: 'var(--nl-accent-soft-bg)', ink: 'var(--nl-accent-ink)' }
+    : DEBT_TYPE_COLORS[debt.type]
 
   return (
     <div
-      className="bg-card border rounded-md p-4"
+      className="bg-card border rounded-md p-3"
       style={{
         borderColor: risk ? 'var(--nl-danger)' : 'var(--nl-border)',
-        boxShadow: risk ? '0 0 16px rgba(240,78,78,0.15)' : 'none',
+        boxShadow: risk ? '0 0 12px rgba(240,78,78,0.15)' : 'none',
       }}
     >
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[13px] font-semibold">{debt.name}</span>
-        <span className="rounded-full px-2.5 py-0.5 text-[10px]" style={{ background: 'var(--nl-bg-track)' }}>
+      <div className="flex items-center gap-2 mb-2">
+        <div
+          className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ background: typeColor.bg, color: typeColor.ink }}
+        >
+          <TypeIcon size={12} />
+        </div>
+        <span className="text-[12.5px] font-semibold flex-1 min-w-0 truncate" title={debt.name}>
+          {debt.name}
+        </span>
+        <span
+          className="rounded-full px-2 py-0.5 text-[9px] flex-shrink-0"
+          style={{ background: typeColor.bg, color: typeColor.ink }}
+        >
           {isReceivable ? 'te debe' : debtTypeLabel(debt.type)}
         </span>
       </div>
-      <div className="flex items-center gap-4 mb-2.5">
+      <div className="flex items-center gap-3 mb-2">
         <Donut
           slices={[
             { value: paidRatio, color: 'var(--nl-accent)' },
             { value: 1 - paidRatio, color: 'var(--nl-bg-track)' },
           ]}
-          size={64}
-          strokeWidth={9}
+          size={40}
+          strokeWidth={5}
           centerLabel={`${Math.round(paidRatio * 100)}%`}
+          centerFontSize={10}
         />
-        <div className="flex-1">
-          <div className="text-[11px] text-muted-foreground">{isReceivable ? 'Cobrado' : 'TAE'}</div>
-          {isReceivable ? (
-            <div className="text-[20px] font-light">{Math.round(paidRatio * 100)}%</div>
-          ) : (
-            <div className="text-[20px] font-light" style={{ color: apr > 25 ? 'var(--nl-danger-ink)' : undefined }}>
-              {debt.interest_rate ? `${apr.toFixed(1)}%` : '—'}
-            </div>
-          )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground">{isReceivable ? 'Cobrado' : 'TAE'}</span>
+            <span
+              className="text-[13px] font-medium"
+              style={{ color: !isReceivable && apr > 25 ? 'var(--nl-danger-ink)' : undefined }}
+            >
+              {isReceivable ? `${Math.round(paidRatio * 100)}%` : debt.interest_rate ? `${apr.toFixed(1)}%` : '—'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground">{isReceivable ? 'Te debe' : 'Saldo'}</span>
+            <span className="text-[13px] font-medium" style={{ color: balanceColor }}>
+              {formatMoney(debt.current_balance)}
+            </span>
+          </div>
         </div>
       </div>
-      <div className="mb-2.5">
-        <div className="text-[11px] text-muted-foreground">{isReceivable ? 'Te debe' : 'Saldo'}</div>
-        <div className="text-lg font-light" style={{ color: balanceColor }}>
-          {formatMoney(debt.current_balance)}
-        </div>
-      </div>
-      <div className="flex items-center justify-between pt-2 border-t border-border">
-        <div className="text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-between pt-1.5 border-t border-border">
+        <div className="text-[10px] text-muted-foreground truncate">
           {debt.status === 'completed' ? 'Liquidada' : `Próximo: ${debt.next_payment_date ?? '—'}`}
         </div>
         {debt.status === 'active' && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Dialog open={correctOpen} onOpenChange={setCorrectOpen}>
               <DialogTrigger
                 render={
                   <button
                     type="button"
                     data-tour="debts:correct-balance"
-                    className="rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
+                    className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
                   >
-                    Corregir saldo
+                    <Scale size={11} />
+                    Corregir
                   </button>
                 }
               />
@@ -557,9 +611,10 @@ function DebtCard({ debt }: { debt: Debt }) {
                 render={
                   <button
                     type="button"
-                    className="rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
+                    className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
                   >
-                    {isReceivable ? 'Registrar cobro' : 'Registrar pago'}
+                    <Check size={11} />
+                    {isReceivable ? 'Cobrar' : 'Pagar'}
                   </button>
                 }
               />
@@ -575,7 +630,7 @@ function DebtCard({ debt }: { debt: Debt }) {
           </div>
         )}
         {debt.status === 'completed' && (
-          <span className="rounded-full px-2.5 py-0.5 text-[10px]" style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}>
+          <span className="rounded-full px-2 py-0.5 text-[9px]" style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}>
             Liquidada
           </span>
         )}
@@ -598,10 +653,10 @@ function UnplannedDebtRow({ unplanned }: { unplanned: UnplannedDebt }) {
           <button
             type="button"
             data-tour="debts:activate-button"
-            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] font-medium"
+            className="flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium"
             style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
           >
-            <Zap size={13} />
+            <Zap size={12} />
             Activar
           </button>
         }
@@ -617,7 +672,7 @@ function UnplannedDebtRow({ unplanned }: { unplanned: UnplannedDebt }) {
 
   if (isDesktop) {
     return (
-      <div className="grid grid-cols-[2fr_1fr_1fr_100px] gap-2 items-center py-2.5 border-t border-border first:border-0 text-[13px]">
+      <div className="grid grid-cols-[2fr_1fr_1fr_100px] gap-2 items-center py-1.5 border-t border-border first:border-0 text-[12.5px]">
         <span className="font-medium truncate">{unplanned.name}</span>
         <span className="text-muted-foreground">{unplanned.creditor ?? '—'}</span>
         <span className="text-right">{formatMoney(unplanned.amount)}</span>
@@ -627,7 +682,7 @@ function UnplannedDebtRow({ unplanned }: { unplanned: UnplannedDebt }) {
   }
 
   return (
-    <div className="flex items-center justify-between gap-2 py-2.5 border-t border-border first:border-0 text-[13px]">
+    <div className="flex items-center justify-between gap-2 py-1.5 border-t border-border first:border-0 text-[12.5px]">
       <div className="min-w-0">
         <div className="font-medium truncate">{unplanned.name}</div>
         <div className="text-muted-foreground text-[12px] truncate">
@@ -697,6 +752,33 @@ function DebtsHelp() {
         mueve de una cuenta a otra (o a esta lista, si todavía no tiene cuenta asociada).
       </HelpTip>
     </>
+  )
+}
+
+/** Version mas compacta que StatCard (components/nl/primitives.tsx) --
+ * StatCard es compartido con Dashboard/Recurrentes/Presupuesto y su modo
+ * "compact" ya es el estandar ahi, achicarlo cambiaria esas pantallas
+ * tambien. Esta vive solo en Deudas, a juego con el tamano mas chico que ya
+ * tienen las DebtCard de abajo, sin llegar a ilegible. */
+function MiniStat({
+  icon: Icon,
+  label,
+  value,
+  valueClassName,
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+  valueClassName?: string
+}) {
+  return (
+    <div className="flex-1 bg-card border border-border rounded-md min-w-0 p-2.5">
+      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
+        <Icon size={14} strokeWidth={1.8} />
+        <span className="text-[12px]">{label}</span>
+      </div>
+      <div className={`text-[18px] font-medium truncate ${valueClassName ?? ''}`}>{value}</div>
+    </div>
   )
 }
 
@@ -787,18 +869,18 @@ export function Debts() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 mb-4 lg:flex lg:gap-3 lg:flex-wrap" data-tour="debts:summary">
+      <div className="grid grid-cols-2 gap-2 mb-3 lg:flex lg:gap-2.5 lg:flex-wrap" data-tour="debts:summary">
         {isReceivable ? (
           <>
-            <StatCard
-              compact
+            <MiniStat
+              icon={TrendingUp}
               label="Me deben en total"
               value={formatMoney(summary?.total_owed_to_me ?? '0')}
               valueClassName="text-[color:var(--nl-accent-ink)]"
             />
             {debtTroubleMode && (
-              <StatCard
-                compact
+              <MiniStat
+                icon={AlertTriangle}
                 label="Sin plan"
                 value={formatMoney(summary?.unplanned_owed_to_me ?? '0')}
                 valueClassName="text-[color:var(--nl-warning-ink)]"
@@ -807,16 +889,20 @@ export function Debts() {
           </>
         ) : (
           <>
-            <StatCard
-              compact
+            <MiniStat
+              icon={TrendingDown}
               label="Debo en total"
               value={formatMoney(summary?.total_owed_by_me ?? '0')}
               valueClassName="text-[color:var(--nl-danger-ink)]"
             />
-            <StatCard compact label="Compromiso / mes" value={formatMoney(summary?.monthly_committed ?? '0')} />
+            <MiniStat
+              icon={Calendar}
+              label="Compromiso / mes"
+              value={formatMoney(summary?.monthly_committed ?? '0')}
+            />
             {debtTroubleMode && (
-              <StatCard
-                compact
+              <MiniStat
+                icon={AlertTriangle}
                 label="Sin plan"
                 value={formatMoney(summary?.unplanned_owed_by_me ?? '0')}
                 valueClassName="text-[color:var(--nl-warning-ink)]"
@@ -837,9 +923,9 @@ export function Debts() {
       )}
 
       {!loadingUnplanned && showUnplannedSection && unplanned.length > 0 && (
-        <div className="bg-card border border-border rounded-md p-4 mb-4">
-          <div className="text-[15px] font-medium mb-1">Sin plan de pago</div>
-          <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_100px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground mt-3">
+        <div className="bg-card border border-border rounded-md p-3 mb-3">
+          <div className="text-[13.5px] font-medium mb-1">Sin plan de pago</div>
+          <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_100px] gap-2 text-[10.5px] uppercase tracking-wide text-muted-foreground mt-2">
             <span>Nombre</span>
             <span>Acreedor</span>
             <span className="text-right">Monto</span>
@@ -855,7 +941,7 @@ export function Debts() {
       {loadingDebts ? (
         <p className="text-sm text-muted-foreground">Cargando...</p>
       ) : activeDebts.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {activeDebts.map((debt) => (
             <DebtCard key={debt.id} debt={debt} />
           ))}

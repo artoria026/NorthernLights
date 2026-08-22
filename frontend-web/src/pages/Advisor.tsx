@@ -254,8 +254,10 @@ function AdvisorHelp() {
       <HelpSection heading="Traer datos históricos">
         <p>
           El 📎 junto al mensaje adjunta estados de cuenta en PDF (funciona aunque tengan contraseña,
-          escríbela una sola vez para todo el lote) — el asistente separa los cargos normales de las
-          compras a meses (MSI) y evita duplicar una MSI repetida en varios estados del mismo lote. El "+"
+          escríbela una sola vez para todo el lote) — el asistente registra los cargos normales y las
+          compras a meses (MSI) por su monto total una sola vez, sin duplicar cuando esa misma mensualidad
+          reaparece en los estados siguientes. Marcar una compra como MSI para ver su progreso en Cuentas
+          es un paso aparte que haces tú al revisar la transacción, el asistente no lo hace solo. El "+"
           tiene dos formas más: cargar un Excel prellenado, o copiar un prompt para pegarlo en otra IA
           (ChatGPT, Gemini) y traer de vuelta un resumen ya estructurado.
         </p>
