@@ -1,4 +1,4 @@
-import { Building2, Check, CreditCard, Landmark, Pencil, PiggyBank, Plus, Scale, Trash2, Wallet } from 'lucide-react'
+import { Building2, Check, CreditCard, Landmark, Layers, Pencil, PiggyBank, Plus, Scale, Trash2, Wallet } from 'lucide-react'
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
@@ -26,6 +26,7 @@ import { useCategories } from '@/hooks/useCategories'
 import { useDeleteTransaction, useTransactions } from '@/hooks/useTransactions'
 import { apiErrorMessage } from '@/services/api'
 import {
+  accountBalanceColor,
   accountSubtypeLabel,
   amountColor,
   entryTypeLabel,
@@ -850,6 +851,56 @@ function TdcCycleCard({ accountId }: { accountId: string }) {
   )
 }
 
+/** Compras a meses sin intereses activas de una TDC -- una fila por compra,
+ * con una barra de progreso "cuota pagada/total" en vez del texto plano de
+ * antes. `installments` ya viene filtrado a las que no han terminado (ver
+ * activeInstallments en Accounts()). */
+function InstallmentsCard({ installments }: { installments: Transaction[] }) {
+  const total = installments.reduce((sum, tx) => sum + Number(tx.installment?.monthly_amount ?? 0), 0)
+
+  return (
+    <div className="rounded-md border border-border bg-card p-3.5 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1.5 text-[13px] font-medium">
+          <Layers size={14} style={{ color: 'var(--nl-accent-ink)' }} />
+          {installments.length === 1 ? '1 compra a meses activa' : `${installments.length} compras a meses activas`}
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] tracking-wider text-muted-foreground">COMPROMETIDO ESTE MES</div>
+          <div className="text-[15px] font-medium" style={{ color: 'var(--nl-accent-ink)' }}>
+            {formatMoney(String(total))}
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col gap-3">
+        {installments.map((tx) => {
+          const info = tx.installment!
+          const ratio = info.total_installments > 0 ? info.paid_installments / info.total_installments : 0
+          return (
+            <div key={tx.id}>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-[13px] truncate">{tx.description}</span>
+                <span className="text-[13px] font-medium flex-shrink-0">{formatMoney(info.monthly_amount)}/mes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--nl-bg-track)' }}>
+                  <div
+                    className="h-full rounded-full transition-[width]"
+                    style={{ width: `${Math.round(ratio * 100)}%`, background: 'var(--nl-accent)' }}
+                  />
+                </div>
+                <span className="text-[11px] text-muted-foreground flex-shrink-0 tabular-nums">
+                  {info.paid_installments}/{info.total_installments}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function AccountRow({
   account,
   selected,
@@ -883,7 +934,7 @@ function AccountRow({
         </div>
       </div>
       {history && history.length > 1 && <Sparkline series={history} />}
-      <div className="text-[13px] font-medium" style={{ color: amountColor(account.balance) }}>
+      <div className="text-[13px] font-medium" style={{ color: accountBalanceColor(account) }}>
         {formatMoney(account.balance)}
       </div>
     </div>
@@ -903,14 +954,18 @@ function AccountsHelp() {
         <p>
           Al crear una cuenta eliges entre <strong>bancaria</strong>, <strong>ahorro</strong>,{' '}
           <strong>efectivo</strong> y <strong>tarjeta de crédito</strong>. Las primeras tres son dinero
-          tuyo disponible; la tarjeta es una deuda (pasivo).
+          tuyo disponible; la tarjeta es un pasivo (lo que debes) -- no es lo mismo que una Deuda: los
+          préstamos formales o informales viven aparte, en Deudas.
         </p>
       </HelpSection>
       <HelpSection heading="Tarjetas de crédito">
         <p>
           Además del nombre y saldo, una TDC guarda límite de crédito, tasa de interés, día de corte y día
           límite de pago — esos dos últimos alimentan el ciclo de facturación que ves en el detalle de la
-          cuenta.
+          cuenta. El botón "Pagar tarjeta" (aquí o en Transacciones) registra el pago como una
+          transferencia real desde cualquier otra cuenta tuya. Si compras algo a meses sin intereses,
+          márcalo al registrar el gasto y verás el progreso ("MSI pagadas/total") directo en el historial
+          de la tarjeta.
         </p>
       </HelpSection>
       <HelpSection heading="Logo y personalización">
@@ -988,10 +1043,6 @@ export function Accounts() {
   // pretende ser un total historico exacto.
   const activeInstallments = (ledger?.data ?? []).filter(
     (tx) => tx.installment && tx.installment.paid_installments < tx.installment.total_installments,
-  )
-  const installmentMonthlyTotal = activeInstallments.reduce(
-    (sum, tx) => sum + Number(tx.installment?.monthly_amount ?? 0),
-    0,
   )
 
   async function handleDeleteAccount(account: Account) {
@@ -1115,7 +1166,7 @@ export function Accounts() {
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div className="text-[16px] font-medium">
                   {selectedAccount.name} ·{' '}
-                  <span style={{ color: amountColor(selectedAccount.balance) }}>
+                  <span style={{ color: accountBalanceColor(selectedAccount) }}>
                     {formatMoney(selectedAccount.balance)}
                   </span>
                 </div>
@@ -1234,11 +1285,7 @@ export function Accounts() {
               )}
 
               {selectedAccount.subtype === 'credit_card' && activeInstallments.length > 0 && (
-                <p className="text-[12px] text-muted-foreground mb-4">
-                  {activeInstallments.length}{' '}
-                  {activeInstallments.length === 1 ? 'compra a meses activa' : 'compras a meses activas'} ·{' '}
-                  {formatMoney(String(installmentMonthlyTotal))} comprometido este mes
-                </p>
+                <InstallmentsCard installments={activeInstallments} />
               )}
 
               <div className="flex gap-2 mb-4 flex-wrap">
@@ -1290,9 +1337,10 @@ export function Accounts() {
                     )
                     const installmentBadge = tx.installment && (
                       <span
-                        className="flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
-                        style={{ background: 'var(--nl-bg-track)' }}
+                        className="flex-shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
+                        style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}
                       >
+                        <Layers size={9} />
                         MSI {tx.installment.paid_installments}/{tx.installment.total_installments}
                       </span>
                     )

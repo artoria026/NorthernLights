@@ -14,7 +14,7 @@
  * que el usuario abre el dialog a mano, y el paso quedaria fuera del tour
  * siempre. Solo se anclan botones disparadores (DialogTrigger) o contenido
  * que ya esta en la pantalla. Lo que solo vive dentro de un formulario (ej.
- * el checkbox de MSI en Deudas, la cuenta vinculada obligatoria) se explica
+ * el checkbox de "a meses sin intereses" en Nueva transaccion) se explica
  * como texto dentro de un step vecino que si tiene anclaje real. */
 
 export type ModuleKey =
@@ -116,7 +116,7 @@ export const TOUR_CONTENT: Partial<Record<ModuleKey, TourContent>> = {
       {
         selector: '[data-tour="accounts:new-button"]',
         title: 'Agrega una cuenta',
-        text: 'Bancaria, de ahorro, efectivo o tarjeta de crédito -- esta última se registra como una deuda (pasivo), no como dinero disponible.',
+        text: 'Bancaria, de ahorro, efectivo o tarjeta de crédito -- esta última se registra como un pasivo (lo que debes), no como dinero disponible. No es lo mismo que una Deuda: eso es para préstamos, no para tarjetas.',
       },
       {
         selector: '[data-tour="accounts:list"]',
@@ -131,12 +131,12 @@ export const TOUR_CONTENT: Partial<Record<ModuleKey, TourContent>> = {
       {
         selector: '[data-tour="accounts:tdc-cycle"]',
         title: 'Ciclo de tu tarjeta',
-        text: 'Día de corte, límite de pago, saldo del ciclo actual y crédito disponible -- vienen de los datos que le diste a la tarjeta al crearla.',
+        text: 'Día de corte, límite de pago, saldo del ciclo actual y crédito disponible -- vienen de los datos que le diste a la tarjeta al crearla. Si tienes compras a meses sin intereses activas, aquí mismo ves cuántas y cuánto comprometen este mes, y cada una trae un sello "MSI pagadas/total" en su fila del historial.',
       },
       {
         selector: '[data-tour="accounts:actions"]',
-        title: 'Editar, conciliar o eliminar',
-        text: 'Editar cambia los datos de la cuenta. Conciliar saldo ajusta la diferencia entre lo que registraste y lo real creando una transacción visible -- úsalo cuando el saldo no cuadra, no para corregir el saldo inicial. Eliminar es permanente.',
+        title: 'Editar, pagar, conciliar o eliminar',
+        text: 'Editar cambia los datos de la cuenta. En una tarjeta de crédito, "Pagar tarjeta" registra una transferencia real desde cualquier otra cuenta -- ese es el único lugar donde se le paga, ya no existe como una Deuda aparte. Conciliar saldo (solo cuentas líquidas) ajusta la diferencia entre lo que registraste y lo real creando una transacción visible -- úsalo cuando el saldo no cuadra, no para corregir el saldo inicial. Eliminar es permanente.',
       },
     ],
   },
@@ -154,7 +154,12 @@ export const TOUR_CONTENT: Partial<Record<ModuleKey, TourContent>> = {
       {
         selector: '[data-tour="transactions:new-button"]',
         title: 'Registra un movimiento',
-        text: 'Para ingreso o gasto solo eliges cuenta, categoría y monto -- la app resuelve sola la contraparte contable.',
+        text: 'Para ingreso o gasto solo eliges cuenta, categoría y monto -- la app resuelve sola la contraparte contable. Si el gasto es con una tarjeta de crédito, aparece la opción "¿A meses sin intereses?" para marcarlo a MSI y ver su progreso después en Cuentas.',
+      },
+      {
+        selector: '[data-tour="transactions:pay-card-button"]',
+        title: 'Pagar una tarjeta',
+        text: 'Registra el pago desde cualquier otra cuenta tuya, sin salir de Transacciones -- solo aparece si tienes al menos una tarjeta de crédito registrada. Si tienes varias, primero eliges cuál.',
       },
       {
         selector: '[data-tour="transactions:split-button"]',
@@ -250,7 +255,7 @@ export const TOUR_CONTENT: Partial<Record<ModuleKey, TourContent>> = {
       {
         selector: '[data-tour="debts:new-button"]',
         title: 'Registra una deuda',
-        text: 'Monto, frecuencia de pago y, si aplica, de/a qué cuenta se movió el efectivo cuando se originó. Una TDC exige una cuenta vinculada; si es una compra a meses (MSI), un checkbox aparte registra también el cargo inicial como transacción.',
+        text: 'Tipo (préstamo personal, de nómina, informal, cívico o recibido), monto, cuota/frecuencia y, si aplica, de/a qué cuenta se movió el efectivo cuando se originó -- opcional, para una deuda que ya traías antes de usar la app.',
       },
       {
         selector: '[data-tour="debts:unplanned-button"]',
@@ -309,6 +314,11 @@ export const TOUR_CONTENT: Partial<Record<ModuleKey, TourContent>> = {
         selector: '[data-tour="recurring:status-filter"]',
         title: 'No desaparecen, se filtran',
         text: 'Un ítem pausado o cancelado no se borra de tu historial -- solo sale de "Activos". Cambia el filtro para volver a verlo.',
+      },
+      {
+        selector: '[data-tour="recurring:card-commitments"]',
+        title: 'Lo que ya deben tus tarjetas',
+        text: 'Solo aparece si tienes tarjetas de crédito. Suma las mensualidades de tus compras a meses activas más lo gastado en el corte abierto -- es informativo, no se suma al "Comprometido / mes" de arriba (ese gasto ya se contó en el presupuesto del mes en que lo hiciste).',
       },
       {
         selector: '[data-tour="recurring:breakdown"]',

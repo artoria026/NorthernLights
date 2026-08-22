@@ -153,8 +153,7 @@ export interface UpdateDebtInput {
 
 /** PUT /debts/{id} (backend/app/routers/debts.py) ya existia listo desde
  * siempre -- lo unico que faltaba era que el frontend lo usara. Hoy solo lo
- * consume la resolucion inline de "cuenta vinculada" en el modal de pago
- * (ver RegisterPaymentForm en Debts.tsx), pero sirve para cualquier campo de
+ * consume CorrectBalanceForm en Debts.tsx, pero sirve para cualquier campo de
  * DebtUpdate. */
 export function useUpdateDebt() {
   const queryClient = useQueryClient()

@@ -31,6 +31,16 @@ export function amountColor(value: string | number | null | undefined): string |
   return undefined
 }
 
+/** Saldo de una cuenta -- para un pasivo (TDC) amountColor lo pintaba verde
+ * "positivo" solo porque el numero es > 0, dando a entender que es dinero a
+ * tu favor cuando en realidad es lo que debes. Un pasivo se muestra en azul
+ * neutro sin importar el signo; el resto de tipos de cuenta conserva el
+ * criterio normal de amountColor. */
+export function accountBalanceColor(account: { type: string; balance: string }): string | undefined {
+  if (account.type === "liability") return "var(--nl-blue-ink)"
+  return amountColor(account.balance)
+}
+
 /** Select nativo con el mismo tratamiento visual que <Input> (no hay un
  * componente shadcn/select en este proyecto; se centraliza aqui para no
  * repetir la clase larga en cada pagina). */
