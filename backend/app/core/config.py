@@ -57,11 +57,11 @@ class Settings(BaseSettings):
     # Push notifications (M11) -- vacio hasta que exista un proyecto Firebase real
     FIREBASE_CREDENTIALS_JSON: str = ""
 
-    # Aviso de privacidad (ver DISCLAIMER.md en la raiz del repo -- el texto
-    # real que se muestra en la app vive en frontend/src/lib/disclaimer.ts,
+    # Aviso de privacidad (ver docs/legal/DISCLAIMER.md en la raiz del repo --
+    # el texto real que se muestra en la app vive en frontend/src/lib/disclaimer.ts,
     # una copia deliberada, no un archivo leido en runtime: el backend corre
-    # en Docker con contexto de build "./backend", DISCLAIMER.md en la raiz
-    # del repo ni siquiera entraria a esa imagen). Esta version es la unica
+    # en Docker con contexto de build "./backend", docs/legal/DISCLAIMER.md
+    # ni siquiera entraria a esa imagen). Esta version es la unica
     # fuente de verdad de "cual es la version vigente hoy" -- subela (y la de
     # frontend/src/lib/disclaimer.ts, deben coincidir) cada vez que el
     # contenido legal cambie de forma material. No confundir con

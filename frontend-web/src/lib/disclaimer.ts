@@ -1,12 +1,13 @@
-/** Copia deliberada del contenido de DISCLAIMER.md (raiz del repo) -- no se
- * lee ese archivo en runtime porque el backend corre en Docker con contexto
- * de build "./backend" (DISCLAIMER.md, en la raiz del repo, ni siquiera
+/** Copia deliberada del contenido de docs/legal/DISCLAIMER.md (raiz del repo)
+ * -- no se lee ese archivo en runtime porque el backend corre en Docker con
+ * contexto de build "./backend" (docs/legal/DISCLAIMER.md ni siquiera
  * entraria a esa imagen) y el frontend tampoco tiene pipeline para importar
  * markdown crudo. Mismo patron que lib/changelog.ts: el contenido vive como
  * dato en TS, no como archivo externo.
  *
- * IMPORTANTE: si cambias el contenido aqui, actualiza tambien DISCLAIMER.md
- * (la version "legible"/para revision legal) y sube DISCLAIMER_VERSION --
+ * IMPORTANTE: si cambias el contenido aqui, actualiza tambien
+ * docs/legal/DISCLAIMER.md (la version "legible"/para revision legal) y sube
+ * DISCLAIMER_VERSION --
  * DEBE coincidir exacto con settings.DISCLAIMER_VERSION en
  * backend/app/core/config.py, o el backend y el frontend van a discrepar
  * sobre si un usuario ya acepto la version vigente. */
