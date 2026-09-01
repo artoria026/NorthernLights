@@ -64,8 +64,8 @@ class UserPreferences(Base, TimestampMixin):
     # cerraron el modal. Comparado contra la version mas reciente del array
     # en el frontend, no hay tabla de releases en el backend.
     last_seen_changelog_version: Mapped[str | None] = mapped_column(String, nullable=True)
-    # Version del aviso de privacidad (DISCLAIMER.md en la raiz del repo,
-    # texto real en frontend/src/lib/disclaimer.ts) que el usuario acepto --
+    # Version del aviso de privacidad (docs/legal/DISCLAIMER.md en la raiz del
+    # repo, texto real en frontend/src/lib/disclaimer.ts) que el usuario acepto --
     # NULL para cuentas creadas antes de esta feature. A diferencia de
     # last_seen_changelog_version (solo informativo), este SI se hace cumplir:
     # DisclaimerGate en el frontend bloquea toda la app hasta que coincida con

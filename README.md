@@ -31,6 +31,12 @@ northern_lights/
 │       ├── components/ui/   # shadcn/ui
 │       ├── hooks/            # un hook por recurso (TanStack Query)
 │       └── lib/              # utils, charts SVG propios, category icons
+├── docs/
+│   ├── legal/DISCLAIMER.md  # aviso de privacidad (copia legible; el texto real vive en frontend-web/src/lib/disclaimer.ts)
+│   ├── DISCLAIMER_INPUTS.md # inventario de features/datos usado como insumo para el disclaimer
+│   ├── CONVENTIONS.md       # nomenclatura de branches y commits
+│   └── RELEASING.md         # checklist para liberar una versión y redactar el changelog
+├── CLAUDE.md                # instrucciones para agentes de IA que trabajen en este repo
 └── docker-compose.yml       # solo pgAdmin (opcional) — Postgres/Redis son nativos, no Docker
 ```
 
