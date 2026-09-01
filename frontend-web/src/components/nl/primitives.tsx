@@ -66,7 +66,20 @@ export function ViewHeader({
   }, [tourKey])
 
   return (
-    <div className="sticky top-3 z-10 mb-6 rounded-md border border-border bg-card px-4 lg:px-8 py-3.5">
+    <div
+      // [transform:translateZ(0)] promueve el header a su propia capa de
+      // composicion GPU -- sin esto, en algunos navegadores/GPUs el sticky
+      // con esquinas redondeadas queda repintando la misma capa que el
+      // contenido que scrollea detras, y deja un "ghosting" visible (frames
+      // viejos asomando un instante detras del header al scrollear).
+      // [isolation:isolate] + [contain:paint] fuerzan ademas un contexto de
+      // pintado propio -- translateZ(0) solo no alcanzo a eliminar el
+      // ghosting, esto evita que el navegador reutilice pixeles de la capa
+      // de abajo al repintar el header. Ojo: contain:paint recorta cualquier
+      // hijo del header que necesite pintar fuera de su caja (tooltips,
+      // dropdowns) -- hoy ViewHeader no tiene ninguno.
+      className="sticky top-3 z-10 mb-6 rounded-md border border-border bg-card px-4 lg:px-8 py-3.5 [transform:translateZ(0)] [isolation:isolate] [contain:paint]"
+    >
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           {section && (

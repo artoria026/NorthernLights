@@ -751,7 +751,7 @@ export function Settings() {
   return (
     <div>
       <ViewHeader icon={<SettingsIcon />} title="Configuración" help={<SettingsHelp />} tourKey="settings" />
-      <div className="max-w-5xl">
+      <div>
         {/* Cada columna empareja cards de altura parecida a proposito (Perfil
             es la card mas alta de todas, por eso va sola con Seguridad, que
             es la mas corta) -- la vez pasada quedo un hueco enorme cuando una
