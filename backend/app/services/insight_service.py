@@ -64,7 +64,7 @@ async def get_history(
 async def get_reviews(
     session: AsyncSession, user_id: UUID, insight_id: UUID
 ) -> list[InsightReview]:
-    await get_insight(session, user_id, insight_id)  # 404 si no es del usuario
+    await get_insight(session, user_id, insight_id)  # 404 if it's not the user's
     result = await session.execute(
         select(InsightReview)
         .where(InsightReview.insight_id == insight_id, InsightReview.user_id == user_id)
@@ -90,14 +90,14 @@ async def resolve(session: AsyncSession, user_id: UUID, insight_id: UUID) -> Ins
 
 
 async def _enforce_active_limit(session: AsyncSession, user_id: UUID) -> None:
-    """Regla M13 #5: maximo 10 activos por usuario. Si se excede, el mas
-    antiguo y de menor prioridad pasa a dismissed automaticamente."""
+    """Rule M13 #5: max 10 active per user. If exceeded, the oldest and
+    lowest-priority one automatically switches to dismissed."""
     active = await list_active(session, user_id)
     if len(active) < MAX_ACTIVE_INSIGHTS_PER_USER:
         return
-    # list_active ya viene ordenado por prioridad asc (high primero); el
-    # ultimo de la lista es el de menor prioridad y, entre iguales, el mas
-    # antiguo (orden estable de Insight.created_at).
+    # list_active already comes sorted by priority asc (high first); the
+    # last item in the list is the lowest priority and, among ties, the
+    # oldest (stable order on Insight.created_at).
     oldest_lowest = active[-1]
     oldest_lowest.status = "dismissed"
     oldest_lowest.dismissed_at = datetime.now(UTC)
@@ -127,7 +127,7 @@ async def _create_insight(
     generated_by: str,
     snapshot: dict,
 ) -> Insight | None:
-    """Regla M13 #1: deduplicacion por categoria activa."""
+    """Rule M13 #1: deduplication by active category."""
     if await _has_active_in_category(session, user_id, category):
         return None
 
@@ -167,8 +167,8 @@ def _extract_key_metrics(snapshot: dict) -> dict:
 async def create_from_chat(
     session: AsyncSession, user_id: UUID, tool_input: InsightCreateFromChat, snapshot: dict
 ) -> dict:
-    """Punto de integracion para M10: llamado por el tool `create_insight`
-    cuando el usuario le pide al asesor guardar un plan."""
+    """Integration point for M10: called by the `create_insight` tool when
+    the user asks the advisor to save a plan."""
     insight = await _create_insight(
         session,
         user_id,
@@ -189,8 +189,8 @@ async def create_from_chat(
 
 
 async def generate_for_user(session: AsyncSession, user_id: UUID, snapshot: dict) -> list[Insight]:
-    """Tarea Celery `insights.generate_periodic` (por usuario, sin schedule
-    fijo: la dispara `review_due_insights` o el endpoint manual)."""
+    """Celery task `insights.generate_periodic` (per user, no fixed
+    schedule: triggered by `review_due_insights` or the manual endpoint)."""
     provider = get_ai_provider()
     raw_insights = await provider.generate_insights(snapshot)
 
@@ -212,7 +212,7 @@ async def generate_for_user(session: AsyncSession, user_id: UUID, snapshot: dict
 
 
 async def review_insight(session: AsyncSession, insight: Insight, snapshot: dict) -> InsightReview:
-    """Tarea Celery `insights.review_due` (por insight vencido)."""
+    """Celery task `insights.review_due` (per overdue insight)."""
     provider = get_ai_provider()
     review_data = await provider.review_insight(
         {
@@ -248,10 +248,11 @@ async def review_insight(session: AsyncSession, insight: Insight, snapshot: dict
 
 
 async def get_due_insights(session: AsyncSession, today: date) -> list[tuple[UUID, UUID]]:
-    """Consulta cross-user usada por el orquestador del task de Celery (ver
-    app/tasks/insights.py): no se filtra por RLS porque es un job de sistema,
-    no una operacion en nombre de un usuario especifico. Retorna pares
-    (insight_id, user_id) para poder agrupar por usuario sin otra consulta."""
+    """Cross-user query used by the Celery task orchestrator (see
+    app/tasks/insights.py): not filtered by RLS because it's a system job,
+    not an operation on behalf of a specific user. Returns
+    (insight_id, user_id) pairs so it can be grouped by user without
+    another query."""
     result = await session.execute(
         select(Insight.id, Insight.user_id).where(
             Insight.status == "active",

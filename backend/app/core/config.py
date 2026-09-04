@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # Base de datos
+    # Database
     DATABASE_URL: str
 
     # Redis
@@ -18,10 +18,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # Google OAuth (M01 extendido) -- vacios hasta crear un proyecto real en
-    # Google Cloud Console; sin GOOGLE_CLIENT_ID/SECRET, /auth/google/login
-    # redirige a una URL de Google que rechaza la solicitud (no rompe el
-    # resto de la app, solo ese flujo no funciona)
+    # Google OAuth (M01 extended) -- empty until a real project is created in
+    # Google Cloud Console; without GOOGLE_CLIENT_ID/SECRET, /auth/google/login
+    # redirects to a Google URL that rejects the request (doesn't break the
+    # rest of the app, only that flow doesn't work)
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
@@ -32,21 +32,21 @@ class Settings(BaseSettings):
     GOOGLE_AI_API_KEY: str = ""
     CLAUDE_MODEL: str = "claude-sonnet-4-6"
     GEMINI_MODEL: str = "gemini-flash-latest"
-    # 1024 se quedaba corto para el chat normal (ver STATEMENT_INSTRUCTIONS en
-    # advisor.py): pedirle que enumere cada movimiento de un estado de cuenta
-    # de varias paginas cortaba la respuesta a la mitad, sin tool-call de
-    # confirmacion despues y sin ningun error -- el stream del proveedor
-    # termina "bien" (no lanza excepcion), asi que antes de este cambio nadie
-    # se enteraba. Ver tambien el chequeo de finish_reason/stop_reason en
-    # gemini.py/claude.py, que ahora avisa en el chat si de verdad se corta.
-    # 16384 (subido otra vez de 8192) para estados de cuenta largos: cada
-    # create_transaction/create_debt propuesto en el mismo turno (ver
-    # STATEMENT_INSTRUCTIONS en advisor.py) gasta ~150-250 tokens de
-    # respuesta, asi que una tarjeta con 30+ movimientos se puede comer el
-    # limite anterior facil. Ver tambien THINKING_BUDGET_TOKENS en gemini.py:
-    # el "pensamiento" interno de gemini-flash-latest sale de este MISMO
-    # limite si no se topa aparte, y sin eso un turno pesado podia agotarlo
-    # entero sin escribir nada visible (truncado silencioso).
+    # 1024 was too short for normal chat (see STATEMENT_INSTRUCTIONS in
+    # advisor.py): asking it to list every transaction from a multi-page
+    # bank statement cut the response in half, with no confirmation
+    # tool-call after it and no error at all -- the provider's stream
+    # ends "cleanly" (no exception raised), so before this change nobody
+    # found out. Also see the finish_reason/stop_reason check in
+    # gemini.py/claude.py, which now warns in the chat if it really gets cut off.
+    # 16384 (raised again from 8192) for long bank statements: each
+    # create_transaction/create_debt proposed in the same turn (see
+    # STATEMENT_INSTRUCTIONS in advisor.py) spends ~150-250 tokens of
+    # response, so a statement with 30+ transactions can easily eat up the
+    # previous limit. Also see THINKING_BUDGET_TOKENS in gemini.py:
+    # gemini-flash-latest's internal "thinking" comes out of this SAME
+    # limit if it isn't capped separately, and without that a heavy turn could
+    # exhaust it entirely without writing anything visible (silent truncation).
     AI_MAX_TOKENS: int = 16384
     AI_RATE_LIMIT_PER_USER_DAY: int = 30
 
@@ -54,18 +54,18 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = "noreply@finanzas.app"
     FRONTEND_URL: str = "http://localhost:5173"
 
-    # Push notifications (M11) -- vacio hasta que exista un proyecto Firebase real
+    # Push notifications (M11) -- empty until a real Firebase project exists
     FIREBASE_CREDENTIALS_JSON: str = ""
 
-    # Aviso de privacidad (ver docs/legal/DISCLAIMER.md en la raiz del repo --
-    # el texto real que se muestra en la app vive en frontend/src/lib/disclaimer.ts,
-    # una copia deliberada, no un archivo leido en runtime: el backend corre
-    # en Docker con contexto de build "./backend", docs/legal/DISCLAIMER.md
-    # ni siquiera entraria a esa imagen). Esta version es la unica
-    # fuente de verdad de "cual es la version vigente hoy" -- subela (y la de
-    # frontend/src/lib/disclaimer.ts, deben coincidir) cada vez que el
-    # contenido legal cambie de forma material. No confundir con
-    # AI_PROVIDER/etc: esto no es config de infra, es contenido versionado.
+    # Privacy disclaimer (see docs/legal/DISCLAIMER.md at the repo root --
+    # the actual text shown in the app lives in frontend/src/lib/disclaimer.ts,
+    # a deliberate copy, not a file read at runtime: the backend runs
+    # in Docker with build context "./backend", docs/legal/DISCLAIMER.md
+    # wouldn't even make it into that image). This version is the sole
+    # source of truth for "what is the current version today" -- bump it (and
+    # frontend/src/lib/disclaimer.ts's, they must match) every time the
+    # legal content changes materially. Don't confuse this with
+    # AI_PROVIDER/etc: this isn't infra config, it's versioned content.
     DISCLAIMER_VERSION: str = "2026-08-15"
 
     # App

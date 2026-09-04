@@ -1,11 +1,11 @@
 import type { QueryClient, QueryKey } from '@tanstack/react-query'
 
 /**
- * Aplica `updater` a todas las queries cacheadas cuya key empieza con
- * `keyPrefix` Y para las que `matches(queryKey)` es true. Usado para listas
- * filtradas (ej. `['recurring', 'list', status, item_type]`) donde insertar
- * un item nuevo solo debe afectar las variantes cuyo filtro lo incluiria --
- * a diferencia de `setQueryData`, que solo puede apuntar a una key exacta.
+ * Applies `updater` to all cached queries whose key starts with
+ * `keyPrefix` AND for which `matches(queryKey)` is true. Used for filtered
+ * lists (e.g. `['recurring', 'list', status, item_type]`) where inserting a
+ * new item should only affect the variants whose filter would include it --
+ * unlike `setQueryData`, which can only target one exact key.
  */
 export function patchMatchingListQueries<T>(
   queryClient: QueryClient,
@@ -21,10 +21,10 @@ export function patchMatchingListQueries<T>(
   }
 }
 
-/** Igual que `patchMatchingListQueries` pero sin filtro -- actualiza in-place
- * (map/filter por id) cualquier variante cacheada que exista, sin importar
- * si el item modificado todavia encaja con el filtro de esa variante. Seguro
- * para cambios de campos que no sean el propio campo de filtro. */
+/** Same as `patchMatchingListQueries` but without a filter -- updates
+ * in-place (map/filter by id) any cached variant that exists, regardless
+ * of whether the modified item still matches that variant's filter. Safe
+ * for changes to fields other than the filter field itself. */
 export function patchAllListQueries<T>(
   queryClient: QueryClient,
   keyPrefix: QueryKey,

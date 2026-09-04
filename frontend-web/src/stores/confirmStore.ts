@@ -7,10 +7,10 @@ interface ConfirmOptions {
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'default' | 'danger'
-  /** Por defecto el icono del boton de confirmar sale segun `variant`
-   * (Trash2 en danger, Check en default) -- eso tiene sentido para borrar
-   * algo, pero no para toda accion "danger" (ej. cerrar sesion es roja pero
-   * no borra nada). Pasar esto pisa ese default. */
+  /** By default the confirm button's icon is derived from `variant`
+   * (Trash2 for danger, Check for default) -- that makes sense for deleting
+   * something, but not for every "danger" action (e.g. logging out is red but
+   * doesn't delete anything). Passing this overrides that default. */
   icon?: LucideIcon
 }
 

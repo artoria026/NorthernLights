@@ -27,16 +27,17 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { EXPORT_PROMPT } from '@/lib/importPrompt'
 import { amountColor, formatMoney, isPositiveEntryType } from '@/lib/utils'
 
-/** Mismos umbrales que ya usa health_score en otras pantallas: 70+ es sano
- * (verde), 40-69 regular (naranja), menos de 40 mal (rojo). */
+/** Same thresholds already used by health_score in other screens: 70+ is
+ * healthy (green), 40-69 fair (orange), under 40 poor (red). */
 function healthScoreColors(score: number): { bg: string; ink: string } {
   if (score >= 70) return { bg: 'var(--nl-accent-soft-bg)', ink: 'var(--nl-accent-ink)' }
   if (score >= 40) return { bg: 'var(--nl-warning-soft-bg)', ink: 'var(--nl-warning-ink)' }
   return { bg: 'var(--nl-danger-soft-bg)', ink: 'var(--nl-danger-ink)' }
 }
 
-/** Runway = cuantos meses te duraria tu liquidez si dejaras de recibir
- * ingresos -- menos de 1 mes es una señal real de riesgo, no un dato neutro. */
+/** Runway = how many months your liquidity would last if you stopped
+ * receiving income -- less than 1 month is a real risk signal, not a
+ * neutral data point. */
 function runwayColor(months: number): string | undefined {
   if (months < 1) return 'var(--nl-danger-ink)'
   if (months < 3) return 'var(--nl-warning-ink)'
@@ -81,21 +82,23 @@ const MARKDOWN_COMPONENTS = {
   td: ({ ...props }) => <td className="border border-border px-2 py-1" {...props} />,
 }
 
-/** Tools de escritura real (backend/app/ai/write_tools.py) -- si la
- * respuesta del asesor trae alguna de estas en tool_calls, de verdad
- * registro/creo algo. list_existing_accounts_and_debts es de solo lectura
- * (el asesor la usa para consultar, no cuenta como accion) y create_insight
- * ya tiene su propio aviso (savedInsight), por eso no van aqui. */
+/** Tools that actually write (backend/app/ai/write_tools.py) -- if the
+ * advisor's response carries any of these in tool_calls, it really
+ * registered/created something. list_existing_accounts_and_debts is
+ * read-only (the advisor uses it to look things up, it doesn't count as an
+ * action) and create_insight already has its own notice (savedInsight), so
+ * they're not listed here. */
 const WRITE_TOOLS = ['create_transaction', 'create_account', 'create_debt', 'create_unplanned_debt', 'create_recurring_item']
 
 function messageDidWrite(toolCalls: { tool: string; result: unknown }[] | undefined): boolean {
   return !!toolCalls?.some((call) => WRITE_TOOLS.includes(call.tool))
 }
 
-/** propose_action (backend/app/ai/write_tools.py) no escribe nada -- es la
- * tool que el asesor llama para pedir confirmacion ANTES de crear algo, en
- * vez de solo preguntarlo en el texto. Si un mensaje la trae, se dibuja como
- * tarjeta con botones reales de Confirmar/Cancelar en vez de burbuja plana. */
+/** propose_action (backend/app/ai/write_tools.py) doesn't write anything --
+ * it's the tool the advisor calls to ask for confirmation BEFORE creating
+ * something, instead of just asking in the text. If a message carries it,
+ * it's rendered as a card with real Confirm/Cancel buttons instead of a
+ * plain bubble. */
 interface ActionField {
   label: string
   value: string
@@ -110,10 +113,10 @@ function findProposal(toolCalls: { tool: string; result: unknown }[] | undefined
   return call?.result as ActionProposal | undefined
 }
 
-/** Tarjeta de accion financiera -- "pending" trae los botones de
- * Confirmar/Cancelar (inertes si `actionable` es false, ej. la conversacion
- * ya siguio adelante), "done" solo envuelve el texto de confirmacion del
- * asesor con el mismo lenguaje visual. */
+/** Financial action card -- "pending" carries the Confirm/Cancel buttons
+ * (inert if `actionable` is false, e.g. the conversation already moved
+ * on), "done" just wraps the advisor's confirmation text with the same
+ * visual language. */
 function ActionCard({
   variant,
   summary,
@@ -195,9 +198,10 @@ function ActionCard({
   )
 }
 
-/** thinkBounce ya existia en index.css (probablemente para esto mismo) pero
- * nunca se habia usado -- 3 puntos con animation-delay escalonado, mismo
- * patron visual que el punto de "Conectado" (pulseDot) del header. */
+/** thinkBounce already existed in index.css (probably for this exact
+ * purpose) but had never been used -- 3 dots with staggered
+ * animation-delay, same visual pattern as the "Conectado" dot (pulseDot)
+ * in the header. */
 function TypingIndicator() {
   return (
     <div className="flex items-center gap-1 py-1" aria-label="El asesor está escribiendo">
@@ -289,12 +293,12 @@ export function Advisor() {
   const seeded = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const pdfInputRef = useRef<HTMLInputElement>(null)
-  // Si el usuario subio a releer el historial, un mensaje nuevo (sobre todo
-  // uno que va llegando en streaming) no deberia jalarlo de vuelta hasta
-  // abajo -- eso es lo que hacia el auto-scroll incondicional de antes. Solo
-  // seguimos el scroll automatico si ya estaba pegado al fondo, o si el
-  // mensaje nuevo es del propio usuario (el que escribe siempre espera ver
-  // lo que acaba de mandar). Si no, se prende el aviso de "nuevo mensaje".
+  // If the user scrolled up to reread the history, a new message (especially
+  // one arriving via streaming) shouldn't yank them back down -- that's what
+  // the old unconditional auto-scroll did. We only keep following the
+  // automatic scroll if it was already pinned to the bottom, or if the new
+  // message is from the user themselves (whoever types always expects to see
+  // what they just sent). Otherwise, the "new message" notice lights up.
   const isNearBottomRef = useRef(true)
   const [showJumpButton, setShowJumpButton] = useState(false)
 
@@ -361,11 +365,11 @@ export function Advisor() {
     const password = pdfPassword
     setAttachedFiles([])
     setPdfPassword('')
-    // El texto que se ve en la burbuja y el que de verdad se manda al backend
-    // ya no son el mismo string -- useAiChat le agrega a ESE el "(adjunto:
-    // ...)" para que el historial en el server siga teniendo el contexto,
-    // pero aqui en pantalla el nombre del archivo se ve como chip, no como
-    // texto pegado al mensaje.
+    // The text shown in the bubble and the one actually sent to the backend
+    // are no longer the same string -- useAiChat appends "(adjunto: ...)" to
+    // THAT one so the server-side history keeps the context, but here on
+    // screen the file name shows as a chip, not as text stuck to the
+    // message.
     await sendMessage(message, hasAttachments ? { files, password: password || undefined } : undefined)
   }
 
@@ -374,10 +378,10 @@ export function Advisor() {
     void send(input)
   }
 
-  /** Los botones de la tarjeta de propose_action mandan un texto fijo por el
-   * mismo chat, en vez de que el usuario tenga que escribir "si" -- es lo
-   * que hace que confirmar sea inequivoco (el asesor no tiene que interpretar
-   * texto libre) sin tener que saltarse el flujo conversacional normal. */
+  /** The propose_action card's buttons send a fixed text through the same
+   * chat, instead of making the user type "yes" -- that's what makes
+   * confirming unambiguous (the advisor doesn't have to interpret free
+   * text) without having to skip the normal conversational flow. */
   function respondToProposal(confirmed: boolean) {
     if (isStreaming) return
     void sendMessage(
@@ -394,10 +398,10 @@ export function Advisor() {
   }
 
   return (
-    // Ya no bleed-ea el padding del Layout (ver Layout.tsx: <main> es
-    // flex-col, esto usa lg:flex-1 lg:min-h-0 para llenar el alto disponible
-    // sin un calc(100vh-Npx) a mano) -- toda la columna, header incluido,
-    // queda con el mismo gutter que cualquier otra pantalla.
+    // No longer bleeds through the Layout's padding (see Layout.tsx: <main>
+    // is flex-col, this uses lg:flex-1 lg:min-h-0 to fill the available
+    // height without a hand-rolled calc(100vh-Npx)) -- the whole column,
+    // header included, ends up with the same gutter as any other screen.
     <div className="flex flex-col lg:flex-1 lg:min-h-0">
       <ViewHeader
         icon={<Bot />}
@@ -514,11 +518,11 @@ export function Advisor() {
                     <Sparkles size={12} style={{ color: 'var(--nl-accent-ink)' }} />
                   </span>
                 )
-                // Propone una accion (create_transaction, create_account, etc.)
-                // -- tarjeta con botones reales de Confirmar/Cancelar en vez de
-                // esperar que el usuario escriba "si". Solo es clickeable si es
-                // el ultimo mensaje: en cuanto la conversacion sigue (el usuario
-                // ya respondio, con boton o texto) queda inerte.
+                // Proposes an action (create_transaction, create_account, etc.)
+                // -- a card with real Confirm/Cancel buttons instead of waiting
+                // for the user to type "yes". Only clickable if it's the last
+                // message: as soon as the conversation moves on (the user
+                // already responded, via button or text) it becomes inert.
                 if (proposal) {
                   return (
                     <div key={i} className="self-start max-w-[78%] flex gap-3">
@@ -543,9 +547,9 @@ export function Advisor() {
                     </div>
                   )
                 }
-                // Ya ejecuto la tool de escritura correspondiente -- el mismo
-                // texto de confirmacion del asesor, pero envuelto en la
-                // tarjeta verde en vez de una burbuja plana con badge.
+                // Already ran the corresponding write tool -- the same
+                // confirmation text from the advisor, but wrapped in the
+                // green card instead of a plain bubble with a badge.
                 if (didWrite) {
                   return (
                     <div key={i} className="self-start max-w-[78%] flex gap-3">
@@ -701,10 +705,10 @@ export function Advisor() {
                 </button>
               </div>
             </div>
-            {/* Solo antes del primer mensaje -- una vez que la conversacion
-                arranca, estas 5 sugerencias ya no aportan (el usuario esta
-                escribiendo lo que necesita) y solo le restan alto util al
-                historial. */}
+            {/* Only before the first message -- once the conversation
+                starts, these 5 suggestions no longer add value (the user
+                is typing what they need) and only take up useful height
+                from the history. */}
             {messages.length === 0 && (
               <div className="flex gap-2 flex-wrap" data-tour="advisor:suggestions">
                 {SUGGESTIONS.map((s) => (
@@ -723,12 +727,13 @@ export function Advisor() {
           </form>
         </div>
 
-        {/* A proposito SIN overflow-y-auto -- este panel no scrollea nunca,
-            queda fijo mientras el chat (a la izquierda) es el unico que se
-            mueve. Su contenido es finito (resumen + hasta 5 transacciones),
-            asi que no necesita su propio scroll -- overflow-hidden es solo
-            un seguro por si algun dia crece mas de lo esperado, para que en
-            ese caso se recorte en vez de empujar la pagina de nuevo. */}
+        {/* Deliberately WITHOUT overflow-y-auto -- this panel never scrolls,
+            it stays fixed while the chat (on the left) is the only thing
+            that moves. Its content is finite (summary + up to 5
+            transactions), so it doesn't need its own scroll --
+            overflow-hidden is just a safeguard in case it ever grows more
+            than expected, so in that case it gets clipped instead of
+            pushing the page again. */}
         <div
           className="border-t lg:border-t-0 lg:border-l border-border overflow-hidden p-4 lg:p-5 lg:flex-[0_0_40%]"
           style={{ background: 'var(--sidebar)' }}

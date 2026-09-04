@@ -60,12 +60,12 @@ async def test_login_wrong_password_unauthorized(client: AsyncClient):
 
 
 async def test_refresh_rotates_token(client: AsyncClient):
-    """El refresh token es de un solo uso: cada /auth/refresh devuelve uno
-    nuevo y el viejo deja de servir. Antes el backend rotaba el token en la
-    DB pero nunca se lo devolvia al cliente -- el cliente seguia mandando el
-    viejo (ya invalido) en el proximo refresh y la sesion moria sola sin
-    aviso al segundo ciclo. Esto prueba el flujo completo, no solo que
-    devuelva un access_token."""
+    """The refresh token is single-use: every /auth/refresh returns a new
+    one and the old one stops working. Previously the backend rotated the token in the
+    DB but never returned it to the client -- the client kept sending the
+    old (now invalid) one on the next refresh and the session would silently die
+    without warning on the second cycle. This tests the full flow, not just that
+    it returns an access_token."""
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
@@ -162,9 +162,9 @@ async def test_login_locks_after_too_many_failed_attempts(client: AsyncClient):
     )
     assert locked.status_code == 429
 
-    # Ni siquiera con la contraseña correcta entra mientras esta bloqueado --
-    # si no, un atacante podria usar esto para confirmar la contraseña real
-    # una vez agotados los intentos, sin resetear el contador.
+    # Not even the correct password gets in while it's locked --
+    # otherwise an attacker could use this to confirm the real password
+    # once the attempts are exhausted, without resetting the counter.
     still_locked = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
     )
@@ -186,8 +186,8 @@ async def test_successful_login_clears_failed_attempts(client: AsyncClient):
     )
     assert ok.status_code == 200
 
-    # El contador se reinicio -- 3 fallos mas todavia no deberian bloquear
-    # (el limite es 5).
+    # The counter was reset -- 3 more failures still shouldn't lock
+    # (the limit is 5).
     for _ in range(3):
         response = await client.post(
             "/api/v1/auth/login", json={"email": email, "password": "wrong"}
@@ -239,7 +239,7 @@ async def test_new_user_gets_default_preferences(client: AsyncClient):
     assert data["email_notifications"] is True
     assert data["push_notifications"] is True
     assert data["avatar_url"] is None
-    # Apagado por defecto -- ver seccion "deuda sin plan" en /debts.
+    # Off by default -- see the "debt without a plan" section in /debts.
     assert data["debt_trouble_mode"] is False
 
 
@@ -255,7 +255,7 @@ async def test_update_settings_changes_theme_and_pay_cycle(client: AsyncClient):
     data = response.json()["data"]
     assert data["theme"] == "light"
     assert data["pay_cycle"] == "biweekly"
-    # Lo que no se manda no cambia.
+    # What isn't sent doesn't change.
     assert data["email_notifications"] is True
 
 
@@ -294,9 +294,9 @@ async def test_update_settings_marks_changelog_version_as_seen(client: AsyncClie
 
 
 async def test_register_without_accepting_disclaimer_rejected(client: AsyncClient):
-    """DisclaimerGate (frontend) exige esto antes de crear la cuenta -- el
-    checkbox del formulario no alcanza por si solo, el backend lo valida de
-    nuevo (accept_disclaimer en RegisterRequest, ver auth_service.register)."""
+    """DisclaimerGate (frontend) requires this before creating the account -- the
+    form checkbox alone isn't enough, the backend validates it
+    again (accept_disclaimer in RegisterRequest, see auth_service.register)."""
     email = f"{uuid.uuid4()}@example.com"
     response = await client.post(
         "/api/v1/auth/register",
@@ -328,10 +328,10 @@ async def test_register_stamps_current_disclaimer_version(client: AsyncClient):
 
 
 async def test_accept_disclaimer_updates_existing_user(client: AsyncClient, session_factory):
-    """Simula una cuenta creada ANTES de que existiera esta feature
-    (accepted_disclaimer_version=NULL) escribiendolo directo por DB -- asi es
-    como se ve de verdad una cuenta ya existente hoy. DisclaimerGate la
-    bloquearia hasta que llame a este endpoint."""
+    """Simulates an account created BEFORE this feature existed
+    (accepted_disclaimer_version=NULL) by writing it directly via DB -- this is
+    truly what an already-existing account looks like today. DisclaimerGate would
+    block it until it calls this endpoint."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     me = await client.get("/api/v1/auth/me", headers=headers)
@@ -389,8 +389,8 @@ async def test_delete_account_requires_correct_password(client: AsyncClient):
     )
     assert right.status_code == 200
 
-    # La cuenta queda desactivada y la sesion revocada: ni login ni refresh
-    # vuelven a funcionar.
+    # The account ends up deactivated and the session revoked: neither login nor refresh
+    # work again.
     login_again = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
     )
@@ -403,6 +403,6 @@ async def test_delete_account_requires_correct_password(client: AsyncClient):
 async def test_unlink_google_requires_existing_password(client: AsyncClient):
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
-    # Esta cuenta nunca se vinculo a Google.
+    # This account was never linked to Google.
     response = await client.post("/api/v1/auth/google/unlink", headers=headers)
     assert response.status_code == 400

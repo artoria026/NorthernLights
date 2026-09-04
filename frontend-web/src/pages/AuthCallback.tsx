@@ -22,11 +22,11 @@ export function AuthCallback() {
   const handled = useRef(false)
 
   useEffect(() => {
-    // StrictMode corre los efectos 2 veces en dev -- sin este guard, la
-    // segunda pasada lee `window.location.search` DESPUES de que la primera
-    // ya navego (y por lo tanto ya no tiene ?error=/?access_token=), asi que
-    // recalcula un mensaje generico y pisa el correcto. Procesar la URL una
-    // sola vez por montaje evita eso.
+    // StrictMode runs effects twice in dev -- without this guard, the
+    // second pass reads `window.location.search` AFTER the first one has
+    // already navigated (and therefore no longer has ?error=/?access_token=),
+    // so it recomputes a generic message and overwrites the correct one.
+    // Processing the URL only once per mount avoids that.
     if (handled.current) return
     handled.current = true
 
@@ -50,15 +50,15 @@ export function AuthCallback() {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
         setUser(me.data.data)
-        // Cuenta de Google recien creada: mismo criterio que Register.tsx --
-        // no vio ningun release, no tiene sentido mostrarle "Novedades".
+        // Newly created Google account: same criterion as Register.tsx --
+        // it hasn't seen any release, no point showing it "Novedades".
         if (isNewAccount) {
           try {
             await updateSettings.mutateAsync({
               last_seen_changelog_version: LATEST_CHANGELOG_VERSION,
             })
           } catch {
-            // no-op: en el peor caso ve el modal de novedades una vez
+            // no-op: worst case they see the changelog modal once
           }
         }
         navigate('/', { replace: true })

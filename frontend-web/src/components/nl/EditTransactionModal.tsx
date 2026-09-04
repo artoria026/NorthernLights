@@ -51,13 +51,14 @@ export function EditTransactionModal({
     setAmount(transaction.amount ?? '')
 
     if (transaction.entry_type === 'transfer') {
-      // Convencion de creacion (ver TransactionModals.tsx): destino=debit, origen=credit.
+      // Creation convention (see TransactionModals.tsx): destination=debit, origin=credit.
       setContraAccountId(transaction.lines.find((l) => l.type === 'debit')?.account_id ?? '')
       setAccountId(transaction.lines.find((l) => l.type === 'credit')?.account_id ?? '')
     } else {
-      // Una de las 2 lines es la cuenta contable interna de la categoria (no
-      // aparece en `accounts`, que solo trae cuentas reales) -- la otra es la
-      // cuenta real que el usuario elige. No asumimos un orden fijo.
+      // One of the 2 lines is the category's internal ledger account (it
+      // doesn't appear in `accounts`, which only brings real accounts) --
+      // the other is the real account the user picks. We don't assume a
+      // fixed order.
       const realLine = transaction.lines.find((l) => accounts.some((a) => a.id === l.account_id))
       setAccountId(realLine?.account_id ?? '')
       setContraAccountId('')
@@ -101,7 +102,7 @@ export function EditTransactionModal({
       }
       onClose()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 

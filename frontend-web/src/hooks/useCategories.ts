@@ -3,9 +3,9 @@ import { api } from '@/services/api'
 import { patchAllListQueries, patchMatchingListQueries } from '@/lib/queryCache'
 import type { ApiSuccess, Category } from '@/types'
 
-/** `['categories', type]` puede tener variantes 'all'/'income'/'expense'
- * cacheadas simultaneamente (ej. un selector de categorias de gasto en un
- * formulario, y la pagina de Categorias mostrando todas). */
+/** `['categories', type]` can have 'all'/'income'/'expense' variants
+ * cached simultaneously (e.g. an expense category selector in a
+ * form, and the Categories page showing all of them). */
 function matchesCategoryFilter(queryKey: unknown[], category: Category): boolean {
   const [, type] = queryKey
   return type === 'all' || type === category.type
@@ -63,8 +63,8 @@ export function useUpdateCategory() {
       return data.data
     },
     onSuccess: (category) => {
-      // UpdateCategoryInput no incluye `type`, asi que el campo de filtro
-      // nunca cambia -- actualizar in-place en todas las variantes es seguro.
+      // UpdateCategoryInput doesn't include `type`, so the filter field
+      // never changes -- updating in-place across all variants is safe.
       patchAllListQueries<Category>(queryClient, ['categories'], (prev) =>
         (prev ?? []).map((c) => (c.id === category.id ? category : c)),
       )
@@ -87,8 +87,8 @@ export function useDeleteCategory() {
   })
 }
 
-/** Categorias de sistema que el usuario actual desactivo -- para la seccion
- * de "reactivar". Las propias nunca aparecen aca (esas se eliminan). */
+/** System categories that the current user deactivated -- for the
+ * "reactivate" section. Custom ones never appear here (those get deleted). */
 export function useHiddenCategories(type?: 'income' | 'expense') {
   return useQuery({
     queryKey: ['categories', 'hidden', type ?? 'all'],
@@ -101,8 +101,8 @@ export function useHiddenCategories(type?: 'income' | 'expense') {
   })
 }
 
-/** Oculta una categoria de sistema solo para el usuario actual (reversible) --
- * nunca aplica a categorias propias, esas se eliminan con useDeleteCategory. */
+/** Hides a system category only for the current user (reversible) --
+ * never applies to custom categories, those get deleted with useDeleteCategory. */
 export function useDeactivateCategory() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -153,8 +153,8 @@ export interface CategorySummaryItem {
   total: string
 }
 
-/** Cuanto lleva cada categoria (ingreso o gasto) en el mes dado. Sin year/month
- * el backend usa el mes actual. */
+/** How much each category (income or expense) has accrued in the given month. Without
+ * year/month the backend uses the current month. */
 export function useCategorySummary(year?: number, month?: number) {
   return useQuery({
     queryKey: ['categories', 'summary', year ?? 'current', month ?? 'current'],

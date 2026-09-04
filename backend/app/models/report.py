@@ -58,9 +58,9 @@ class Report(Base):
 
 
 class ReportInsight(Base):
-    """Puntos generados por IA sobre un periodo YA CERRADO (mes o año) -- a
-    diferencia de `Insight` (M13), estos son historial de solo lectura, sin
-    dismiss/resolve ni review periodico, y siempre atados a un `Report`."""
+    """AI-generated points about an ALREADY CLOSED period (month or year) -- unlike
+    `Insight` (M13), these are read-only history, with no
+    dismiss/resolve or periodic review, and always tied to a `Report`."""
 
     __tablename__ = "report_insights"
     __table_args__ = (

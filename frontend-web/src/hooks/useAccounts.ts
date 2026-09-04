@@ -22,9 +22,9 @@ export function useAccountSummary() {
   })
 }
 
-/** Ciclo de TDC (corte, pago, credito disponible). Solo aplica a cuentas
- * liability/credit_card con billing_cycle_day configurado -- pasar `enabled`
- * en false para cualquier otro tipo de cuenta. */
+/** Credit card cycle (statement date, payment, available credit). Only applies to
+ * liability/credit_card accounts with billing_cycle_day configured -- pass `enabled`
+ * as false for any other account type. */
 export function useTdcCycle(accountId: string | undefined, enabled: boolean) {
   return useQuery({
     queryKey: ['accounts', accountId, 'tdc-cycle'],
@@ -60,10 +60,10 @@ export function useCreateAccount() {
       return data.data
     },
     onSuccess: (account) => {
-      // Escribimos la cuenta directo en la cache en vez de solo invalidar:
-      // invalidar fuerza un round-trip de red antes de que la lista se
-      // actualice, lo que en conexiones lentas se siente como que "no aparece".
-      // Ya tenemos el objeto completo que devolvio el POST, no hace falta pedirlo de nuevo.
+      // We write the account directly into the cache instead of just invalidating:
+      // invalidating forces a network round-trip before the list
+      // updates, which on slow connections feels like it "doesn't show up".
+      // We already have the full object returned by the POST, no need to fetch it again.
       queryClient.setQueryData<Account[]>(['accounts'], (prev) => [...(prev ?? []), account])
       queryClient.invalidateQueries({ queryKey: ['accounts', 'summary'] })
     },
@@ -77,9 +77,9 @@ export interface UpdateAccountInput {
   color?: string
   notes?: string | null
   logo_data_url?: string | null
-  /** Editable aunque ya haya transacciones -- el backend ajusta `balance`
-   * por el mismo delta. Advertir/confirmar antes de mandar esto si la cuenta
-   * ya tiene movimientos es responsabilidad del formulario (ver Accounts.tsx). */
+  /** Editable even if there are already transactions -- the backend adjusts `balance`
+   * by the same delta. Warning/confirming before sending this if the account
+   * already has transactions is the form's responsibility (see Accounts.tsx). */
   initial_balance?: string
   credit_limit?: string | null
   interest_rate?: string | null
@@ -109,11 +109,11 @@ export interface ReconcileAccountInput {
   notes?: string
 }
 
-/** Conciliacion de saldo: si `real_balance` difiere del saldo que la app ya
- * calcula, el backend crea una transaccion de ajuste (adjustment_in/out) y
- * devuelve el resultado -- si coinciden, `adjusted: false` y no se creo nada.
- * Invalida cuentas/transacciones/reportes porque una conciliacion real
- * afecta los tres (a diferencia de un simple rename de cuenta). */
+/** Balance reconciliation: if `real_balance` differs from the balance the app
+ * already calculates, the backend creates an adjustment transaction (adjustment_in/out)
+ * and returns the result -- if they match, `adjusted: false` and nothing was created.
+ * Invalidates accounts/transactions/reports because an actual reconciliation
+ * affects all three (unlike a simple account rename). */
 export function useReconcileAccount() {
   const queryClient = useQueryClient()
   return useMutation({

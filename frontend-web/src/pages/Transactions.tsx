@@ -82,7 +82,7 @@ function SplitExpenseForm({ onDone }: { onDone: () => void }) {
       })
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -240,8 +240,9 @@ function TransactionRow({
 
   return (
     <>
-      {/* Fila de tabla -- solo lg+. La misma info en 6 columnas de ancho fijo
-          no cabe en un telefono, por eso hay una version aparte abajo. */}
+      {/* Table row -- lg+ only. The same info in 6 fixed-width columns
+          doesn't fit on a phone, that's why there's a separate version
+          below. */}
       <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_1fr_1fr_90px] gap-2 items-center px-3 py-2.5 text-[13px] border-t border-border">
         <span className="text-muted-foreground">{tx.date}</span>
         <span className="truncate">{tx.description}</span>
@@ -280,7 +281,7 @@ function TransactionRow({
         </span>
       </div>
 
-      {/* Card -- solo mobile */}
+      {/* Card -- mobile only */}
       <div className="lg:hidden flex flex-col gap-1.5 px-3 py-3 text-[13px] border-t border-border">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate font-medium">{tx.description}</span>

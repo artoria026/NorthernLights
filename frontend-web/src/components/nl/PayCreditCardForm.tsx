@@ -9,9 +9,9 @@ import { formatMoney, selectClass } from '@/lib/utils'
 import { useUiStore } from '@/stores/uiStore'
 import type { Account } from '@/types'
 
-/** Pagar una TDC siempre es una transferencia real entre cuentas -- con
- * tarjetas de credito fuera del modelo de Deudas (ver rediseno), este es el
- * unico camino para registrar un pago, desde Cuentas o desde Transacciones. */
+/** Paying a credit card is always a real transfer between accounts -- with
+ * credit cards outside the Deudas model (see redesign), this is the only
+ * way to record a payment, from Cuentas or from Transacciones. */
 export function PayCreditCardForm({ account, onDone }: { account: Account; onDone: () => void }) {
   const { data: accounts } = useAccounts()
   const createTransaction = useCreateTransaction()
@@ -41,7 +41,7 @@ export function PayCreditCardForm({ account, onDone }: { account: Account; onDon
       )
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 

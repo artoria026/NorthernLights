@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.notification import Notification
 from app.models.user import User
 
-# Eventos de alto impacto: ademas de la notificacion in-app, se envia email
-# (si el usuario no lo desactivo en sus preferencias). El resto es solo in-app.
+# High-impact events: besides the in-app notification, an email is sent
+# (if the user hasn't disabled it in their preferences). The rest are in-app only.
 HIGH_IMPACT_TYPES = ("report_ready", "tdc_due")
 
 
@@ -23,8 +23,8 @@ async def create(
     related_entity_type: str | None = None,
     related_entity_id: UUID | None = None,
 ) -> Notification:
-    """Unico punto de escritura en `notifications`: todos los modulos (M04-M07,
-    M11, M13, M15) llaman aqui en vez de insertar directamente."""
+    """Single write point for `notifications`: all modules (M04-M07, M11,
+    M13, M15) call here instead of inserting directly."""
     notification = Notification(
         user_id=user_id,
         title=title,
@@ -42,8 +42,8 @@ async def create(
 async def send_email_notification(
     session: AsyncSession, user_id: UUID, subject: str, body_html: str
 ) -> None:
-    """Email solo para eventos de alto impacto. Respeta
-    `users.email_notifications`. Envia via Celery (app/tasks/email.py)."""
+    """Email only for high-impact events. Respects
+    `users.email_notifications`. Sends via Celery (app/tasks/email.py)."""
     user = await session.get(User, user_id)
     if user is None or not user.preferences.email_notifications:
         return

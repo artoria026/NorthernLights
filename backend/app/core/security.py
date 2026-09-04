@@ -33,12 +33,12 @@ def generate_secure_token() -> str:
 
 
 def hash_token(token: str) -> str:
-    """SHA-256 alcanza para un secreto ya random de 64 bytes -- a diferencia
-    de una contraseña (baja entropia, necesita bcrypt para resistir fuerza
-    bruta), un refresh token de generate_secure_token() es imposible de
-    adivinar sin importar que tan rapido sea el hash. Usado para no guardar
-    devices.refresh_token en texto plano: una fuga de esa tabla ya no
-    entrega sesiones activas listas para usar."""
+    """SHA-256 is enough for a secret that's already random over 64 bytes -- unlike
+    a password (low entropy, needs bcrypt to resist brute
+    force), a refresh token from generate_secure_token() is impossible to
+    guess no matter how fast the hash is. Used to avoid storing
+    devices.refresh_token in plain text: a leak of that table no longer
+    hands over active sessions ready to use."""
     return hashlib.sha256(token.encode()).hexdigest()
 
 
@@ -80,9 +80,9 @@ async def require_admin(current_user: CurrentUser = Depends(get_current_user)) -
 
 
 def create_state_token() -> str:
-    """JWT de corta duracion (10 min) con un nonce aleatorio -- reemplaza la
-    sesion de servidor de anti-CSRF clasica del flujo OAuth (la app es
-    stateless). Se manda como `state` a Google y se valida al volver en
+    """Short-lived JWT (10 min) with a random nonce -- replaces the
+    classic server-side anti-CSRF session from the OAuth flow (the app is
+    stateless). Sent as `state` to Google and validated on return in
     /auth/google/callback."""
     payload = {
         "nonce": secrets.token_urlsafe(32),

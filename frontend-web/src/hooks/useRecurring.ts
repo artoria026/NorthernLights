@@ -15,9 +15,9 @@ function invalidateRecurring(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ['budget'] })
 }
 
-/** `['recurring', 'list', status, item_type]` puede tener varias variantes
- * cacheadas a la vez (distintos filtros montados en distintas vistas) -- solo
- * insertamos el item nuevo en las que su status/item_type realmente incluiria. */
+/** `['recurring', 'list', status, item_type]` can have several variants
+ * cached at once (different filters mounted in different views) -- we only
+ * insert the new item into the ones whose status/item_type would actually include it. */
 function matchesRecurringFilter(queryKey: unknown[], item: RecurringItem): boolean {
   const [, , status, itemType] = queryKey
   const statusOk = status === 'all' || status === item.status
@@ -82,8 +82,8 @@ export function useCreateRecurringItem() {
       return data.data
     },
     onSuccess: (item) => {
-      // Solo crea el registro (M06); la primera transaccion real la genera
-      // Celery despues -- no hay balances/budget que recalcular todavia.
+      // Only creates the record (M06); the first real transaction is generated
+      // by Celery later -- there are no balances/budget to recalculate yet.
       patchMatchingListQueries<RecurringItem>(
         queryClient,
         ['recurring', 'list'],
@@ -105,11 +105,11 @@ export interface UpdateRecurringItemInput {
   next_date?: string
 }
 
-/** item_type y status no son editables aqui (item_type define categorias
- * validas/entry_type y no se puede migrar; status tiene sus propios
- * endpoints dedicados: pause/cancel/resume) -- por eso nunca cambia el
- * bucket de status/item_type de un item existente y matchesRecurringFilter
- * no necesita revisarse tras un update, a diferencia de un create. */
+/** item_type and status are not editable here (item_type defines valid
+ * categories/entry_type and can't be migrated; status has its own
+ * dedicated endpoints: pause/cancel/resume) -- that's why an existing item's
+ * status/item_type bucket never changes and matchesRecurringFilter
+ * doesn't need to be re-checked after an update, unlike a create. */
 export function useUpdateRecurringItem() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -135,9 +135,9 @@ export function usePauseRecurringItem() {
       return data.data
     },
     onSuccess: (item) => {
-      // Actualiza el status donde ya esta visible al instante; invalida
-      // ademas para que las variantes filtradas por status lo saquen/metan
-      // de la lista correcta en su proximo refetch.
+      // Updates the status where it's already visible instantly; also
+      // invalidates so that variants filtered by status remove/add it
+      // to the correct list on their next refetch.
       patchAllListQueries<RecurringItem>(queryClient, ['recurring', 'list'], (prev) =>
         (prev ?? []).map((i) => (i.id === item.id ? item : i)),
       )
@@ -186,9 +186,9 @@ export function useConfirmTransaction() {
       return data.data
     },
     onSuccess: (_, entryId) => {
-      // Confirmar crea una transaccion real (afecta balances/presupuesto) --
-      // eso si necesita recalculo del servidor. Lo que puede quitarse al
-      // instante es el draft de la lista de pendientes.
+      // Confirming creates a real transaction (affects balances/budget) --
+      // that does need server recalculation. What can be removed
+      // instantly is the draft from the pending list.
       queryClient.setQueryData(['recurring', 'pending'], (prev: unknown) =>
         Array.isArray(prev) ? prev.filter((tx: { id: string }) => tx.id !== entryId) : prev,
       )

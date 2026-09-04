@@ -13,8 +13,8 @@ from app.models.transaction import JournalEntry, JournalLine
 from app.schemas.account import AccountCreate, AccountUpdate
 from app.services import cache_service
 
-# Tipos de cuenta cuyo balance crece con un debito (regla contable estandar).
-# El resto (liability, income, equity) crece con un credito.
+# Account types whose balance grows with a debit (standard accounting rule).
+# The rest (liability, income, equity) grow with a credit.
 DEBIT_NORMAL_TYPES = {"asset", "expense"}
 
 __all__ = ["DEBIT_NORMAL_TYPES", "LIQUID_SUBTYPES"]
@@ -28,7 +28,7 @@ def balance_delta(account_type: str, line_type: str, amount: Decimal) -> Decimal
 async def update_account_balance(
     session: AsyncSession, account_id: UUID, amount: Decimal, line_type: str
 ) -> None:
-    """Uso exclusivo del servicio de transacciones (M04), dentro de la misma tx de DB."""
+    """Exclusive use of the transaction service (M04), within the same DB tx."""
     account = await session.get(Account, account_id)
     if account is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Cuenta no encontrada")
@@ -60,10 +60,10 @@ async def create_account(session: AsyncSession, user_id: UUID, data: AccountCrea
 
 
 async def list_accounts(session: AsyncSession, user_id: UUID) -> list[Account]:
-    """Solo cuentas reales del usuario (asset/liability). Las internas del
-    motor contable (categorias, ledger de deudas informales) nunca se exponen
-    aqui -- ver 'Creacion Asistida de Cuentas' en Notion,
-    get_or_create_category_ledger_account y get_or_create_debt_ledger_account."""
+    """Only the user's real accounts (asset/liability). Internal accounting
+    engine accounts (categories, informal debt ledger) are never exposed
+    here -- see 'Creacion Asistida de Cuentas' in Notion,
+    get_or_create_category_ledger_account and get_or_create_debt_ledger_account."""
     result = await session.execute(
         select(Account)
         .where(
@@ -79,12 +79,12 @@ async def list_accounts(session: AsyncSession, user_id: UUID) -> list[Account]:
 
 
 _LEDGER_ACCOUNT_NAME = {"income": "Ingresos", "expense": "Gastos"}
-# adjustment_in/adjustment_out comparten UNA sola cuenta contable interna
-# type=equity ("Ajustes de saldo") sin importar la direccion -- a diferencia
-# de income/expense (donde Account.type == entry_type identifica la cuenta 1
-# a 1), aqui ambos entry_type resuelven al mismo tipo de cuenta. Es el mismo
-# lugar donde la contabilidad tradicional absorbe diferencias de conciliacion
-# (igual que un "Opening Balance Equity" en QuickBooks/Quicken).
+# adjustment_in/adjustment_out share a SINGLE internal accounting account
+# type=equity ("Ajustes de saldo") regardless of direction -- unlike
+# income/expense (where Account.type == entry_type identifies the account 1
+# to 1), here both entry_type values resolve to the same account type. It's
+# the same place traditional accounting absorbs reconciliation differences
+# (just like an "Opening Balance Equity" in QuickBooks/Quicken).
 _ADJUSTMENT_LEDGER_TYPE = "equity"
 _ADJUSTMENT_LEDGER_NAME = "Ajustes de saldo"
 
@@ -92,11 +92,11 @@ _ADJUSTMENT_LEDGER_NAME = "Ajustes de saldo"
 async def get_or_create_category_ledger_account(
     session: AsyncSession, user_id: UUID, entry_type: str
 ) -> Account:
-    """Cuenta contable interna usada como contraparte en el motor de doble
-    entrada para transacciones simples (income/expense/adjustment_*). El
-    usuario nunca la ve, la elige ni la crea -- se resuelve sola aqui, una
-    por usuario por tipo, la primera vez que hace falta. Excluida de
-    patrimonio neto a proposito (get_summary/engine_service solo suman
+    """Internal accounting account used as the counterpart in the double
+    entry engine for simple transactions (income/expense/adjustment_*). The
+    user never sees it, picks it, or creates it -- it resolves itself here,
+    one per user per type, the first time it's needed. Deliberately excluded
+    from net worth (get_summary/engine_service only sum
     type in asset/liability)."""
     is_adjustment = entry_type in ("adjustment_in", "adjustment_out")
     account_type = _ADJUSTMENT_LEDGER_TYPE if is_adjustment else entry_type
@@ -124,7 +124,7 @@ async def get_or_create_category_ledger_account(
 
 
 _DEBT_LEDGER = {
-    # owed_by_me: lo que yo debo -> pasivo. owed_to_me: lo que me deben -> activo.
+    # owed_by_me: what I owe -> liability. owed_to_me: what's owed to me -> asset.
     "owed_by_me": {"name": "Préstamos por pagar", "type": "liability", "subtype": "informal_debt"},
     "owed_to_me": {"name": "Préstamos por cobrar", "type": "asset", "subtype": "loan_receivable"},
 }
@@ -133,13 +133,13 @@ _DEBT_LEDGER = {
 async def get_or_create_debt_ledger_account(
     session: AsyncSession, user_id: UUID, direction: str
 ) -> Account:
-    """Contraparte contable interna para deudas informales (M05): UNA cuenta
-    oculta por usuario por direccion (no una por persona -- la persona/monto
-    vive en `debts.current_balance`, no aqui). Asi el motor de doble entrada
-    balancea y el saldo entra al calculo de patrimonio neto (account_service.
-    get_summary suma por tipo asset/liability sin importar is_internal) sin
-    que el usuario vea nunca esta cuenta en Cuentas (list_accounts filtra
-    is_internal)."""
+    """Internal accounting counterpart for informal debts (M05): ONE hidden
+    account per user per direction (not one per person -- the person/amount
+    lives in `debts.current_balance`, not here). This way the double entry
+    engine balances and the balance enters the net worth calculation
+    (account_service.get_summary sums by type asset/liability regardless of
+    is_internal) without the user ever seeing this account in Accounts
+    (list_accounts filters out is_internal)."""
     meta = _DEBT_LEDGER[direction]
     result = await session.execute(
         select(Account)
@@ -192,10 +192,10 @@ async def update_account(
     if "initial_balance" in updates:
         new_initial = updates.pop("initial_balance")
         if new_initial is not None and new_initial != account.initial_balance:
-            # Desplaza el balance actual por el mismo delta -- preserva el
-            # efecto de todas las transacciones confirmadas, solo cambia el
-            # punto de partida (mismo invariante que usa data_service.py al
-            # resetear: balance = initial_balance + suma de deltas).
+            # Shift the current balance by the same delta -- preserves the
+            # effect of all confirmed transactions, only changes the
+            # starting point (same invariant data_service.py uses when
+            # resetting: balance = initial_balance + sum of deltas).
             account.balance += new_initial - account.initial_balance
             account.initial_balance = new_initial
             await cache_service.invalidate_snapshot_for(user_id)

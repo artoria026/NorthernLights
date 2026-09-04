@@ -30,19 +30,20 @@ class TransactionCreate(BaseModel):
     tags: list[str] = []
     entry_type: str = Field(pattern=f"^({'|'.join(ENTRY_TYPES)})$")
     category_id: UUID | None = None
-    # Forma simple (recomendada para income/expense): el front nunca ve ni
-    # elige la cuenta contable interna de la categoria, el backend la resuelve
-    # solo -- ver account_service.get_or_create_category_ledger_account.
+    # Simple form (recommended for income/expense): the front never sees or
+    # picks the category's internal ledger account, the backend resolves it
+    # on its own -- see account_service.get_or_create_category_ledger_account.
     account_id: UUID | None = None
     amount: Decimal | None = Field(default=None, gt=0)
-    # Forma explicita (requerida para transfer/prestamos, disponible para
-    # cualquier caso de uso avanzado): el caller arma los renglones el mismo.
+    # Explicit form (required for transfer/loans, available for any
+    # advanced use case): the caller builds the lines itself.
     lines: list[JournalLineIn] | None = None
-    # Solo para entry_type='expense' en forma simple, pagando con una TDC:
-    # marca la compra como a meses sin intereses -- ver
-    # transaction_service.create_transaction, que valida la cuenta y crea el
-    # InstallmentPlan. Cuantas cuotas van pagadas y la mensualidad se calculan
-    # al vuelo a partir de esta transaccion, nunca se guardan aparte.
+    # Only for entry_type='expense' in simple form, paying with a credit
+    # card: marks the purchase as interest-free installments -- see
+    # transaction_service.create_transaction, which validates the account and
+    # creates the InstallmentPlan. How many installments are paid and the
+    # monthly amount are computed on the fly from this transaction, never
+    # stored separately.
     installment_total: int | None = Field(default=None, ge=2)
 
     @model_validator(mode="after")
@@ -76,12 +77,12 @@ class TransactionUpdate(BaseModel):
     notes: str | None = None
     tags: list[str] | None = None
     category_id: UUID | None = None
-    # Forma simple (expense/income): igual que en TransactionCreate, el front
-    # nunca ve ni elige la cuenta contable interna de la categoria -- ver
-    # transaction_service.update_transaction, que la resuelve el mismo.
+    # Simple form (expense/income): same as in TransactionCreate, the front
+    # never sees or picks the category's internal ledger account -- see
+    # transaction_service.update_transaction, which resolves it on its own.
     account_id: UUID | None = None
     amount: Decimal | None = Field(default=None, gt=0)
-    # Forma explicita (requerida para transfer): igual que en create.
+    # Explicit form (required for transfer): same as in create.
     lines: list[JournalLineIn] | None = None
 
 
@@ -111,8 +112,8 @@ class TransactionOut(BaseModel):
 
 
 class SplitDebtor(BaseModel):
-    # Se resuelve/crea sola en Deudas (direction=owed_to_me) por nombre, igual
-    # que un prestamo directo -- el front nunca elige una cuenta para esto.
+    # Resolved/created on its own in Debts (direction=owed_to_me) by name,
+    # same as a direct loan -- the front never picks an account for this.
     person_name: str = Field(min_length=1, max_length=120)
     amount: Decimal = Field(gt=0)
 
@@ -122,6 +123,6 @@ class SplitExpenseCreate(BaseModel):
     description: str = Field(min_length=1)
     notes: str | None = None
     category_id: UUID
-    paying_account_id: UUID  # cuenta que absorbe el cargo completo (banco/TDC)
+    paying_account_id: UUID  # account that absorbs the full charge (bank/credit card)
     my_share: Decimal = Field(gt=0)
     debtors: list[SplitDebtor] = Field(min_length=1)

@@ -1,7 +1,7 @@
-"""Quitar la contraseña de un PDF antes de mandarlo al modelo de IA -- ni
-Gemini ni Claude pueden abrir un PDF encriptado por su cuenta (ver
-app/ai/advisor.py, bloques `document`). Todo en memoria: nunca se persiste
-el PDF a disco ni la contraseña a ningun lado (ni logs)."""
+"""Strip a PDF's password before sending it to the AI model -- neither
+Gemini nor Claude can open an encrypted PDF on its own (see
+app/ai/advisor.py, `document` blocks). Everything in memory: the PDF is never
+persisted to disk, nor the password anywhere (not even logs)."""
 
 import io
 
@@ -10,14 +10,14 @@ from pypdf.errors import PdfReadError
 
 
 class PdfPasswordError(Exception):
-    """Contraseña incorrecta o faltante para un PDF que si esta encriptado."""
+    """Incorrect or missing password for a PDF that is in fact encrypted."""
 
 
 def strip_pdf_password(data: bytes, password: str | None) -> bytes:
-    """Si el PDF no esta encriptado, regresa `data` tal cual. Si lo esta,
-    intenta abrirlo con `password` y regresa una copia sin encriptacion (las
-    paginas se re-escriben en un PdfWriter nuevo) -- asi el proveedor de IA
-    recibe bytes de un PDF plano, sin tener que saber nada de la contrasena."""
+    """If the PDF isn't encrypted, returns `data` as-is. If it is,
+    tries to open it with `password` and returns a copy without encryption (the
+    pages are rewritten into a new PdfWriter) -- so the AI provider
+    receives the bytes of a plain PDF, without needing to know anything about the password."""
     try:
         reader = PdfReader(io.BytesIO(data))
     except PdfReadError as e:

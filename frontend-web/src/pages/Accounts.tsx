@@ -41,19 +41,19 @@ import type { Account, Category, Transaction } from '@/types'
 
 type Segment = 'ALL' | 'IN' | 'OUT'
 
-// Subtipos donde "contar lo que tienes fisicamente" tiene sentido -- mismo
-// criterio que account_service.LIQUID_SUBTYPES en el backend (que es quien
-// realmente lo valida; esto solo evita mostrar el boton donde el POST
-// /reconcile respondería 400 de todos modos).
+// Subtypes where "counting what you physically have" makes sense -- same
+// criterion as account_service.LIQUID_SUBTYPES in the backend (which is the
+// one that actually validates it; this just avoids showing the button where
+// the POST /reconcile would respond 400 anyway).
 const RECONCILABLE_SUBTYPES = new Set(['cash', 'checking', 'savings'])
 
-/** Tipos de cuenta que el usuario puede crear desde el wizard. Los tipos
- * contables internos (income/expense/equity, y el ledger oculto de deudas
- * informales) nunca se exponen aqui -- ver "Creacion Asistida de Cuentas" en
- * Notion. Prestar o que te presten dinero (en cualquier direccion, formal o
- * informal) tampoco vive aqui -- eso es Deudas (M05), no Accounts: no importa
- * cuanto le prestes a alguien, nunca se convierte en una cuenta mas junto a
- * tu banco. */
+/** Account types the user can create from the wizard. Internal accounting
+ * types (income/expense/equity, and the hidden ledger for informal debts)
+ * are never exposed here -- see "Creacion Asistida de Cuentas" in Notion.
+ * Lending or borrowing money (in either direction, formal or informal) also
+ * doesn't live here -- that's Debts (M05), not Accounts: no matter how much
+ * you lend someone, it never becomes just another account alongside your
+ * bank. */
 const ACCOUNT_KINDS = [
   {
     kind: 'checking' as const,
@@ -199,16 +199,17 @@ function LogoField({ value, onChange }: { value: string | null; onChange: (value
   )
 }
 
-/** 'in'/'out' aqui es de UX (que columna/color usar), no el Debe/Haber
- * contable -- para un pasivo (TDC) van invertidos a proposito. Contablemente
- * un pasivo crece con un credito (increases=true), pero en un estado de
- * cuenta de tarjeta real "Cargo" es una compra (aumenta la deuda) y "Abono"
- * es un pago (la reduce): exactamente al reves de como "aumenta el saldo"
- * se ve en una cuenta de activo. Sin este ajuste, un gasto con la TDC se
- * veia como Abono en verde -- correcto en teoria contable, confuso para
- * cualquiera acostumbrado a un estado de cuenta bancario. El balance real
- * de la cuenta sigue calculandose aparte con la convencion contable de
- * siempre (ver DEBIT_NORMAL_TYPES en account_service.py, backend).*/
+/** 'in'/'out' here is a UX concern (which column/color to use), not the
+ * accounting debit/credit -- for a liability (credit card) they're
+ * intentionally inverted. In accounting terms a liability grows with a
+ * credit (increases=true), but on a real credit card statement "Cargo" is
+ * a purchase (increases the debt) and "Abono" is a payment (reduces it):
+ * exactly the reverse of how "the balance increases" looks on an asset
+ * account. Without this adjustment, an expense on the credit card looked
+ * like an "Abono" in green -- correct in accounting theory, confusing for
+ * anyone used to a bank statement. The account's real balance is still
+ * calculated separately with the usual accounting convention (see
+ * DEBIT_NORMAL_TYPES in account_service.py, backend).*/
 function lineDirection(tx: Transaction, accountId: string, accountType: Account['type']) {
   const line = tx.lines.find((l) => l.account_id === accountId)
   if (!line) return null
@@ -226,17 +227,18 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-/** Pill de categoria con el padre integrado ("Propuesta 3 -- breadcrumb con
- * separador ›" de categoria-columna-propuestas.html) -- una sola linea con
- * el color real de la categoria en vez de dos textos sueltos que no se ven
- * conectados. Solo se usa aqui (ledger de una cuenta); el resto de la app
- * sigue con CategoryBadge tal cual, que no necesita mostrar el padre.
+/** Category pill with the parent integrated ("Proposal 3 -- breadcrumb with
+ * › separator" from categoria-columna-propuestas.html) -- a single line
+ * with the category's real color instead of two loose texts that don't
+ * look connected. Only used here (an account's ledger); the rest of the
+ * app keeps using CategoryBadge as-is, which doesn't need to show the
+ * parent.
  *
- * El padre y el hijo son DOS spans, no uno solo con truncate -- con nombres
- * largos, un solo texto trunca por el final y se come justo lo que mas
- * importa (la subcategoria). Aqui solo el padre encoge/trunca primero
- * (min-w-0 + flex-1); el hijo (shrink-0) se queda completo salvo que la
- * pill entera ya no quepa ni con el padre en cero. */
+ * The parent and the child are TWO spans, not a single one with truncate --
+ * with long names, a single text truncates at the end and eats exactly what
+ * matters most (the subcategory). Here only the parent shrinks/truncates
+ * first (min-w-0 + flex-1); the child (shrink-0) stays complete unless the
+ * whole pill no longer fits even with the parent at zero. */
 function CategoryBreadcrumb({ category, parentName }: { category: Category; parentName?: string }) {
   const Icon = categoryIcon(category.icon)
   return (
@@ -356,7 +358,7 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
       )
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -547,8 +549,8 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
   const pushToast = useUiStore((s) => s.pushToast)
   const confirm = useConfirmStore((s) => s.ask)
   const isCreditCard = account.subtype === 'credit_card'
-  // Consulta barata (per_page:1, solo nos importa meta.total) para saber si
-  // ya hay movimientos antes de advertir sobre el saldo inicial.
+  // Cheap query (per_page:1, we only care about meta.total) to know whether
+  // there are already transactions before warning about the initial balance.
   const { data: txCheck } = useTransactions({ account_id: account.id, per_page: 1 })
   const hasTransactions = (txCheck?.meta.total ?? 0) > 0
 
@@ -615,7 +617,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       )
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -742,9 +744,9 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
   const [notes, setNotes] = useState('')
 
   const delta = realBalance === '' ? 0 : Number(realBalance) - Number(account.balance)
-  // Umbral chico en vez de === 0 exacto: evita que un redondeo de centavos en
-  // el input (ej. el usuario borra y vuelve a escribir "1105.00") dispare un
-  // ajuste de $0.00 real que solo ensucia el historial.
+  // Small threshold instead of exactly === 0: avoids a cents rounding in the
+  // input (e.g. the user deletes and retypes "1105.00") triggering a real
+  // $0.00 adjustment that just clutters the history.
   const hasDelta = Math.abs(delta) >= 0.01
 
   async function handleSubmit(event: FormEvent) {
@@ -760,7 +762,7 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
       }
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -851,10 +853,10 @@ function TdcCycleCard({ accountId }: { accountId: string }) {
   )
 }
 
-/** Compras a meses sin intereses activas de una TDC -- una fila por compra,
- * con una barra de progreso "cuota pagada/total" en vez del texto plano de
- * antes. `installments` ya viene filtrado a las que no han terminado (ver
- * activeInstallments en Accounts()). */
+/** Active interest-free installment purchases (MSI) on a credit card -- one
+ * row per purchase, with a "paid/total installment" progress bar instead of
+ * the plain text from before. `installments` already comes filtered to the
+ * ones that haven't finished (see activeInstallments in Accounts()). */
 function InstallmentsCard({ installments }: { installments: Transaction[] }) {
   const total = installments.reduce((sum, tx) => sum + Number(tx.installment?.monthly_amount ?? 0), 0)
 
@@ -1038,9 +1040,9 @@ export function Accounts() {
   const visibleRows = filteredRows.slice(0, LEDGER_PREVIEW_LIMIT)
   const hasMoreInAccount = (ledger?.meta?.total ?? 0) > LEDGER_PREVIEW_LIMIT
 
-  // Compras a meses activas de esta TDC, sobre la ventana de transacciones ya
-  // cargada (per_page:50 arriba) -- suficiente para un resumen visual, no
-  // pretende ser un total historico exacto.
+  // Active installment purchases on this credit card, over the transaction
+  // window already loaded (per_page:50 above) -- enough for a visual
+  // summary, not meant to be an exact historical total.
   const activeInstallments = (ledger?.data ?? []).filter(
     (tx) => tx.installment && tx.installment.paid_installments < tx.installment.total_installments,
   )
@@ -1086,13 +1088,13 @@ export function Accounts() {
         tourKey="accounts"
       />
 
-      {/* items-stretch (default de grid, explicito aqui para que quede claro
-          por que) -- con items-start las dos columnas terminaban a alturas
-          distintas segun cuanto contenido tuviera cada una (se veia parejo
-          solo por casualidad), dejando un borde inferior irregular entre
-          ambas tarjetas. Ahora siempre miden lo mismo, y en la de la
-          izquierda "Patrimonio neto" + "Agregar cuenta" quedan pegados
-          abajo (mt-auto) en vez de flotar justo despues de la lista. */}
+      {/* items-stretch (grid's default, made explicit here so it's clear
+          why) -- with items-start the two columns ended up at different
+          heights depending on how much content each had (it only looked
+          even by coincidence), leaving an uneven bottom edge between the
+          two cards. Now they always measure the same, and on the left one
+          "Patrimonio neto" + "Agregar cuenta" stay pinned to the bottom
+          (mt-auto) instead of floating right after the list. */}
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-stretch">
         <div className="bg-card border border-border rounded-md p-[18px] flex flex-col" data-tour="accounts:list">
           <div className="text-[11px] tracking-wider text-muted-foreground mb-2">ACTIVOS</div>
@@ -1132,8 +1134,8 @@ export function Accounts() {
             <Dialog
               open={open}
               onOpenChange={(next, eventDetails) => {
-                // Clic afuera del modal (p.ej. al usar el color picker nativo)
-                // no debe cerrarlo -- solo Escape o los botones explicitos.
+                // A click outside the modal (e.g. when using the native color
+                // picker) shouldn't close it -- only Escape or the explicit buttons.
                 if (!next && eventDetails.reason === 'outside-press') return
                 setOpen(next)
               }}
@@ -1325,9 +1327,9 @@ export function Accounts() {
                   {visibleRows.map((tx) => {
                     const dir = lineDirection(tx, selectedAccount.id, selectedAccount.type)
                     const editable = isTransactionEditable(tx)
-                    // El padre solo aparece si la transaccion cayo en una
-                    // subcategoria -- una categoria de primer nivel no tiene
-                    // padre que mostrar, se queda con la pill de siempre.
+                    // The parent only shows up if the transaction landed in a
+                    // subcategory -- a top-level category has no parent to
+                    // show, and keeps the usual pill.
                     const category = tx.category_id ? categoryById.get(tx.category_id) : undefined
                     const parent = category?.parent_id ? categoryById.get(category.parent_id) : undefined
                     const categoryCell = category ? (

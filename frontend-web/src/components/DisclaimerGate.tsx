@@ -4,15 +4,16 @@ import { useAcceptDisclaimer, useLogout } from '@/hooks/useAuth'
 import { apiErrorMessage } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 
-/** Bloquea TODA la app (montado una sola vez en App.tsx, como
- * ConfirmDialogHost) para cualquier usuario cuya cuenta ya exista pero cuyo
- * `accepted_disclaimer_version` no coincida con la version vigente --
- * cuentas creadas antes de esta feature, o despues de una actualizacion real
- * del aviso. No tiene X ni se cierra con click afuera/Escape (Dialog queda
- * controlado en open=true sin soltarlo desde onOpenChange) -- las unicas
- * dos salidas son los botones de abajo: aceptar, o cerrar sesion. Si cierra
- * sesion sin aceptar, la proxima vez que entre se vuelve a topar con esto
- * mismo (el estado vive en el backend, no en este componente). */
+/** Blocks the ENTIRE app (mounted once in App.tsx, like ConfirmDialogHost)
+ * for any user whose account already exists but whose
+ * `accepted_disclaimer_version` doesn't match the current version --
+ * accounts created before this feature, or after a real update to the
+ * disclaimer. It has no X and doesn't close on click-outside/Escape (Dialog
+ * stays controlled at open=true without releasing it from onOpenChange) --
+ * the only two ways out are the buttons below: accept, or log out. If the
+ * user logs out without accepting, the next time they sign in they'll run
+ * into this same gate (the state lives in the backend, not in this
+ * component). */
 export function DisclaimerGate() {
   const user = useAuthStore((s) => s.user)
   const acceptDisclaimer = useAcceptDisclaimer()

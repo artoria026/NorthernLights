@@ -34,5 +34,5 @@ Thumbs.db
 # Docker volumes / logs
 *.log
 
-# Celery beat (creado localmente por `celery beat`, no es parte del repo)
+# Celery beat (created locally by `celery beat`, not part of the repo)
 celerybeat-schedule*

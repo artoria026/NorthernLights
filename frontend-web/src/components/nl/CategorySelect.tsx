@@ -4,13 +4,13 @@ import { categoryIcon } from '@/lib/categoryIcons'
 import { cn } from '@/lib/utils'
 import type { Category } from '@/types'
 
-/** Reemplazo de <Select> para elegir categoría/subcategoría -- un <Select>
- * plano no dice a qué padre pertenece cada subcategoría. Aquí las
- * subcategorías quedan agrupadas debajo de su padre (con encabezado), y se
- * puede filtrar escribiendo el nombre de cualquiera de los dos. `useCategories`
- * ya trae padres e hijos en una sola lista plana (con `parent_id`), así que
- * arma los grupos una sola vez por render en vez de requerir que el caller
- * los pre-procese. */
+/** Replacement for <Select> to pick a category/subcategory -- a plain
+ * <Select> doesn't say which parent each subcategory belongs to. Here
+ * subcategories are grouped under their parent (with a heading), and you
+ * can filter by typing the name of either one. `useCategories` already
+ * brings parents and children in a single flat list (with `parent_id`), so
+ * it builds the groups once per render instead of requiring the caller to
+ * pre-process them. */
 
 interface CategorySelectProps {
   categories: Category[] | undefined
@@ -23,8 +23,9 @@ interface CategorySelectProps {
 
 interface CategoryGroup {
   parent: Category
-  /** [padre, ...hijos] -- el padre va primero para poder elegirlo como "sin
-   * subcategoría" sin salir del grupo. Si no tiene hijos, queda solo el. */
+  /** [parent, ...children] -- the parent goes first so it can be chosen as
+   * "no subcategory" without leaving the group. If it has no children,
+   * it's the only one left. */
   items: Category[]
 }
 
@@ -112,11 +113,11 @@ export function CategorySelect({
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
-            {/* Combobox.Empty siempre queda montado en el DOM (incluso sin
-                resultados que mostrar, ver nota de accesibilidad en sus
-                docs) -- sin `empty:hidden` su padding deja una barra en
-                blanco arriba de la lista aunque SI haya resultados, porque
-                el div solo se vacia de texto, nunca se desmonta. */}
+            {/* Combobox.Empty always stays mounted in the DOM (even with no
+                results to show, see the accessibility note in its docs) --
+                without `empty:hidden` its padding leaves a blank bar above
+                the list even when there ARE results, because the div only
+                empties of text, it never unmounts. */}
             <Combobox.Empty className="empty:hidden px-3 py-6 text-center text-xs text-muted-foreground">
               Sin resultados
             </Combobox.Empty>
@@ -127,10 +128,10 @@ export function CategorySelect({
                   <Combobox.Group
                     key={group.parent.id}
                     items={group.items}
-                    // data-list-empty se marca cuando el filtro no dejo
-                    // ningun item del grupo -- sin esto el grupo entero
-                    // (encabezado incluido) queda montado vacio, mismo bug
-                    // que Combobox.Empty de arriba pero por grupo.
+                    // data-list-empty gets set when the filter left no
+                    // items in the group -- without this the whole group
+                    // (heading included) stays mounted empty, the same bug
+                    // as Combobox.Empty above but per group.
                     className="data-[list-empty]:hidden mb-1 last:mb-0"
                   >
                     {hasChildren && (

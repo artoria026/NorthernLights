@@ -2,10 +2,10 @@ from typing import Any
 
 from pydantic import BaseModel
 
-# Compartido por cualquier campo que guarde una imagen subida por el usuario
-# como data-url (logo de cuenta, foto de perfil): el frontend siempre la
-# normaliza a un PNG/JPG/WebP pequeno en un <canvas> antes de mandarla, asi
-# que este limite es generoso para eso sin permitir fotos completas.
+# Shared by any field that stores an image uploaded by the user as a
+# data-url (account logo, profile photo): the frontend always normalizes it
+# to a small PNG/JPG/WebP in a <canvas> before sending it, so this limit is
+# generous for that without allowing full-size photos.
 IMAGE_DATA_URL_PATTERN = r"^data:image/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/]+=*$"
 IMAGE_DATA_URL_MAX_LENGTH = 400_000
 

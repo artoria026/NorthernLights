@@ -3,6 +3,6 @@ from typing import Any
 
 
 def json_safe(value: Any) -> Any:
-    """Convierte Decimal/UUID/date/etc. (no serializables nativamente) a texto
-    via un roundtrip de json, para poder guardarlos en columnas JSONB."""
+    """Converts Decimal/UUID/date/etc. (not natively serializable) to text
+    via a json roundtrip, so they can be stored in JSONB columns."""
     return json.loads(json.dumps(value, default=str))

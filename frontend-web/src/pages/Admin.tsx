@@ -48,10 +48,10 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-/** Mismos umbrales que ya usa health_score en Advisor.tsx: 70+ es sano
- * (verde), 40-69 regular (naranja), menos de 40 mal (rojo). Solo el score
- * compuesto -- sus componentes (DTI, tasa de ahorro, etc.) nunca llegan al
- * front de admin, ver admin_service.list_users. */
+/** Same thresholds already used by health_score in Advisor.tsx: 70+ is
+ * healthy (green), 40-69 fair (orange), under 40 poor (red). Only the
+ * composite score -- its components (DTI, savings rate, etc.) never reach
+ * the admin frontend, see admin_service.list_users. */
 function healthScoreColors(score: number): { bg: string; ink: string } {
   if (score >= 70) return { bg: 'var(--nl-accent-soft-bg)', ink: 'var(--nl-accent-ink)' }
   if (score >= 40) return { bg: 'var(--nl-warning-soft-bg)', ink: 'var(--nl-warning-ink)' }
@@ -70,9 +70,9 @@ function HealthScoreBadge({ score }: { score: number }) {
   )
 }
 
-/** Mismo logo de Google (4 colores) que ya usa Settings.tsx en "Cuentas
- * conectadas" -- reusado tal cual para que el stat "Con Google" se
- * reconozca de un vistazo, en vez de un ícono generico. */
+/** Same Google logo (4 colors) already used by Settings.tsx in "Connected
+ * accounts" -- reused as-is so the "With Google" stat is recognizable at a
+ * glance, instead of a generic icon. */
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" className="flex-shrink-0">
@@ -84,9 +84,9 @@ function GoogleIcon() {
   )
 }
 
-/** Fila de "Adopción de funciones" -- % de usuarios totales que ya tienen al
- * menos 1 registro de ese tipo, calculado en el cliente (count/total ya
- * vienen del backend, sin otra llamada). */
+/** "Feature adoption" row -- % of total users who already have at least 1
+ * record of that type, computed on the client (count/total already come
+ * from the backend, no extra call). */
 function AdoptionRow({ label, count, total }: { label: string; count: number; total: number }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0
   return (
@@ -222,7 +222,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
 
   return (
     <>
-      {/* Fila de tabla -- solo lg+ */}
+      {/* Table row -- lg+ only */}
       <div className="hidden lg:grid grid-cols-[1.1fr_75px_85px_60px_70px_65px_85px_75px_75px] gap-2 items-center py-3 border-t border-border first:border-0 text-[13px]">
         <div className="min-w-0">
           <div className="font-medium truncate">
@@ -244,7 +244,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
         <span className="flex justify-end items-center gap-1">{actionButtons}</span>
       </div>
 
-      {/* Card -- solo mobile */}
+      {/* Card -- mobile only */}
       <div className="lg:hidden flex flex-col gap-2 py-3 border-t border-border first:border-0 text-[13px]">
         <div className="min-w-0">
           <div className="font-medium truncate">
@@ -265,9 +265,8 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
         <div className="flex items-center gap-1.5 flex-wrap">{actionButtons}</div>
       </div>
 
-      {/* Contraseña temporal -- se muestra UNA sola vez, no queda guardada
-          en ningún lado en texto plano salvo mientras este modal esta
-          abierto (estado local, se pierde al cerrarlo). */}
+      {/* Temporary password -- shown ONCE, never kept in plain text anywhere
+          except while this modal is open (local state, lost on close). */}
       <Dialog open={tempPassword !== null} onOpenChange={(next) => !next && setTempPassword(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -308,10 +307,10 @@ const FEEDBACK_STATUS_SEVERITY: Record<FeedbackStatus, 'blue' | 'warning' | 'acc
   discarded: 'danger',
 }
 
-// Estos dos si le disparan una notificacion in-app al usuario dueño del
-// feedback (ver feedback_service._NOTIFY_STATUSES en el backend) -- por eso
-// son los unicos que abren el dialogo para pedir una nota antes de aplicar
-// el cambio; new/read son transiciones internas que no notifican a nadie.
+// These two do trigger an in-app notification to the user who owns the
+// feedback (see feedback_service._NOTIFY_STATUSES in the backend) -- that's
+// why they're the only ones that open the dialog to ask for a note before
+// applying the change; new/read are internal transitions that notify no one.
 const _NOTIFYING_STATUSES: FeedbackStatus[] = ['considered', 'discarded']
 
 function FeedbackRow({ item }: { item: AdminFeedback }) {
@@ -374,7 +373,7 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
 
   return (
     <>
-      {/* Fila de tabla -- solo lg+ */}
+      {/* Table row -- lg+ only */}
       <div className="hidden lg:grid grid-cols-[100px_1fr_1.4fr_120px_140px] gap-2 items-center py-3 border-t border-border first:border-0 text-[13px]">
         <span>{typeBadge}</span>
         <div className="min-w-0">
@@ -391,7 +390,7 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
         <span className="flex justify-end">{statusSelect}</span>
       </div>
 
-      {/* Card -- solo mobile */}
+      {/* Card -- mobile only */}
       <div className="lg:hidden flex flex-col gap-2 py-3 border-t border-border first:border-0 text-[13px]">
         <div className="flex items-center gap-1.5 flex-wrap">
           {typeBadge}
@@ -463,9 +462,9 @@ export function Admin() {
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
 
-  // Debounce de ~400ms antes de disparar la busqueda -- evita una request
-  // por cada tecla. Cambiar la busqueda reinicia a la pagina 1 (una pagina 3
-  // de una busqueda que solo tiene 1 pagina no tendria sentido).
+  // ~400ms debounce before firing the search -- avoids a request per
+  // keystroke. Changing the search resets to page 1 (page 3 of a search
+  // that only has 1 page wouldn't make sense).
   useEffect(() => {
     const timer = setTimeout(() => {
       setSearch(searchInput)
@@ -485,7 +484,7 @@ export function Admin() {
   const rangeEnd = Math.min(total, page * USERS_PER_PAGE)
   const maxPage = Math.max(1, Math.ceil(total / USERS_PER_PAGE))
 
-  // El guard de rol vive en AdminLayout (shell de esta pagina) -- ver
+  // The role guard lives in AdminLayout (this page's shell) -- see
   // AdminLayout.tsx.
   return (
     <div>

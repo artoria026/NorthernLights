@@ -9,8 +9,8 @@ from app.core.database import Base
 
 
 class CategoryHide(Base):
-    """Desactivacion de una categoria de sistema a nivel usuario -- nunca
-    toca la fila compartida de `categories`. Sin fila aqui = visible."""
+    """Per-user deactivation of a system category -- never
+    touches the shared row in `categories`. No row here = visible."""
 
     __tablename__ = "category_hides"
 

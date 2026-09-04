@@ -97,10 +97,10 @@ export function Dashboard() {
   const categoryColorById = new Map((categories ?? []).map((c) => [c.id, c.color]))
 
   const liquidAccounts = accounts?.filter((a) => a.type === 'asset') ?? []
-  // Deuda revolvente viene de Account, no de Debt: una TDC es una cuenta
-  // completa por si sola (ver rediseno que saco tarjetas de credito del
-  // modelo de Deudas) -- filtrar por Debt.type dejaba fuera cualquier TDC
-  // sin overlay opcional en Deudas, que era la mayoria.
+  // Revolving debt comes from Account, not Debt: a credit card is a full
+  // account on its own (see the redesign that took credit cards out of the
+  // Debts model) -- filtering by Debt.type left out any credit card
+  // without the optional overlay in Debts, which was most of them.
   const creditCardAccounts = accounts?.filter((a) => a.type === 'liability' && a.subtype === 'credit_card') ?? []
   const revolvingTotal = creditCardAccounts.reduce((sum, a) => sum + Number(a.balance), 0)
   const avgApr =
@@ -113,10 +113,11 @@ export function Dashboard() {
       ? Math.round((Number(budgetCurrent.variable_total_spent) / Number(budgetCurrent.variable_total_budgeted)) * 100)
       : 0
 
-  // La semana "actual" es la que contiene la fecha de hoy, no la ultima del
-  // arreglo -- budget/current/weekly devuelve TODAS las semanas del mes (una
-  // de calendario puede tener 5), y la ultima suele ser una semana futura sin
-  // gasto todavia, lo que antes mostraba siempre 0%/$0 sin importar el gasto real.
+  // The "current" week is the one that contains today's date, not the last
+  // one in the array -- budget/current/weekly returns ALL weeks of the
+  // month (a calendar one can have 5), and the last one is usually a future
+  // week with no expense yet, which used to always show 0%/$0 regardless
+  // of actual spending.
   const todayIso = new Date().toISOString().slice(0, 10)
   const currentWeek = budgetWeekly?.weeks.find((w) => w.date_from <= todayIso && todayIso <= w.date_to)
   const currentWeekSpent = currentWeek
@@ -127,8 +128,8 @@ export function Dashboard() {
     : 0
   const weekPct = currentWeekBudget > 0 ? Math.round((currentWeekSpent / currentWeekBudget) * 100) : 0
 
-  // Reportes mensuales listos, ordenados cronologicamente -- alimentan tanto
-  // la tendencia de patrimonio neto como la comparacion mes vs mes anterior.
+  // Ready monthly reports, sorted chronologically -- feed both the net
+  // worth trend and the month vs previous month comparison.
   const monthlyReports = useMemo(
     () =>
       (reportsData?.items ?? [])
@@ -144,13 +145,13 @@ export function Dashboard() {
   const [prevMonthReport, currentMonthReport] = monthlyReports.slice(-2).length === 2
     ? monthlyReports.slice(-2)
     : [undefined, monthlyReports.at(-1)]
-  // Si el ultimo reporte generado es del mes EN CURSO (todavia no termina),
-  // su total es una foto parcial -- compararlo contra un mes anterior
-  // completo se ve como una caida falsa (ej. 9 dias de ingreso vs 30 dias
-  // del mes pasado, "cayo 97%" cuando en realidad el mes ni termina). En
-  // ese caso usamos el resumen siempre-vivo para el valor y no mostramos
-  // "vs mes anterior" en absoluto. (todayIso ya se calculo arriba para la
-  // semana actual del presupuesto, mismo valor).
+  // If the last generated report is for the CURRENT month (not over yet),
+  // its total is a partial snapshot -- comparing it against a full previous
+  // month looks like a false drop (e.g. 9 days of income vs 30 days of last
+  // month, "dropped 97%" when the month hasn't even ended). In that case we
+  // use the always-live summary for the value and don't show "vs mes
+  // anterior" at all. (todayIso was already computed above for the
+  // budget's current week, same value).
   const isCurrentReportClosed = currentMonthReport ? todayIso > currentMonthReport.period_end : false
 
   function pctChange(current: number, previous: number | undefined): number | null {
@@ -173,8 +174,9 @@ export function Dashboard() {
     ? pctChange(monthExpenses, prevMonthExpenses !== undefined ? Number(prevMonthExpenses) : undefined)
     : null
 
-  // Deudas activas con progreso: cuanto del monto original ya se liquido
-  // (owed_by_me) o se cobro (owed_to_me), sin distinguir capital/intereses.
+  // Active debts with progress: how much of the original amount has already
+  // been paid off (owed_by_me) or collected (owed_to_me), without
+  // distinguishing principal from interest.
   const activeDebts = (debts ?? [])
     .filter((d) => d.status === 'active')
     .map((d) => {
@@ -188,9 +190,10 @@ export function Dashboard() {
   const pctColor = (pct: number) =>
     pct >= 90 ? 'var(--nl-danger-ink)' : pct >= 70 ? 'var(--nl-warning-ink)' : 'var(--nl-accent-ink)'
 
-  // Solo salidas de dinero -- un recurrente item_type='income' (ej. nomina)
-  // no "vence", se recibe. Este panel es de "proximos PAGOS", mezclar
-  // ingresos aqui con el mismo lenguaje de vencimiento no tiene sentido.
+  // Money going out only -- a recurring item_type='income' (e.g. payroll)
+  // doesn't "come due", it gets received. This panel is for "upcoming
+  // PAYMENTS", mixing income in here with the same due-date language
+  // wouldn't make sense.
   const upcoming = [
     ...(recurring ?? [])
       .filter((item) => item.item_type !== 'income')
@@ -277,11 +280,12 @@ export function Dashboard() {
         </div>
       )}
 
-      {/* Las 4 tarjetas de siempre + las 2 de ingresos/gastos (si ya hay
-          reporte del mes) van en UNA sola fila -- antes eran dos bloques con
-          su propio margen entre si, lo que sumaba una fila completa de alto
-          de mas. `compact` en StatCard les quita padding/tamano de sobra,
-          esto es lo unico que usa esa variante en toda la app. */}
+      {/* The usual 4 cards + the 2 income/expense ones (if there's already a
+          report for the month) go in ONE single row -- they used to be two
+          blocks with their own margin between them, which added a full
+          extra row of height. `compact` on StatCard strips their extra
+          padding/size, this is the only place in the app that uses that
+          variant. */}
       <div className="grid grid-cols-2 gap-2.5 mb-4 lg:flex lg:gap-3 lg:flex-wrap">
         <StatCard
           compact
@@ -335,11 +339,11 @@ export function Dashboard() {
         )}
       </div>
 
-      {/* Una sola cuadricula regular de 4 columnas -- cada tarjeta ocupa
-          siempre 2 de 4 (mitad), en vez de que cada fila tuviera su propia
-          proporcion custom (0.32fr, 0.65fr...) sin relacion entre si. Se
-          agrupan por tipo: graficas con graficas, listas con listas, para
-          que el ancho de cada una se sienta a proposito y no arbitrario. */}
+      {/* A single regular 4-column grid -- each card always takes up 2 of 4
+          (half), instead of each row having its own custom proportion
+          (0.32fr, 0.65fr...) unrelated to one another. They're grouped by
+          type: charts with charts, lists with lists, so each one's width
+          feels intentional rather than arbitrary. */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4 items-start">
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
           <div className="flex items-center justify-between mb-2">

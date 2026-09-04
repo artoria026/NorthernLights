@@ -10,9 +10,9 @@ import type {
   UnplannedDebt,
 } from '@/types'
 
-/** Cualquier mutacion de deudas puede tocar listas (por direccion), resumen,
- * proximos pagos y sin-plan a la vez -- mas simple invalidar todo ['debts']
- * que mantener parches manuales de cache por cada variante de queryKey. */
+/** Any debt mutation can touch lists (by direction), summary,
+ * upcoming payments and unplanned all at once -- simpler to invalidate all of ['debts']
+ * than to maintain manual cache patches for every queryKey variant. */
 function invalidateDebts(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ['debts'] })
 }
@@ -73,9 +73,9 @@ export interface ActivateDebtInput {
   payment_day?: number
   total_installments?: number
   linked_account_id?: string
-  /** Cuenta real donde ya entro/salio el efectivo de este prestamo -- la
-   * deuda sin plan nunca toca balances por diseno, esta es la primera
-   * oportunidad de registrar el movimiento real. */
+  /** Actual account where the cash for this loan already came in/out -- the
+   * unplanned debt never touches balances by design, this is the first
+   * opportunity to record the real transaction. */
   funding_account_id?: string
   start_date: string
   due_date?: string
@@ -109,7 +109,7 @@ export interface CreateDebtInput {
   payment_frequency?: PaymentFrequency
   total_installments?: number
   linked_account_id?: string
-  /** Cuenta real donde ya entro/salio el efectivo al originar esta deuda. */
+  /** Actual account where the cash for originating this debt already came in/out. */
   funding_account_id?: string
   start_date?: string
   is_shared?: boolean
@@ -125,8 +125,8 @@ export function useCreateDebt() {
     },
     onSuccess: (_debt, input) => {
       invalidateDebts(queryClient)
-      // funding_account_id es el unico caso que genera una transaccion real
-      // -- ahi si cambian cuentas/transacciones.
+      // funding_account_id is the only case that generates a real transaction
+      // -- that's when accounts/transactions actually change.
       if (input.funding_account_id) {
         queryClient.invalidateQueries({ queryKey: ['accounts'] })
         queryClient.invalidateQueries({ queryKey: ['transactions'] })
@@ -144,16 +144,16 @@ export interface UpdateDebtInput {
   linked_account_id?: string
   payment_source_account_id?: string
   notes?: string
-  /** Correccion manual del saldo pendiente -- current_balance es la unica
-   * fuente de verdad del saldo de una deuda (a diferencia de Account, que
-   * tiene un initial_balance separado), asi que esto ajusta directo, no por
-   * delta. Pensado para corregir el saldo despues de un backfill historico. */
+  /** Manual correction of the outstanding balance -- current_balance is the sole
+   * source of truth for a debt's balance (unlike Account, which
+   * has a separate initial_balance), so this adjusts directly, not by
+   * delta. Meant for correcting the balance after a historical backfill. */
   current_balance?: string
 }
 
-/** PUT /debts/{id} (backend/app/routers/debts.py) ya existia listo desde
- * siempre -- lo unico que faltaba era que el frontend lo usara. Hoy solo lo
- * consume CorrectBalanceForm en Debts.tsx, pero sirve para cualquier campo de
+/** PUT /debts/{id} (backend/app/routers/debts.py) has always existed ready
+ * to go -- the only thing missing was the frontend using it. Today only
+ * CorrectBalanceForm in Debts.tsx consumes it, but it works for any field of
  * DebtUpdate. */
 export function useUpdateDebt() {
   const queryClient = useQueryClient()

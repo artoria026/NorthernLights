@@ -1,189 +1,188 @@
-# Insumos para el aviso de privacidad / disclaimer — NorthernLights
+# Inputs for the privacy notice / disclaimer — NorthernLights
 
-Este documento **no es el disclaimer** — es el inventario de features y manejo de datos que otro
-agente (o abogado) va a usar como insumo para redactarlo. Todo lo aquí escrito está verificado
-contra el código real del repo (`/home/artoria026/projects/personal/northern_lights`), con
-referencias de archivo:línea para poder confirmarlo. Fecha del corte: 2026-08-14.
+This document **is not the disclaimer** — it's the inventory of features and data handling
+that another agent (or lawyer) will use as input to draft one. Everything written here is
+verified against the actual code in the repo (`/home/artoria026/projects/personal/northern_lights`),
+with file:line references so it can be confirmed. Cutoff date: 2026-08-14.
 
-**Regla de oro para quien redacte el disclaimer con esto**: no prometer nada que no esté confirmado
-aquí. En particular, ver la sección 4 — hay una distinción legal importante entre "cifrado" y
-"aislado por RLS" que no se puede mezclar.
-
----
-
-## 1. Qué es la app
-
-App web de finanzas personales de un solo usuario por cuenta (no hay cuentas compartidas/familiares
-como concepto de producto, aunque una deuda o transacción individual sí puede marcarse como
-"compartida" con un tercero por nombre libre). Contabilidad de doble entrada, presupuesto,
-seguimiento de deudas, gastos recurrentes/suscripciones, reportes históricos, y un asesor financiero
-con IA que puede leer y crear movimientos por chat, incluyendo adjuntar PDFs de estados de cuenta
-bancarios.
+**Golden rule for whoever drafts the disclaimer from this**: don't promise anything that
+isn't confirmed here. In particular, see section 4 — there's an important legal distinction
+between "encrypted" and "isolated via RLS" that must not be conflated.
 
 ---
 
-## 2. Inventario de pantallas/features
+## 1. What the app is
 
-| Pantalla | Qué hace | Datos del usuario involucrados |
+A single-user-per-account personal finance web app (there's no shared/family account concept
+as a product feature, although an individual debt or transaction can be marked as "shared"
+with a third party by free-text name). Double-entry accounting, budget, debt tracking,
+recurring expenses/subscriptions, historical reports, and an AI financial advisor that can
+read and create transactions via chat, including attaching PDFs of bank statements.
+
+---
+
+## 2. Inventory of screens/features
+
+| Screen | What it does | User data involved |
 |---|---|---|
-| Login / Registro | Alta e inicio de sesión con email+contraseña; login con Google existe en el backend pero **está deshabilitado hoy** en el botón del frontend (`frontend-web/src/pages/Login.tsx` — `GOOGLE_LOGIN_ENABLED = false`, sin `GOOGLE_CLIENT_ID`/`SECRET` configurados). | Nombre, email, contraseña. |
-| Inicio (Dashboard) | Resumen general: cuentas, presupuesto, deudas, recurrentes, insights, reportes del mes, transacciones recientes. | Prácticamente todo el snapshot financiero del usuario, de un vistazo. |
-| Cuentas | Alta/edición/eliminación de cuentas (banco, efectivo, TDC, ahorro), reconciliación, logo propio. | Nombre de cuenta, **últimos 4 dígitos de tarjeta**, saldo, límite de crédito, tasa de interés, día de corte/pago, logo (imagen). |
-| Transacciones | Alta/edición/borrado de movimientos, gastos compartidos, calendario. | Monto, fecha, descripción, categoría, notas, tags, y **nombre de la persona** en un gasto compartido. |
-| Categorías | Categorías propias y del sistema, ocultar categorías. | Nombres/colores de categorías propias. |
-| Deudas | Deudas propias o de terceros que le deben al usuario, planes de pago, "deuda sin plan". | Nombre de la deuda, **nombre del acreedor**, monto, tasa, cuotas, y quién más participa si es compartida. |
-| Recurrentes / Suscripciones | Gastos/ingresos periódicos, confirmar o rechazar cobros generados automáticamente. | Monto, frecuencia, cuenta asociada, URL del servicio. |
-| Presupuesto | Límites mensuales por categoría, tendencia, sugerencias. | Montos presupuestados vs. gastados. |
-| Metas | Pantalla placeholder ("Próximamente") — no hay datos reales todavía. | Ninguno. |
-| Insights | Recomendaciones/alertas generadas por IA sobre hábitos financieros. | Texto generado por IA + métricas financieras del usuario en ese momento. |
-| Reportes | Reportes mensuales/anuales con resumen e insights de IA sobre el periodo. | Resúmenes financieros por periodo + insights de IA guardados. |
-| Notificaciones | Bandeja in-app (alertas de deuda, presupuesto, tarjeta, pagos, suscripciones). | Título/cuerpo del aviso. |
-| **Asesor IA** | Chat con IA que ve el estado financiero real, puede crear cuentas/deudas/gastos si se confirma, y puede leer PDFs de estados de cuenta adjuntos. | **La más sensible de todas** — ver sección 3, se manda info a un proveedor externo. |
-| Ajustes | Perfil, cambio de password, preferencias, desvincular Google, **borrado selectivo de datos**, **eliminar cuenta permanentemente**, cerrar sesión (una o todas). | Control real del usuario sobre sus propios datos — relevante para cualquier derecho tipo ARCO/portabilidad que el disclaimer prometa. |
-| Admin (solo rol admin) | Panel de administración de la plataforma. | Ve datos de **todos los usuarios** — ver sección 5. |
+| Login / Register | Sign-up and login with email+password; Google login exists on the backend but **is disabled today** on the frontend button (`frontend-web/src/pages/Login.tsx` — `GOOGLE_LOGIN_ENABLED = false`, no `GOOGLE_CLIENT_ID`/`SECRET` configured). | Name, email, password. |
+| Home (Dashboard) | Overall summary: accounts, budget, debts, recurring items, insights, monthly reports, recent transactions. | Essentially the user's entire financial snapshot, at a glance. |
+| Accounts | Create/edit/delete accounts (bank, cash, credit card, savings), reconciliation, custom logo. | Account name, **last 4 digits of card**, balance, credit limit, interest rate, billing/due day, logo (image). |
+| Transactions | Create/edit/delete transactions, shared expenses, calendar. | Amount, date, description, category, notes, tags, and the **other person's name** on a shared expense. |
+| Categories | Custom and system categories, hiding categories. | Names/colors of custom categories. |
+| Debts | Debts owed by the user or by third parties who owe the user, payment plans, "debt with no plan". | Debt name, **creditor's name**, amount, rate, installments, and who else is involved if shared. |
+| Recurring / Subscriptions | Periodic expenses/income, confirming or rejecting automatically generated charges. | Amount, frequency, associated account, service URL. |
+| Budget | Monthly limits per category, trend, suggestions. | Budgeted vs. spent amounts. |
+| Goals | Placeholder screen ("Coming soon") — no real data yet. | None. |
+| Insights | AI-generated recommendations/alerts about financial habits. | AI-generated text + the user's financial metrics at that moment. |
+| Reports | Monthly/annual reports with a summary and AI insights for the period. | Financial summaries per period + saved AI insights. |
+| Notifications | In-app inbox (debt, budget, card, payment, subscription alerts). | Notification title/body. |
+| **AI Advisor** | AI chat that sees the user's actual financial state, can create accounts/debts/expenses if confirmed, and can read attached bank statement PDFs. | **The most sensitive of all** — see section 3, information is sent to an external provider. |
+| Settings | Profile, password change, preferences, unlink Google, **selective data deletion**, **permanently delete account**, log out (one session or all). | Real user control over their own data — relevant to any ARCO-type right/portability the disclaimer promises. |
+| Admin (admin role only) | Platform administration panel. | Sees data for **all users** — see section 5. |
 
 ---
 
-## 3. Qué datos personales/financieros se recolectan y guardan
+## 3. What personal/financial data is collected and stored
 
-- **Identidad**: nombre, email, contraseña (hasheada), avatar, rol, proveedor de auth (email/Google).
-- **Dispositivos**: nombre y tipo de dispositivo, token de push (cuando se active), refresh token
-  (hasheado, nunca en texto plano).
-- **Financieros**: cuentas (con últimos 4 dígitos de tarjeta), todas las transacciones con doble
-  entrada contable, deudas (incluyendo **nombre de acreedores/terceros**), presupuestos, gastos
-  recurrentes/suscripciones, reportes e insights generados por IA sobre el comportamiento financiero
-  del usuario.
-- **Chat del Asesor IA**: el **texto completo de cada mensaje se guarda de forma permanente** en la
-  base de datos (sin fecha de expiración automática) hasta que el usuario lo borre manualmente desde
-  Ajustes o el botón de "limpiar historial" del chat. Los PDFs de estados de cuenta que se adjuntan
-  **nunca se guardan** (ni el archivo ni su contraseña) — se procesan en memoria y se descartan
-  después de la respuesta; lo que sí puede quedar es el texto extraído de ahí, si termina como parte
-  de una transacción/deuda creada o del propio mensaje de chat guardado.
-- **Feedback**: mensajes de bug/sugerencia que el usuario manda desde la app, visibles para
-  cualquier administrador de la plataforma (no solo el propio usuario).
-
----
-
-## 4. Terceros a los que se envía información del usuario
-
-Esta es la sección más importante para el aviso de privacidad — probablemente donde se necesita
-consentimiento explícito.
-
-### Proveedores de IA (Google Gemini / Anthropic Claude)
-- **En cada mensaje** que el usuario manda al Asesor IA, se envía junto con él **el snapshot
-  financiero completo del usuario** (cuentas, deudas, presupuesto, transacciones recientes, salud
-  financiera) como contexto — no solo cuando se pregunta explícitamente por finanzas.
-- También se reenvía el **historial reciente del chat** (últimos ~10 intercambios) en cada llamada.
-- Si el usuario adjunta un **PDF de estado de cuenta bancario**, ese archivo (ya sin contraseña) se
-  manda directo al proveedor de IA para que lo lea.
-- El proveedor activo es configurable (`AI_PROVIDER`: Gemini o Claude) — hoy el proyecto tiene
-  configuradas credenciales para ambos.
-- **Esto es, en la práctica, compartir datos financieros bancarios completos con un proveedor de IA
-  externo (Google o Anthropic) en cada uso del Asesor.** El disclaimer necesita cubrir esto de forma
-  explícita y probablemente pedir consentimiento específico, separado del consentimiento general de
-  la app.
-
-### Google OAuth (login) — implementado pero inactivo hoy
-- El flujo existe en el backend y, si se activa, envía credenciales OAuth a Google y recibe de vuelta
-  email, nombre, foto de perfil e ID único de Google.
-- **No está activo en producción todavía** (botón deshabilitado en el frontend por falta de
-  credenciales configuradas) — pero el disclaimer debería contemplarlo desde ahora si se planea
-  activar pronto, para no tener que re-notificar después.
-
-### Firebase Cloud Messaging (push notifications) — implementado pero inactivo hoy
-- El código para mandar notificaciones push vía Firebase (Google) existe pero hoy es un no-op (no
-  hay credenciales de Firebase configuradas). Cuando se active, se enviaría el token del dispositivo
-  más el contenido de la notificación a Firebase.
-
-### Lo que NO existe (para no prometer de más ni tampoco quedarse corto)
-- No hay Sentry, analytics, ni ningún otro rastreador de terceros integrado hoy.
-- No hay envío real de emails — la recuperación de contraseña por correo está *stubbeada* (solo
-  registra en logs, nunca llega un correo real al usuario), y esa pantalla ni siquiera está expuesta
-  en el frontend.
+- **Identity**: name, email, password (hashed), avatar, role, auth provider (email/Google).
+- **Devices**: device name and type, push token (once enabled), refresh token (hashed, never
+  in plain text).
+- **Financial**: accounts (with last 4 digits of card), all transactions with double-entry
+  accounting, debts (including **names of creditors/third parties**), budgets, recurring
+  expenses/subscriptions, reports and AI-generated insights about the user's financial
+  behavior.
+- **AI Advisor chat**: the **full text of every message is stored permanently** in the
+  database (with no automatic expiration) until the user manually deletes it from Settings or
+  the "clear history" button in the chat. Attached bank statement PDFs **are never stored**
+  (neither the file nor its password) — they're processed in memory and discarded after the
+  response; what can remain is the text extracted from them, if it ends up as part of a
+  created transaction/debt or in the saved chat message itself.
+- **Feedback**: bug/suggestion messages the user sends from the app, visible to any platform
+  administrator (not just the user themself).
 
 ---
 
-## 5. Panel de Administrador — qué puede ver un admin sobre otros usuarios
+## 4. Third parties that user information is sent to
 
-- **Sí puede ver**: email, nombre, rol, proveedor de auth, si la cuenta está activa, fecha de alta, y
-  **conteos** de cuentas/transacciones (números, no montos ni contenido) de cualquier usuario de la
-  plataforma. Estadísticas agregadas de toda la plataforma (usuarios totales, activos, nuevos,
-  cuentas/transacciones/deudas totales — todo anónimo/agregado). El mensaje de feedback (bug/sugerencia)
-  de cualquier usuario, con su estado.
-- **Puede hacer**: activar/desactivar cualquier cuenta de usuario, cambiar el rol de cualquier
-  usuario a admin/user (con excepción de sí mismo en ambos casos).
-- **No puede ver** (no hay evidencia en el código de que exista): saldos, transacciones individuales,
-  deudas, ni el contenido del chat de otros usuarios. El acceso cross-usuario está limitado a
-  metadatos de cuenta + agregados de plataforma + feedback.
+This is the most important section for the privacy notice — probably where explicit consent
+is needed.
 
----
+### AI providers (Google Gemini / Anthropic Claude)
+- **With every message** the user sends to the AI Advisor, it's sent along with **the user's
+  complete financial snapshot** (accounts, debts, budget, recent transactions, financial
+  health) as context — not only when finances are explicitly asked about.
+- The **recent chat history** (last ~10 exchanges) is also resent on every call.
+- If the user attaches a **bank statement PDF**, that file (with its password already
+  stripped) is sent directly to the AI provider so it can read it.
+- The active provider is configurable (`AI_PROVIDER`: Gemini or Claude) — the project
+  currently has credentials configured for both.
+- **In practice, this means sharing complete banking/financial data with an external AI
+  provider (Google or Anthropic) on every use of the Advisor.** The disclaimer needs to cover
+  this explicitly and probably request specific consent, separate from the app's general
+  consent.
 
-## 6. Seguridad real que existe hoy (ser precisos, no prometer de más)
+### Google OAuth (login) — implemented but inactive today
+- The flow exists on the backend and, if enabled, sends OAuth credentials to Google and gets
+  back email, name, profile photo, and a unique Google ID.
+- **Not active in production yet** (button disabled on the frontend due to missing configured
+  credentials) — but the disclaimer should account for it now if there are plans to enable it
+  soon, to avoid having to re-notify users later.
 
-- **Los datos NO están cifrados en reposo.** La separación entre usuarios es mediante **Row Level
-  Security (RLS) de PostgreSQL** — un aislamiento lógico a nivel de motor de base de datos, reforzado
-  por un rol de solo-lectura separado (`BYPASSRLS`) que usa el panel de Admin para sus agregaciones.
-  Esto es real y es una buena práctica de arquitectura, pero **no es lo mismo que "cifrado"** — si el
-  disclaimer va a usar la palabra "cifrado", tiene que ser sobre algo que de verdad esté cifrado (ver
-  los dos puntos siguientes), no sobre el aislamiento entre cuentas.
-- **Las contraseñas de usuario sí están hasheadas** con bcrypt (con salt, no reversible) — esto sí se
-  puede llamar protección criptográfica real.
-- **Los refresh tokens de sesión están hasheados** (SHA-256) antes de guardarse, nunca en texto
-  plano; con rotación de un solo uso en cada renovación.
-- **Hay HTTPS/TLS en producción** (Let's Encrypt vía Certbot sobre el dominio de la app) — el tráfico
-  entre el navegador del usuario y el servidor sí viaja cifrado en tránsito. (El tramo interno entre
-  el proxy y el backend, dentro del mismo servidor, es HTTP plano — patrón estándar, no expuesto a
-  internet.)
-- **Las contraseñas de los PDFs de estados de cuenta nunca se guardan** en ningún lado (ni disco, ni
-  base de datos, ni logs) — se usan una sola vez en memoria para abrir el archivo y se descartan.
+### Firebase Cloud Messaging (push notifications) — implemented but inactive today
+- The code to send push notifications via Firebase (Google) exists but is currently a no-op
+  (no Firebase credentials configured). Once enabled, it would send the device token plus the
+  notification content to Firebase.
 
----
-
-## 7. Estado legal actual — esto todavía no existe
-
-- **No hay ningún checkbox de "Acepto los términos" ni link a política de privacidad** en el registro
-  ni en el login, hoy.
-- **No existe ningún archivo de términos y condiciones ni aviso de privacidad** en el repo todavía.
-- Lo único parecido son frases de marketing en las pantallas de login/registro ("Tus datos, tus
-  reglas", "Privado desde el día uno") que describen el aislamiento por RLS — hay que revisar que el
-  disclaimer no contradiga ni sobre-prometa respecto a esas frases ya visibles.
+### What does NOT exist (so as not to over-promise or under-disclose)
+- There's no Sentry, analytics, or any other third-party tracker integrated today.
+- There's no real email sending — password recovery by email is *stubbed* (it only logs, no
+  real email ever reaches the user), and that screen isn't even exposed on the frontend.
 
 ---
 
-## 8. Puntos clave que el disclaimer debería cubrir (checklist para quien lo redacte)
+## 5. Admin panel — what an admin can see about other users
 
-1. Qué datos personales se recolectan (identidad + financieros + chat) — ver secciones 2-3.
-2. Que se comparte información financiera completa (incluyendo PDFs de estados de cuenta bancarios)
-   con proveedores de IA externos (Google Gemini / Anthropic Claude) en cada uso del Asesor —
-   probablemente amerita un consentimiento específico, no solo genérico.
-3. Que el chat con el asesor se guarda de forma permanente hasta que el usuario lo borre.
-4. Que existe un rol de administrador con visibilidad limitada (metadatos + agregados + feedback,
-   no montos/transacciones/chat) sobre otros usuarios.
-5. Descripción honesta de la seguridad: aislamiento por RLS + TLS en tránsito + hashing de
-   contraseñas/tokens — **evitar la palabra "cifrado" para los datos en reposo**, no aplica hoy.
-6. Derechos del usuario sobre sus datos: ya existe borrado selectivo y eliminación de cuenta en
-   Ajustes — el disclaimer puede apoyarse en eso para hablar de derechos ARCO/portabilidad.
-7. Uso de cookies/tokens de sesión (JWT + refresh token) para mantener la sesión iniciada.
-8. Que Google OAuth y las notificaciones push están implementadas pero no activas todavía — dejar
-   redactado para cubrir ambos casos sin tener que renotificar cuando se activen.
-9. Edad mínima / no dirigido a menores (criterio de negocio a definir, no hay nada en el código hoy
-   que lo determine).
-10. Contacto para ejercer derechos / dudas de privacidad (canal a definir).
+- **Can see**: email, name, role, auth provider, whether the account is active, sign-up date,
+  and **counts** of accounts/transactions (numbers, not amounts or content) for any user on
+  the platform. Platform-wide aggregate stats (total users, active, new, total
+  accounts/transactions/debts — all anonymous/aggregated). Any user's feedback message
+  (bug/suggestion), with its status.
+- **Can do**: activate/deactivate any user account, change any user's role to admin/user
+  (except their own account in both cases).
+- **Cannot see** (no evidence in the code that this exists): balances, individual
+  transactions, debts, or the content of other users' chats. Cross-user access is limited to
+  account metadata + platform aggregates + feedback.
 
 ---
 
-## 9. Dónde mostrarlo en la app (recomendación, no implementado todavía)
+## 6. Actual security that exists today (be precise, don't over-promise)
 
-- **Registro**: checkbox obligatorio "Acepto los Términos y el Aviso de Privacidad" con link al
-  documento, antes de poder crear la cuenta — hoy `Register.tsx` no tiene nada de esto.
-- **Login/Registro**: link visible a los términos/privacidad en el pie de ambas pantallas, sin
-  necesidad de tener cuenta para poder leerlo.
-- **Ajustes**: link permanente para releer el aviso en cualquier momento.
-- **Usuarios ya existentes**: si el aviso se agrega después de que ya haya cuentas creadas, conviene
-  un aviso de "una sola vez" tipo el que ya existe para el changelog (`user.last_seen_changelog_version`
-  + modal que se auto-abre — ver `frontend-web/src/components/ChangelogButton.tsx` como referencia de
-  patrón) pero para una nueva versión de términos, bloqueando el uso hasta aceptar.
-- **Asesor IA específicamente**: dado que es el único punto donde se comparten datos financieros con
-  un tercero (Google/Anthropic), vale la pena un aviso corto y específico ahí (ej. la primera vez que
-  se abre esa pantalla, o la primera vez que se adjunta un PDF) además del aviso general — no alcanza
-  con que quede enterrado dentro del aviso de privacidad general.
+- **Data is NOT encrypted at rest.** Separation between users is done via PostgreSQL **Row
+  Level Security (RLS)** — logical isolation at the database engine level, reinforced by a
+  separate read-only role (`BYPASSRLS`) that the Admin panel uses for its aggregations. This
+  is real and a good architectural practice, but **it is not the same as "encryption"** — if
+  the disclaimer is going to use the word "encrypted", it has to be about something that's
+  actually encrypted (see the next two points), not about the isolation between accounts.
+- **User passwords ARE hashed** with bcrypt (salted, not reversible) — this can legitimately
+  be called real cryptographic protection.
+- **Session refresh tokens are hashed** (SHA-256) before being stored, never in plain text;
+  with single-use rotation on every renewal.
+- **There is HTTPS/TLS in production** (Let's Encrypt via Certbot on the app's domain) —
+  traffic between the user's browser and the server does travel encrypted in transit. (The
+  internal hop between the proxy and the backend, within the same server, is plain HTTP —
+  standard pattern, not exposed to the internet.)
+- **Bank statement PDF passwords are never stored** anywhere (not on disk, not in the
+  database, not in logs) — they're used once in memory to open the file and then discarded.
+
+---
+
+## 7. Current legal status — this doesn't exist yet
+
+- **There is no "I accept the terms" checkbox or link to a privacy policy** on registration or
+  login, today.
+- **No terms and conditions file or privacy notice exists** in the repo yet.
+- The only thing resembling it are marketing phrases on the login/registration screens ("Tus
+  datos, tus reglas", "Privado desde el día uno" — kept in Spanish as they're the actual
+  user-facing app copy) that describe RLS-based isolation — make sure the disclaimer doesn't
+  contradict or over-promise relative to those already-visible phrases.
+
+---
+
+## 8. Key points the disclaimer should cover (checklist for whoever drafts it)
+
+1. What personal data is collected (identity + financial + chat) — see sections 2-3.
+2. That complete financial information is shared (including bank statement PDFs) with
+   external AI providers (Google Gemini / Anthropic Claude) on every use of the Advisor —
+   this probably warrants specific consent, not just generic consent.
+3. That the advisor chat is stored permanently until the user deletes it.
+4. That there's an administrator role with limited visibility (metadata + aggregates +
+   feedback, not amounts/transactions/chat) into other users.
+5. An honest description of security: RLS-based isolation + TLS in transit + password/token
+   hashing — **avoid the word "encrypted" for data at rest**, it doesn't apply today.
+6. User rights over their data: selective deletion and account deletion already exist in
+   Settings — the disclaimer can lean on that to talk about ARCO/portability rights.
+7. Use of cookies/session tokens (JWT + refresh token) to keep the session logged in.
+8. That Google OAuth and push notifications are implemented but not active yet — word it to
+   cover both cases without having to re-notify when they're enabled.
+9. Minimum age / not directed at minors (a business decision still to be made, nothing in the
+   code today determines this).
+10. Contact for exercising rights / privacy questions (channel to be defined).
+
+---
+
+## 9. Where to show it in the app (recommendation, not implemented yet)
+
+- **Registration**: mandatory checkbox "I accept the Terms and Privacy Notice" with a link to
+  the document, before the account can be created — today `Register.tsx` has none of this.
+- **Login/Registration**: visible link to the terms/privacy in the footer of both screens, no
+  account needed to read it.
+- **Settings**: permanent link to re-read the notice at any time.
+- **Existing users**: if the notice is added after accounts already exist, a "one-time" notice
+  similar to the one that already exists for the changelog (`user.last_seen_changelog_version`
+  + auto-opening modal — see `frontend-web/src/components/ChangelogButton.tsx` as a reference
+  for the pattern) makes sense, but for a new terms version, blocking use until accepted.
+- **AI Advisor specifically**: since it's the only point where financial data is shared with a
+  third party (Google/Anthropic), a short, specific notice there is worth it (e.g. the first
+  time that screen is opened, or the first time a PDF is attached) in addition to the general
+  notice — it's not enough for it to be buried inside the general privacy notice.

@@ -51,14 +51,15 @@ function barColorInk(pct: number) {
   return 'var(--nl-accent-ink)'
 }
 
-/** Edita el limite de TODAS las categorias de gasto en una sola pantalla en
- * vez de una a la vez -- el backend ya hacia upsert por categoria
- * (budget_service.set_limits), asi que mandar varias de un jalon con
- * useSetBudgetLimits no le pisa nada a las que no se tocan, solo faltaba un
- * formulario que aprovechara eso. useBudgetLimitSuggestions (a diferencia de
- * useBudgetCurrent) trae TODAS las categorias de gasto con su color real y
- * su promedio de los ultimos 3 meses, incluidas las que nunca tuvieron
- * limite -- de ahi sale tanto el color del punto como la sugerencia. */
+/** Edits the limit for ALL expense categories on a single screen instead of
+ * one at a time -- the backend already did an upsert per category
+ * (budget_service.set_limits), so sending several at once with
+ * useSetBudgetLimits doesn't overwrite the ones left untouched, it just
+ * needed a form that took advantage of that. useBudgetLimitSuggestions
+ * (unlike useBudgetCurrent) brings ALL expense categories with their real
+ * color and their average from the last 3 months, including ones that
+ * never had a limit -- that's where both the dot color and the suggestion
+ * come from. */
 function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewingPastMonth?: boolean }) {
   const { data: suggestions } = useBudgetLimitSuggestions()
   const setLimits = useSetBudgetLimits()
@@ -85,7 +86,7 @@ function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewi
       await setLimits.mutateAsync(limits)
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -153,23 +154,24 @@ function CategoryRow({
 }: {
   category: BudgetCategoryBreakdown
   color: string
-  /** Gasto de esta misma categoria en el mes anterior -- undefined si no hay
-   * dato (categoria nueva o mes anterior sin movimiento) para no mostrar
-   * flecha con un 0 falso. */
+  /** This same category's expense in the previous month -- undefined if
+   * there's no data (new category or previous month with no transactions)
+   * so we don't show an arrow with a false 0. */
   prevSpent?: number
-  /** average_last_3_months se calcula siempre respecto a HOY (no al mes que
-   * se esta viendo) -- mostrar la sugerencia de limite mientras se navega un
-   * mes pasado mezclaria un dato "de hoy" con una fila historica. */
+  /** average_last_3_months is always calculated relative to TODAY (not the
+   * month being viewed) -- showing the limit suggestion while navigating a
+   * past month would mix a "today" data point with a historical row. */
   showSuggestions?: boolean
 }) {
   const setLimit = useSetBudgetLimits()
   const average = Number(category.average_last_3_months)
   const limit = Number(category.monthly_limit)
   const spent = Number(category.spent)
-  // Solo vale la pena sugerir el promedio si hay datos y difiere de verdad
-  // del limite actual -- si ya coinciden (o no hay historial) no hay nada que sugerir.
+  // Only worth suggesting the average if there's data and it genuinely
+  // differs from the current limit -- if they already match (or there's no
+  // history) there's nothing to suggest.
   const showSuggestion = showSuggestions && average > 0 && Math.abs(average - limit) >= 1
-  // +/-5% se trata como "igual" para no mostrar una flecha por ruido minimo.
+  // +/-5% is treated as "the same" so we don't show an arrow for minimal noise.
   const deltaPct = prevSpent && prevSpent > 0 ? ((spent - prevSpent) / prevSpent) * 100 : null
   const trend = deltaPct === null || Math.abs(deltaPct) < 5 ? null : deltaPct > 0 ? 'up' : 'down'
 
@@ -185,7 +187,7 @@ function CategoryRow({
 
   return (
     <div className="py-3 border-t border-border first:border-0">
-      {/* Fila de tabla -- solo lg+ */}
+      {/* Table row -- lg+ only */}
       <div className="hidden lg:grid grid-cols-[1fr_140px_90px_50px_90px] gap-3 items-center">
         <div className="flex items-center gap-2 min-w-0">
           <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
@@ -199,7 +201,7 @@ function CategoryRow({
         </span>
       </div>
 
-      {/* Card -- solo mobile */}
+      {/* Card -- mobile only */}
       <div className="lg:hidden flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -348,10 +350,11 @@ export function Budget() {
   const spentPct = budgeted > 0 ? Math.round((spent / budgeted) * 100) : 0
   const daysLeftInMonth = new Date(currentYear, currentMonth, 0).getDate() - now.getDate()
 
-  // Un mes sin ningun limite definido llega con budgeted=0 y percentage=0
-  // -- eso no significa "gastaste 0%", significa "ese mes no tenias con que
-  // comparar". Mostrarlo igual como una barra en 0% llena la grafica de
-  // meses sin informacion real, se ve como ruido plano en vez de tendencia.
+  // A month with no limit defined at all arrives with budgeted=0 and
+  // percentage=0 -- that doesn't mean "you spent 0%", it means "that month
+  // had nothing to compare against". Showing it anyway as a 0% bar fills
+  // the chart with months that carry no real information, and reads as
+  // flat noise instead of a trend.
   const trendBars = (trend ?? [])
     .filter((m) => Number(m.budgeted) > 0)
     .map((m) => ({
@@ -506,11 +509,10 @@ export function Budget() {
         </div>
       )}
 
-      {/* Misma cuadricula regular de 4 columnas que Inicio -- cada tarjeta
-          ocupa 2 de 4 (mitad), salvo Tendencia, que al abarcar hasta 12
-          meses de barras se queda a ancho completo (4 de 4). "2x2, 4x2":
-          bloques de tamano fijo dentro de la misma cuadricula, no fracciones
-          custom por fila. */}
+      {/* Same regular 4-column grid as Home -- each card takes up 2 of 4
+          (half), except Trend, which spans up to 12 months of bars and
+          stays full width (4 of 4). "2x2, 4x2": fixed-size blocks within
+          the same grid, not custom per-row fractions. */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
           <div className="text-[15px] font-medium mb-2">Desglose por categoría</div>

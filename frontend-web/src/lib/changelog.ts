@@ -5,31 +5,33 @@ export interface ChangelogEntry {
   items: string[]
 }
 
-/** Orden: mas reciente primero (indice 0). Cada release nueva se agrega
- * arriba con el `version` real de ese momento (el mismo numero que
- * frontend-web/package.json, el que se ve como "NorthernLights vX.X.X" al
- * pie del sidebar) y su `date` de liberacion -- ambos se muestran juntos y
- * por separado en el modal (ver ChangelogButton.tsx), no hace falta que el
- * version "ordene" nada por si solo: `LATEST_CHANGELOG_VERSION` es siempre
- * CHANGELOG[0], y `user.last_seen_changelog_version` solo se compara por
- * igualdad, nunca por orden.
+/** Order: most recent first (index 0). Each new release is added at the top
+ * with the real `version` at that time (the same number as
+ * frontend-web/package.json, the one shown as "NorthernLights vX.X.X" at
+ * the bottom of the sidebar) and its release `date` -- both are shown
+ * together and separately in the modal (see ChangelogButton.tsx); the
+ * version doesn't need to "sort" anything by itself:
+ * `LATEST_CHANGELOG_VERSION` is always CHANGELOG[0], and
+ * `user.last_seen_changelog_version` is only compared by equality, never by
+ * order.
  *
- * Vacio a proposito en v1.0.0 -- las entradas anteriores documentaban
- * releases para usuarios de prueba (0.2.0, 1.0.1), que no tiene sentido
- * mostrar como "novedades" en el primer release publico real: implicarian
- * versiones publicas previas que nadie afuera vio. A partir de aqui, cada
- * release publica nueva agrega su entrada arriba. */
+ * Empty on purpose in v1.0.0 -- previous entries documented releases for
+ * test users (0.2.0, 1.0.1), which doesn't make sense to show as "what's
+ * new" in the first real public release: they'd imply prior public versions
+ * that nobody outside ever saw. From here on, each new public release adds
+ * its entry at the top. */
 export const CHANGELOG: ChangelogEntry[] = []
 
-/** null cuando CHANGELOG esta vacio (ver arriba) -- ChangelogButton/Dialog
- * tratan null como "nada que mostrar", nunca marcan version como no-vista. */
+/** null when CHANGELOG is empty (see above) -- ChangelogButton/Dialog treat
+ * null as "nothing to show", never mark a version as unseen. */
 export const LATEST_CHANGELOG_VERSION: string | null = CHANGELOG[0]?.version ?? null
 
-/** Cuantas releases se muestran en el modal de Novedades -- CHANGELOG entero
- * queda como el historico real (crece para siempre), pero mostrarlo completo
- * cada vez que alguien abre el modal no tiene sentido pasadas unas pocas
- * releases. Subir este numero no cambia nada mas (LATEST_CHANGELOG_VERSION
- * sigue siendo CHANGELOG[0], el auto-open sigue comparando contra esa). */
+/** How many releases are shown in the What's New modal -- the full
+ * CHANGELOG remains the real history (grows forever), but showing it in
+ * full every time someone opens the modal doesn't make sense past a few
+ * releases. Raising this number doesn't change anything else
+ * (LATEST_CHANGELOG_VERSION is still CHANGELOG[0], auto-open still compares
+ * against that). */
 export const RECENT_CHANGELOG_COUNT = 3
 
 export function getRecentChangelog(): ChangelogEntry[] {

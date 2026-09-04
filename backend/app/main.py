@@ -34,28 +34,29 @@ app = FastAPI(title="App Finanzas Personales API", version="1.0.0")
 
 
 class CatchAllExceptionMiddleware:
-    """Una excepcion no capturada por ningun handler de FastAPI la procesa
-    Starlette en ServerErrorMiddleware, que queda FUERA de CORSMiddleware --
-    el navegador entonces reporta un falso error de CORS en vez del 500 real.
-    Atajarla aqui (una capa de middleware normal, dentro de CORSMiddleware
-    porque se registra antes) hace que la respuesta de error si pase por
-    CORSMiddleware en su camino de vuelta.
+    """An exception not caught by any FastAPI handler is processed by
+    Starlette in ServerErrorMiddleware, which is OUTSIDE CORSMiddleware --
+    the browser then reports a false CORS error instead of the real 500.
+    Catching it here (a normal middleware layer, inside CORSMiddleware
+    because it's registered before it) makes the error response actually
+    pass through CORSMiddleware on its way back.
 
-    ASGI puro a proposito, NO `BaseHTTPMiddleware` (como era antes): ese subclase
-    corre el resto del stack en un Task separado (via TaskGroup/memory stream)
-    para poder darle a `dispatch` un `call_next()` con forma de funcion normal.
-    Con un StreamingResponse de larga duracion (ej. /ai/chat, ver ai/advisor.py)
-    esa frontera extra de Task es justo donde una desconexion del cliente (o
-    un error del proveedor de IA que corta el generador a medio camino) puede
-    disparar un `CancelledError` que golpea codigo de limpieza (cierre de la
-    sesion de DB) fuera de lugar -- deja la conexion de asyncpg terminada a
-    medias en vez de cerrada limpia, y esa conexion envenenada vuelve al pool
-    para el siguiente request que le toque (bug real, visto en prod: un 503
-    transitorio de Gemini en /ai/chat hizo que un /api/v1/categories sin
-    relacion alguna fallara con "connection is closed" segundos despues).
-    ASGI puro corre todo en el mismo Task que la request -- sin esa frontera,
-    una cancelacion sigue las reglas normales de asyncio (se resuelve en el
-    mismo `finally`/`async with` que ya la esperaba) en vez de cruzar Tasks."""
+    Deliberately pure ASGI, NOT `BaseHTTPMiddleware` (like it was before):
+    that subclass runs the rest of the stack in a separate Task (via
+    TaskGroup/memory stream) so it can hand `dispatch` a `call_next()`
+    shaped like a normal function. With a long-lived StreamingResponse
+    (e.g. /ai/chat, see ai/advisor.py) that extra Task boundary is exactly
+    where a client disconnect (or an AI provider error that cuts the
+    generator off midway) can trigger a `CancelledError` that hits cleanup
+    code (closing the DB session) at the wrong place -- it leaves the
+    asyncpg connection half-finished instead of cleanly closed, and that
+    poisoned connection goes back to the pool for whichever request gets
+    it next (real bug, seen in prod: a transient 503 from Gemini in
+    /ai/chat made an unrelated /api/v1/categories fail with "connection is
+    closed" seconds later). Pure ASGI runs everything in the same Task as
+    the request -- without that boundary, a cancellation follows asyncio's
+    normal rules (resolved in the same `finally`/`async with` that was
+    already awaiting it) instead of crossing Tasks."""
 
     def __init__(self, app):
         self.app = app
@@ -78,10 +79,11 @@ class CatchAllExceptionMiddleware:
         except Exception:
             logger.exception("unhandled_exception", path=scope.get("path", ""))
             if response_started:
-                # Ya se le mando algo al cliente (ej. headers de un SSE que
-                # alcanzo a empezar) -- no se puede reemplazar por un
-                # JSONResponse nuevo, los headers ya se fueron. Solo queda
-                # loguearlo (arriba) y dejar la conexion terminar.
+                # Something has already been sent to the client (e.g.
+                # headers of an SSE that managed to start) -- it can't be
+                # replaced by a new JSONResponse, the headers are already
+                # gone. All that's left is logging it (above) and letting
+                # the connection end.
                 return
             response = JSONResponse(
                 status_code=500,

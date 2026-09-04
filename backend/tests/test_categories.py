@@ -277,11 +277,11 @@ async def test_delete_parent_category_cascades_to_subcategories(client: AsyncCli
 
 
 async def test_subcategory_requires_user_id_at_db_level(client: AsyncClient, session_factory):
-    """ck_categories_subcategory_user_scoped: una subcategoria (parent_id no
-    nulo) nunca puede ser una fila de sistema (user_id NULL), ni siquiera
-    saltando category_service con un INSERT directo -- RLS no lo hubiera
-    bloqueado solo (rls_categories permite user_id IS NULL sin importar la
-    sesion), asi que esto es una segunda capa real, no redundante."""
+    """ck_categories_subcategory_user_scoped: a subcategory (non-null
+    parent_id) can never be a system row (user_id NULL), not even by
+    bypassing category_service with a direct INSERT -- RLS alone wouldn't have
+    blocked it (rls_categories allows user_id IS NULL regardless of the
+    session), so this is a real second layer, not redundant."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     listing = await client.get("/api/v1/categories?type=expense", headers=headers)

@@ -25,9 +25,9 @@ def _month_bounds(year: int, month: int) -> tuple[date, date]:
 
 
 def previous_month_bounds() -> tuple[date, date]:
-    """Mes calendario completo anterior a hoy -- usado por POST /reports/generate
-    cuando el usuario no especifica un rango, y por la tarea de Celery
-    `reports.generate_monthly` para el batch automatico del dia 1."""
+    """Full calendar month prior to today -- used by POST /reports/generate
+    when the user doesn't specify a range, and by the Celery task
+    `reports.generate_monthly` for the automatic batch on day 1."""
     prev_month_end = date.today().replace(day=1) - timedelta(days=1)
     return _month_bounds(prev_month_end.year, prev_month_end.month)
 
@@ -37,18 +37,18 @@ def _year_bounds(year: int) -> tuple[date, date]:
 
 
 def previous_year_bounds() -> tuple[date, date]:
-    """Año calendario completo anterior a hoy -- usado por la tarea de Celery
-    `reports.generate_yearly`, que corre el 1ro de enero."""
+    """Full calendar year prior to today -- used by the Celery task
+    `reports.generate_yearly`, which runs on January 1st."""
     return _year_bounds(date.today().year - 1)
 
 
 async def _get_existing_report(
     session: AsyncSession, user_id: UUID, period_start: date, period_end: date
 ) -> Report | None:
-    # selectinload: el resultado de aqui puede volver directo al router via
-    # ReportOut.model_validate (early-return idempotente) -- sin esto, leer
-    # `.insights` en ese camino dispara un lazy-load sync que revienta bajo
-    # asyncio (MissingGreenlet).
+    # selectinload: this result can go straight back to the router via
+    # ReportOut.model_validate (idempotent early-return) -- without this,
+    # reading `.insights` on that path triggers a sync lazy-load that
+    # blows up under asyncio (MissingGreenlet).
     result = await session.execute(
         select(Report)
         .options(selectinload(Report.insights))
@@ -88,17 +88,18 @@ async def generate_report(
     generated_by: str,
     force: bool = False,
 ) -> Report:
-    """Punto de entrada unico para generar un reporte: lo usa tanto el
-    endpoint manual (sincrono, un solo usuario) como la tarea de Celery
-    `reports.generate_for_user` (un usuario a la vez, dentro del loop del
-    batch mensual). No duplica: si ya existe uno 'ready' para el periodo
-    exacto, lo retorna sin recalcular (regla de negocio M15 #2 y #3).
+    """Single entry point for generating a report: used both by the manual
+    endpoint (synchronous, single user) and the Celery task
+    `reports.generate_for_user` (one user at a time, inside the monthly
+    batch loop). Doesn't duplicate: if one already exists 'ready' for the
+    exact period, it's returned without recalculating (business rule M15
+    #2 and #3).
 
-    `force=True` salta ese candado y recalcula igual -- pensado para un
-    periodo que ya se genero (casi vacio) antes de que el usuario
-    backfilleara historial viejo. Antes de recalcular, borra los
-    `ReportInsight` que ya tuviera: `report_insight_service.generate_for_report`
-    solo hace INSERT, nunca DELETE, asi que sin esto quedarian duplicados."""
+    `force=True` skips that lock and recalculates anyway -- meant for a
+    period that was already generated (nearly empty) before the user
+    backfilled old history. Before recalculating, it deletes any
+    `ReportInsight` it already had: `report_insight_service.generate_for_report`
+    only does INSERT, never DELETE, so without this they'd end up duplicated."""
     existing = await _get_existing_report(session, user_id, period_start, period_end)
     if existing is not None and existing.status == "ready" and not force:
         return existing
@@ -169,17 +170,17 @@ async def generate_report(
         await session.flush()
         raise
 
-    # Fuera del try/except de arriba a proposito: un fallo de IA generando
-    # los puntos del periodo nunca debe convertir un reporte ya listo en
-    # 'error' (ver docstring de report_insight_service.generate_for_report).
-    # Solo para periodos realmente cerrados -- un rango 'custom' ad-hoc no
-    # dispara la generacion de puntos de IA.
+    # Deliberately outside the try/except above: an AI failure generating
+    # the period's points must never turn an already-ready report into
+    # 'error' (see docstring of report_insight_service.generate_for_report).
+    # Only for genuinely closed periods -- an ad-hoc 'custom' range doesn't
+    # trigger AI point generation.
     if report.type != "custom":
         await report_insight_service.generate_for_report(session, user_id, report)
-    # `report` ya es persistente (se flusheo arriba) -- su relacion
-    # `.insights` no queda marcada como cargada solo por crear las filas
-    # hijas (o por no crear ninguna), y leerla sin refrescar dispara un
-    # lazy-load sync que revienta bajo asyncio (MissingGreenlet).
+    # `report` is already persistent (flushed above) -- its `.insights`
+    # relationship doesn't get marked as loaded just from creating the
+    # child rows (or from creating none), and reading it without a refresh
+    # triggers a sync lazy-load that blows up under asyncio (MissingGreenlet).
     await session.refresh(report, attribute_names=["insights"])
 
     return report
@@ -193,10 +194,10 @@ async def generate_monthly_for_user(
 
 
 def _merge_by_category(entries: list[dict]) -> list[dict]:
-    """Suma por nombre de categoria a traves de varios meses (cada entrada
-    mensual ya viene con las subcategorias sumadas a su padre, ver
-    engine_service._category_breakdown) -- el desglose de subcategorias
-    tambien se fusiona entre meses, no solo el total del padre."""
+    """Sums by category name across several months (each monthly entry
+    already comes with its subcategories summed into the parent, see
+    engine_service._category_breakdown) -- the subcategory breakdown is
+    also merged across months, not just the parent's total."""
     totals: dict[str, Decimal] = {}
     subtotals: dict[str, dict[str, Decimal]] = {}
     for entry in entries:
@@ -226,10 +227,10 @@ def _merge_by_category(entries: list[dict]) -> list[dict]:
 def _aggregate_yearly_summary(
     monthly_summaries: list[dict], previous_yearly_score: float | None
 ) -> dict:
-    """Agrega los `summary` de los reportes mensuales ya generados de un año
-    en la MISMA forma que devuelve `engine_service.compute_period_summary` --
-    a proposito no vuelve a tocar las transacciones crudas (ver Contexto del
-    plan): el trabajo pesado ya lo hizo cada reporte mensual."""
+    """Aggregates the `summary`s of a year's already-generated monthly
+    reports in the SAME shape that `engine_service.compute_period_summary`
+    returns -- deliberately doesn't touch the raw transactions again (see
+    Plan Context): each monthly report already did the heavy lifting."""
     income_total = sum(
         (Decimal(str(m["income"]["total"])) for m in monthly_summaries), Decimal("0")
     )
@@ -242,10 +243,10 @@ def _aggregate_yearly_summary(
     recurring_paid = sum(
         (Decimal(str(m["committed"]["recurring_paid"])) for m in monthly_summaries), Decimal("0")
     )
-    # .get(...) con default: reportes mensuales generados antes de que este
-    # campo existiera (JSON ya persistido en `reports.summary`) no se
-    # regeneran solos -- generate_report retorna el existente 'ready' tal
-    # cual si ya esta calculado para ese periodo exacto.
+    # .get(...) with a default: monthly reports generated before this field
+    # existed (JSON already persisted in `reports.summary`) don't regenerate
+    # themselves -- generate_report returns the existing 'ready' one as-is
+    # if it's already computed for that exact period.
     adjustments_in = sum(
         (Decimal(str(m.get("adjustments", {}).get("total_in", 0))) for m in monthly_summaries),
         Decimal("0"),
@@ -306,16 +307,17 @@ def _aggregate_yearly_summary(
 async def generate_yearly_report(
     session: AsyncSession, user_id: UUID, year: int, generated_by: str, force: bool = False
 ) -> Report:
-    """Agrega los reportes mensuales `ready` ya generados de `year` (no
-    recalcula desde las transacciones crudas) y genera los puntos de IA del
-    año a partir de ese agregado. Idempotente igual que `generate_report`.
+    """Aggregates `year`'s already-generated `ready` monthly reports
+    (doesn't recalculate from raw transactions) and generates the year's AI
+    points from that aggregate. Idempotent just like `generate_report`.
 
-    `force=True` recalcula aunque ya este 'ready', y ademas fuerza primero la
-    regeneracion de los 12 meses de `year` (con `generate_report(...,
-    force=True)`, que crea los que falten y recalcula los que ya existan) --
-    esta funcion agrega reportes mensuales YA 'ready', asi que sin ese paso
-    el año quedaria recalculado sobre datos mensuales viejos. De paso, esto
-    resuelve de un solo llamado el backfill de todo un año."""
+    `force=True` recalculates even if already 'ready', and also forces the
+    regeneration of `year`'s 12 months first (with `generate_report(...,
+    force=True)`, which creates the missing ones and recalculates the
+    existing ones) -- this function aggregates monthly reports that are
+    ALREADY 'ready', so without that step the year would end up
+    recalculated on stale monthly data. As a side effect, this resolves the
+    backfill of an entire year in a single call."""
     period_start, period_end = _year_bounds(year)
     existing = await _get_existing_report(session, user_id, period_start, period_end)
     if existing is not None and existing.status == "ready" and not force:

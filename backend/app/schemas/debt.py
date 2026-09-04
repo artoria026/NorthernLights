@@ -44,13 +44,13 @@ class DebtActivationRequest(BaseModel):
     payment_day: int | None = Field(default=None, ge=0, le=31)
     total_installments: int | None = None
     linked_account_id: UUID | None = None
-    # Cuenta real donde ya entro/salio el efectivo de este prestamo (si aplica)
-    # -- se registra la transaccion una sola vez, aqui, nunca en la deuda sin
-    # plan (esa nunca toca balances por diseno).
+    # Real account where the cash for this loan already came in/out (if
+    # applicable) -- the transaction is recorded exactly once, here, never
+    # on the unplanned debt (that one never touches balances by design).
     funding_account_id: UUID | None = None
-    # Cuenta de la que sale/entra cada pago periodico. Sin esto, la deuda
-    # queda en flujo 100% manual -- con esto, debts.process_due_payments
-    # genera el borrador solo cuando toque.
+    # Account that each periodic payment comes from/goes to. Without this,
+    # the debt stays in a 100% manual flow -- with it, debts.process_due_payments
+    # generates the draft only when it's due.
     payment_source_account_id: UUID | None = None
     start_date: date_type
     due_date: date_type | None = None
@@ -65,7 +65,7 @@ class DebtCreate(BaseModel):
     original_amount: Decimal | None = None
     agreed_amount: Decimal | None = None
     total_amount: Decimal = Field(gt=0)
-    current_balance: Decimal | None = None  # default = total_amount si no se especifica
+    current_balance: Decimal | None = None  # default = total_amount if not specified
 
     interest_rate: Decimal = Decimal("0")
     payment_amount: Decimal | None = None
@@ -76,14 +76,14 @@ class DebtCreate(BaseModel):
     total_installments: int | None = None
 
     linked_account_id: UUID | None = None
-    # Cuenta real donde entro/salio el efectivo al originarse esta deuda (p.ej.
-    # tu cuenta de banco cuando alguien te presta, o de la que sale cuando tu
-    # prestas). Opcional: una deuda que ya traias antes de usar la app no
-    # necesita esto.
+    # Real account where the cash came in/out when this debt originated
+    # (e.g. your bank account when someone lends to you, or the one it
+    # leaves from when you lend). Optional: a debt you already had before
+    # using the app doesn't need this.
     funding_account_id: UUID | None = None
-    # Cuenta de la que sale/entra cada pago periodico. Sin esto, la deuda
-    # queda en flujo 100% manual -- con esto, debts.process_due_payments
-    # genera el borrador solo cuando toque.
+    # Account that each periodic payment comes from/goes to. Without this,
+    # the debt stays in a 100% manual flow -- with it, debts.process_due_payments
+    # generates the draft only when it's due.
     payment_source_account_id: UUID | None = None
     start_date: date_type | None = None
     estimated_end_date: date_type | None = None
@@ -106,11 +106,11 @@ class DebtUpdate(BaseModel):
     linked_account_id: UUID | None = None
     payment_source_account_id: UUID | None = None
     notes: str | None = None
-    # Correccion manual del saldo pendiente -- no hay un "initial_balance"
-    # separado como en Account, current_balance ES la unica fuente de verdad
-    # del saldo de una deuda, asi que esto es un ajuste directo (no un
-    # delta). Pensado para corregir el saldo despues de un backfill
-    # historico de pagos/transacciones viejas.
+    # Manual correction of the outstanding balance -- there's no separate
+    # "initial_balance" like in Account, current_balance IS the single
+    # source of truth for a debt's balance, so this is a direct adjustment
+    # (not a delta). Meant to fix the balance after a historical backfill
+    # of old payments/transactions.
     current_balance: Decimal | None = Field(default=None, ge=0)
 
 
@@ -147,7 +147,7 @@ class DebtOut(BaseModel):
 
 
 class DebtPaymentCreate(BaseModel):
-    account_id: UUID  # cuenta de la que sale el dinero (banco/efectivo)
+    account_id: UUID  # account the money comes from (bank/cash)
     amount: Decimal = Field(gt=0)
     date: date_type
     notes: str | None = None

@@ -55,9 +55,9 @@ async def test_google_callback_creates_new_user(client: AsyncClient, monkeypatch
     query = parse_qs(urlparse(location).query)
     assert "access_token" in query
     assert "refresh_token" in query
-    # Cuenta recien creada -- AuthCallback.tsx usa esto para marcar el
-    # changelog como visto y no mostrarle el modal de "Novedades" a alguien
-    # que nunca uso la app.
+    # Newly created account -- AuthCallback.tsx uses this to mark the
+    # changelog as seen and not show the "What's New" modal to someone
+    # who never used the app.
     assert query["is_new"] == ["1"]
 
     me = await client.get(
@@ -80,10 +80,10 @@ async def test_google_callback_links_existing_email_user(client: AsyncClient, mo
     response = await client.get(f"/api/v1/auth/google/callback?code=abc&state={state}")
     assert response.status_code == 302
     query = parse_qs(urlparse(response.headers["location"]).query)
-    # Cuenta ya existente (se registro por email antes) -- no es "nueva".
+    # Already existing account (registered by email before) -- it's not "new".
     assert "is_new" not in query
 
-    # El usuario original sigue pudiendo entrar con su password de siempre.
+    # The original user can still log in with their usual password.
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
     )
@@ -119,15 +119,15 @@ async def test_google_callback_does_not_overwrite_manually_set_avatar(
     first = await client.get(f"/api/v1/auth/google/callback?code=abc&state={state}")
     token = parse_qs(urlparse(first.headers["location"]).query)["access_token"][0]
 
-    # El usuario sube su propia foto en Configuracion.
+    # The user uploads their own photo in Settings.
     await client.put(
         "/api/v1/auth/me",
         headers={"Authorization": f"Bearer {token}"},
         json={"name": "Google User", "avatar_url": "data:image/png;base64,aGVsbG8="},
     )
 
-    # Vuelve a entrar por Google con una foto distinta en su perfil real --
-    # no debe pisar la que el usuario ya elegio a mano.
+    # Logs in again via Google with a different photo on their real profile --
+    # must not override the one the user already picked by hand.
     profile["picture"] = "https://lh3.googleusercontent.com/a/foto-nueva-de-google.jpg"
     second = await client.get(f"/api/v1/auth/google/callback?code=abc&state={create_state_token()}")
     token = parse_qs(urlparse(second.headers["location"]).query)["access_token"][0]

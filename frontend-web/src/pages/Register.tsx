@@ -55,20 +55,20 @@ export function Register() {
     try {
       await register.mutateAsync({ email, name, password, accept_disclaimer: true })
       await login.mutateAsync({ email, password })
-      // Cuenta recien creada: no vio ningun release todavia, asi que no
-      // tiene sentido mostrarle "Novedades" con features que nunca usó --
-      // se marca como visto antes de navegar para que ChangelogButton no
-      // llegue a auto-abrirse ni una vez (ver last_seen_changelog_version).
-      // Con su propio try/catch: si esto falla, no debe bloquear el ingreso
-      // (register+login ya son exitosos en este punto).
+      // Newly created account: hasn't seen any release yet, so there's no
+      // point showing it "Novedades" with features it never used -- it's
+      // marked as seen before navigating so ChangelogButton doesn't even
+      // auto-open once (see last_seen_changelog_version).
+      // With its own try/catch: if this fails, it shouldn't block sign-in
+      // (register+login are already successful at this point).
       try {
         await updateSettings.mutateAsync({ last_seen_changelog_version: LATEST_CHANGELOG_VERSION })
       } catch {
-        // no-op: en el peor caso ve el modal de novedades una vez
+        // no-op: worst case they see the changelog modal once
       }
       navigate('/')
     } catch {
-      // el error se muestra abajo
+      // the error is shown below
     }
   }
 

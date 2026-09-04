@@ -11,9 +11,9 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     name: str = Field(min_length=1)
     password: str = Field(min_length=8)
-    # Debe venir en True -- auth_service.register lo valida explicitamente
-    # (no alcanza con que el frontend deshabilite el boton: el checkbox real
-    # es el gate legal, este campo es lo que lo hace cumplir del lado servidor).
+    # Must come in as True -- auth_service.register validates it explicitly
+    # (it's not enough for the frontend to disable the button: the actual
+    # checkbox is the legal gate, this field is what enforces it server-side).
     accept_disclaimer: bool = False
 
 
@@ -83,10 +83,10 @@ class UserOut(BaseModel):
     debt_trouble_mode: bool
     last_seen_changelog_version: str | None
     accepted_disclaimer_version: str | None
-    # Siempre = settings.DISCLAIMER_VERSION -- se manda junto con el campo de
-    # arriba para que el frontend solo tenga que comparar los dos strings de
-    # este mismo objeto (DisclaimerGate) en vez de mantener su propia copia
-    # de "cual es la version vigente" sincronizada a mano con el backend.
+    # Always = settings.DISCLAIMER_VERSION -- sent together with the field
+    # above so the frontend only has to compare the two strings on this
+    # same object (DisclaimerGate) instead of keeping its own copy of
+    # "which version is current" manually synced with the backend.
     current_disclaimer_version: str
     created_at: datetime
 

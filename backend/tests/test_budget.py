@@ -99,11 +99,11 @@ async def test_confirmed_expense_updates_spent(client: AsyncClient):
 
 
 async def test_categorized_income_does_not_leak_into_budget(client: AsyncClient):
-    """Bug real: _on_confirmed escribia en budget_periods.spent para
-    CUALQUIER transaccion confirmada con category_id, sin filtrar
-    entry_type == 'expense'. Un ingreso categorizado (ej. 'Otro' de tipo
-    income) terminaba inflando variable_total_spent y colandose en el
-    desglose de presupuesto como si fuera un gasto."""
+    """Real bug: _on_confirmed wrote to budget_periods.spent for
+    ANY confirmed transaction with category_id, without filtering by
+    entry_type == 'expense'. A categorized income (e.g. 'Otro' of type
+    income) ended up inflating variable_total_spent and sneaking into the
+    budget breakdown as if it were an expense."""
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     expense_category = await _get_category_id(client, headers, "expense")
@@ -133,8 +133,8 @@ async def test_categorized_income_does_not_leak_into_budget(client: AsyncClient)
 
     current = await client.get("/api/v1/budget/current", headers=headers)
     body = current.json()["data"]
-    # Solo el gasto real cuenta -- el ingreso categorizado no debe aparecer
-    # en el desglose ni sumarse al total gastado.
+    # Only the real expense counts -- the categorized income must not appear
+    # in the breakdown or be added to the total spent.
     assert body["variable_total_spent"] == "300.00"
     category_ids_in_breakdown = {c["category_id"] for c in body["variable_categories"]}
     assert income_category not in category_ids_in_breakdown
@@ -160,15 +160,15 @@ async def test_average_last_3_months_reflects_historical_spend(client: AsyncClie
     breakdown = next(
         c for c in current.json()["data"]["variable_categories"] if c["category_id"] == category_id
     )
-    # 2 meses distintos con gasto: (300 + 600) / 2 = 450.00
+    # 2 distinct months with spend: (300 + 600) / 2 = 450.00
     assert breakdown["average_last_3_months"] == "450.00"
 
 
 async def test_limit_suggestions_include_categories_without_limit(client: AsyncClient):
-    """A diferencia de /budget/current (que solo trae categorias con limite o
-    movimiento este mes), /budget/limits/suggestions debe traer TODAS las
-    categorias de gasto -- incluida una que nunca tuvo limite -- para poder
-    sugerir un monto de entrada en la pantalla de definir limites en bloque."""
+    """Unlike /budget/current (which only brings categories with a limit or
+    a transaction this month), /budget/limits/suggestions must bring ALL
+    expense categories -- including one that never had a limit -- to be able to
+    suggest an input amount on the bulk limits-setting screen."""
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -183,8 +183,8 @@ async def test_limit_suggestions_include_categories_without_limit(client: AsyncC
         headers=headers,
         json={"limits": [{"category_id": limited_category, "monthly_limit": "1000.00"}]},
     )
-    # Gasto historico en la categoria SIN limite -- debe aparecer como
-    # sugerencia (average_last_3_months) aunque current_limit sea null.
+    # Historical spend in the category WITHOUT a limit -- must appear as a
+    # suggestion (average_last_3_months) even though current_limit is null.
     await _confirm_expense(client, headers, unlimited_category, "300.00", date.today().isoformat())
 
     response = await client.get("/api/v1/budget/limits/suggestions", headers=headers)
@@ -194,7 +194,7 @@ async def test_limit_suggestions_include_categories_without_limit(client: AsyncC
     assert suggestions[limited_category]["current_limit"] == "1000.00"
     assert suggestions[unlimited_category]["current_limit"] is None
     assert suggestions[unlimited_category]["average_last_3_months"] == "300.00"
-    assert suggestions[unlimited_category]["color"]  # cada categoria trae su propio color
+    assert suggestions[unlimited_category]["color"]  # each category carries its own color
 
 
 async def test_budget_alert_flag_at_80_percent(client: AsyncClient):
@@ -266,7 +266,7 @@ async def test_changing_limit_does_not_touch_past_month(client: AsyncClient, ses
         json={"limits": [{"category_id": category_id, "monthly_limit": "1000.00"}]},
     )
 
-    # Simula un periodo de un mes pasado ya con su snapshot escrito.
+    # Simulates a past month's period already with its snapshot written.
     async with rls_session(session_factory, uid) as session:
         past_period = BudgetPeriod(
             user_id=uid,
@@ -418,7 +418,7 @@ async def test_budget_trend_returns_last_6_months_chronologically(
     assert response.status_code == 200
     trend = response.json()["data"]
     assert len(trend) == 6
-    # cronologico: el mes actual debe ser el ultimo elemento
+    # chronological: the current month must be the last element
     assert trend[-1]["year"] == today.year
     assert trend[-1]["month"] == today.month
     assert Decimal(trend[-1]["spent"]) == Decimal("300.00")
@@ -458,9 +458,9 @@ async def _create_subcategory(client: AsyncClient, headers: dict, parent_id: str
 
 
 async def test_subcategory_expense_rolls_up_to_parent_budget(client: AsyncClient):
-    """Decision de producto: el presupuesto vive en la categoria padre. Un
-    gasto categorizado con una subcategoria (ej. 'Restaurantes' bajo 'Comida
-    y Bebidas') debe sumar al budget_period del padre, no crear uno propio."""
+    """Product decision: the budget lives on the parent category. An
+    expense categorized with a subcategory (e.g. 'Restaurantes' under 'Comida
+    y Bebidas') must add to the parent's budget_period, not create its own."""
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     parent_id = await _get_category_id(client, headers, "expense")

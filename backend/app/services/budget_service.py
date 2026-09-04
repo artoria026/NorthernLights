@@ -51,12 +51,12 @@ async def get_limits(session: AsyncSession, user_id: UUID) -> list[dict]:
 
 
 async def get_limit_suggestions(session: AsyncSession, user_id: UUID) -> list[dict]:
-    """Para la pantalla de 'definir limites en bloque': a diferencia de
-    get_current_budget (que solo trae categorias que YA tienen limite o
-    movimiento este mes), esto trae TODAS las categorias de gasto visibles
-    para el usuario -- incluidas las que nunca se han limitado -- junto con
-    su promedio de gasto de los ultimos 3 meses, para poder sugerir un monto
-    de entrada aunque el usuario nunca le haya puesto tope a esa categoria."""
+    """For the 'set limits in bulk' screen: unlike get_current_budget (which
+    only brings categories that ALREADY have a limit or transaction this
+    month), this brings ALL expense categories visible to the user --
+    including ones that have never had a limit -- along with their average
+    spend over the last 3 months, so we can suggest a starting amount even
+    if the user never set a cap on that category."""
     cat_result = await session.execute(
         select(Category.id, Category.name, Category.color, Category.sort_order)
         .where(
@@ -118,8 +118,8 @@ async def set_limits(
         )
         await session.execute(stmt)
 
-        # Regla M07 #2: cambiar un limite actualiza el mes en curso; los meses
-        # anteriores (budget_periods.budgeted ya escrito) quedan intactos.
+        # Rule M07 #2: changing a limit updates the current month; previous
+        # months (budget_periods.budgeted already written) stay intact.
         period_stmt = (
             pg_insert(BudgetPeriod)
             .values(
@@ -159,7 +159,7 @@ async def _check_budget_alert(
     spent: Decimal,
     budgeted: Decimal,
 ) -> None:
-    """Alerta al 80% con anti-spam (M09): una notificacion por categoria por dia."""
+    """Alert at 80% with anti-spam (M09): one notification per category per day."""
     if budgeted <= 0:
         return
     pct = spent / budgeted
@@ -182,8 +182,8 @@ async def _check_budget_alert(
             body=f"Llevas ${spent:,.0f} de ${budgeted:,.0f} este mes.",
         )
     except Exception:
-        # El anti-spam/notificacion es un side-effect no critico: si Redis o
-        # la notificacion fallan no debe tumbar la confirmacion de la transaccion.
+        # The anti-spam/notification is a non-critical side effect: if Redis
+        # or the notification fails it must not take down the transaction confirmation.
         logger.warning(
             "budget_alert_check_failed", user_id=str(user_id), category_id=str(category_id)
         )
@@ -192,14 +192,15 @@ async def _check_budget_alert(
 async def upsert_period_spent(
     session: AsyncSession, user_id: UUID, category_id: UUID, date_: date, amount: Decimal
 ) -> None:
-    """Punto de integracion exportado para M04: llamar en cada transaccion
-    `confirmed` con category_id (creacion directa o confirmacion de draft/
-    pending). `amount` negativo revierte (edicion o borrado de una `confirmed`).
+    """Integration point exported for M04: call on every `confirmed`
+    transaction with category_id (direct creation or draft/pending
+    confirmation). A negative `amount` reverts it (editing or deleting a
+    `confirmed` one).
 
-    El presupuesto vive siempre en la categoria padre (decision de producto):
-    si category_id es una subcategoria, el gasto sube automaticamente al
-    budget_period de su padre en vez de crear uno propio -- las subcategorias
-    nunca tienen presupuesto independiente, ver set_limits."""
+    The budget always lives on the parent category (product decision): if
+    category_id is a subcategory, the expense automatically rolls up to its
+    parent's budget_period instead of creating its own -- subcategories
+    never have an independent budget, see set_limits."""
     category = await session.get(Category, category_id)
     if category is not None and category.parent_id is not None:
         effective_category_id = category.parent_id
@@ -262,19 +263,19 @@ async def upsert_period_spent(
 async def _average_spent_by_category(
     session: AsyncSession, user_id: UUID, category_ids: set[UUID], months: int = 3
 ) -> dict[UUID, Decimal]:
-    """Mismo patron que `engine_service.get_income_estimates` (promedio de los
-    ultimos N meses), aplicado a gasto por categoria en vez de ingreso total.
-    Sirve para categorias variables (gasolina, alimentacion) donde el usuario
-    no quiere fijar un limite a ciegas -- ver que gasto de verdad primero."""
+    """Same pattern as `engine_service.get_income_estimates` (average of the
+    last N months), applied to spend by category instead of total income.
+    Useful for variable categories (gas, groceries) where the user doesn't
+    want to set a limit blindly -- see what's actually spent first."""
     if not category_ids:
         return {}
 
     since = date.today().replace(day=1) - relativedelta(months=months)
-    # El gasto de una subcategoria cuenta para el promedio de su padre (mismo
-    # rollup que upsert_period_spent) -- category_ids aqui son siempre
-    # categorias de primer nivel (get_limit_suggestions/get_current_budget ya
-    # excluyen subcategorias), asi que se resuelve via join+coalesce en vez
-    # de comparar JournalEntry.category_id directo.
+    # A subcategory's spend counts toward its parent's average (same
+    # rollup as upsert_period_spent) -- category_ids here are always
+    # top-level categories (get_limit_suggestions/get_current_budget already
+    # exclude subcategories), so it's resolved via join+coalesce instead of
+    # comparing JournalEntry.category_id directly.
     effective_id = func.coalesce(Category.parent_id, Category.id)
     result = await session.execute(
         select(effective_id, JournalEntry.date, JournalEntry.amount)
@@ -321,11 +322,11 @@ async def get_current_budget(session: AsyncSession, user_id: UUID, year: int, mo
     categories = {}
     category_ids: set[UUID] = set()
     if candidate_ids:
-        # El presupuesto variable es solo de gasto -- filtrar por
-        # Category.type aqui es defensa extra ademas del filtro en el punto
-        # de escritura (transaction_service._on_confirmed): set_limits() no
-        # valida el type de la categoria, asi que en teoria se podria fijar
-        # un "limite" sobre una categoria de ingreso via API directa.
+        # The variable budget is expense-only -- filtering by Category.type
+        # here is extra defense on top of the filter at the write point
+        # (transaction_service._on_confirmed): set_limits() doesn't validate
+        # the category's type, so in theory a "limit" could be set on an
+        # income category via a direct API call.
         cat_result = await session.execute(
             select(Category.id, Category.name, Category.sort_order).where(
                 Category.id.in_(candidate_ids),
@@ -389,11 +390,11 @@ async def get_current_budget(session: AsyncSession, user_id: UUID, year: int, mo
 
 
 async def get_budget_trend(session: AsyncSession, user_id: UUID, months: int = 6) -> list[dict]:
-    """Serie cronologica (mas viejo -> mas reciente) de presupuestado/gastado
-    variable por mes, para la grafica de tendencia de 6 meses en Presupuesto.
-    Suma directo desde budget_periods (ya filtrado a categorias de gasto)
-    en vez de reusar get_current_budget en un loop -- evita recalcular
-    income/committed_fixed (engine_service) que esa vista no necesita."""
+    """Chronological series (oldest -> newest) of variable budgeted/spent
+    per month, for the 6-month trend chart in Budget. Sums directly from
+    budget_periods (already filtered to expense categories) instead of
+    reusing get_current_budget in a loop -- avoids recalculating
+    income/committed_fixed (engine_service) that this view doesn't need."""
     cursor = date.today().replace(day=1)
     period_specs: list[tuple[int, int]] = []
     for _ in range(months):
@@ -449,7 +450,7 @@ async def get_summary(session: AsyncSession, user_id: UUID) -> dict:
 
 
 async def get_weekly_view(session: AsyncSession, user_id: UUID, year: int, month: int) -> dict:
-    from app.models.transaction import JournalEntry  # import local: evita ciclo con M04
+    from app.models.transaction import JournalEntry  # local import: avoids a cycle with M04
 
     current = await get_current_budget(session, user_id, year, month)
     limits_by_category = {
@@ -458,9 +459,9 @@ async def get_weekly_view(session: AsyncSession, user_id: UUID, year: int, month
     ranges = _week_ranges(year, month)
     weeks_in_month = len(ranges)
 
-    # Mismo rollup que upsert_period_spent: el gasto de una subcategoria
-    # cuenta para la referencia semanal de su padre, que es el unico que
-    # aparece en limits_by_category.
+    # Same rollup as upsert_period_spent: a subcategory's spend counts
+    # toward its parent's weekly reference, which is the only one that
+    # appears in limits_by_category.
     effective_id = func.coalesce(Category.parent_id, Category.id)
     entries_result = await session.execute(
         select(effective_id, JournalEntry.date, JournalEntry.amount)

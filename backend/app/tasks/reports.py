@@ -33,7 +33,7 @@ async def _generate_monthly_for_all_users() -> int:
 
 @celery_app.task(name="reports.generate_monthly")
 def generate_monthly_report_for_all_users() -> int:
-    """Corre el 1ro de cada mes a la 01:00 AM via Celery Beat."""
+    """Runs on the 1st of every month at 01:00 AM via Celery Beat."""
     count = asyncio.run(_generate_monthly_for_all_users())
     logger.info("reports_generate_monthly_completed", users=count)
     return count
@@ -44,7 +44,7 @@ async def _generate_yearly_for_user(user_id: UUID, year: int) -> str | None:
         try:
             report = await report_service.generate_yearly_report(session, user_id, year, "auto")
         except HTTPException:
-            # Usuario sin reportes mensuales ready de ese año -- nada que agregar.
+            # User has no ready monthly reports for that year -- nothing to aggregate.
             return None
         return str(report.id)
 
@@ -61,8 +61,9 @@ async def _generate_yearly_for_all_users() -> int:
 
 @celery_app.task(name="reports.generate_yearly")
 def generate_yearly_report_for_all_users() -> int:
-    """Corre el 1ro de enero a las 02:00 AM via Celery Beat -- despues del job
-    mensual (01:00 AM), que ya genero el reporte de diciembre del año que cierra."""
+    """Runs on January 1st at 02:00 AM via Celery Beat -- after the monthly
+    job (01:00 AM), which already generated the December report for the
+    year that's closing."""
     count = asyncio.run(_generate_yearly_for_all_users())
     logger.info("reports_generate_yearly_completed", users=count)
     return count

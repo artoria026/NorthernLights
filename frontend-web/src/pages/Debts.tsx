@@ -60,11 +60,11 @@ const DEBT_TYPES: DebtType[] = [
 
 const FREQUENCIES: PaymentFrequency[] = ['weekly', 'biweekly', 'monthly', 'irregular']
 
-/** Icono + color por tipo -- puramente categorico (identifica de un
- * vistazo, no implica riesgo/estado; eso ya lo cubre el borde rojo de
- * DebtCard cuando la TAE pasa de 25%). "Me deben" siempre es informal, pero
- * usa su propio icono (gente que te debe, no tu prestamo) via isReceivable
- * en vez de este mapa. */
+/** Icon + color per type -- purely categorical (identifies at a glance,
+ * doesn't imply risk/status; that's already covered by DebtCard's red
+ * border when the APR goes over 25%). "Me deben" is always informal, but
+ * uses its own icon (people who owe you, not your loan) via isReceivable
+ * instead of this map. */
 const DEBT_TYPE_ICONS: Record<DebtType, LucideIcon> = {
   personal_loan: Wallet,
   payroll_loan: Briefcase,
@@ -101,7 +101,7 @@ function NewUnplannedDebtForm({
       await createUnplanned.mutateAsync(form)
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -164,7 +164,7 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
       })
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -281,7 +281,7 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
       })
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -399,7 +399,7 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
       await registerPayment.mutateAsync({ debtId: debt.id, input: { account_id: accountId, amount, date } })
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -445,11 +445,12 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
   )
 }
 
-/** Ajuste directo de current_balance -- pensado para el flujo de backfill
- * historico (ver useDebts.ts UpdateDebtInput.current_balance): en vez de
- * registrar pago por pago de años atrás, se carga el historial de
- * transacciones que se tenga y al final se corrige el saldo pendiente a lo
- * que de verdad es hoy. No toca ningún pago ya registrado. */
+/** Direct adjustment of current_balance -- meant for the historical
+ * backfill flow (see useDebts.ts UpdateDebtInput.current_balance): instead
+ * of registering payment after payment from years back, whatever
+ * transaction history exists gets loaded and at the end the pending
+ * balance is corrected to what it really is today. Doesn't touch any
+ * already registered payment. */
 function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }) {
   const updateDebt = useUpdateDebt()
   const confirm = useConfirmStore((s) => s.ask)
@@ -480,7 +481,7 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
       )
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -643,9 +644,9 @@ function UnplannedDebtRow({ unplanned }: { unplanned: UnplannedDebt }) {
   const [activateOpen, setActivateOpen] = useState(false)
   const isDesktop = useIsDesktop()
 
-  // Un solo Dialog con estado local -- ver mismo comentario en
-  // RecurringItemRow (pages/Recurring.tsx). isDesktop decide cual layout se
-  // monta, nunca los dos a la vez.
+  // A single Dialog with local state -- see the same comment in
+  // RecurringItemRow (pages/Recurring.tsx). isDesktop decides which layout
+  // gets mounted, never both at once.
   const activateDialog = (
     <Dialog open={activateOpen} onOpenChange={setActivateOpen}>
       <DialogTrigger
@@ -755,11 +756,11 @@ function DebtsHelp() {
   )
 }
 
-/** Version mas compacta que StatCard (components/nl/primitives.tsx) --
- * StatCard es compartido con Dashboard/Recurrentes/Presupuesto y su modo
- * "compact" ya es el estandar ahi, achicarlo cambiaria esas pantallas
- * tambien. Esta vive solo en Deudas, a juego con el tamano mas chico que ya
- * tienen las DebtCard de abajo, sin llegar a ilegible. */
+/** More compact version than StatCard (components/nl/primitives.tsx) --
+ * StatCard is shared with Dashboard/Recurring/Budget and its "compact"
+ * mode is already the standard there, shrinking it further would change
+ * those screens too. This one lives only in Debts, matching the smaller
+ * size the DebtCards below already have, without becoming illegible. */
 function MiniStat({
   icon: Icon,
   label,
@@ -795,9 +796,9 @@ export function Debts() {
   const unplanned = unplannedAll?.filter((u) => u.direction === direction) ?? []
   const activeDebts = debts?.filter((d) => d.status !== 'completed') ?? []
   const isReceivable = direction === 'owed_to_me'
-  // Si ya hay deudas sin plan de datos previos a activar el toggle, se
-  // siguen mostrando -- el toggle gatea la ENTRADA a la feature, no esconde
-  // datos que el usuario ya registro.
+  // If there are already unplanned debts from before the toggle was
+  // activated, they keep showing -- the toggle gates ENTRY into the
+  // feature, it doesn't hide data the user already registered.
   const showUnplannedSection = debtTroubleMode || unplanned.length > 0
 
   return (

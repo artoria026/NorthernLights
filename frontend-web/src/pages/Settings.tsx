@@ -122,7 +122,7 @@ function ProfileCard() {
     try {
       await updateProfile.mutateAsync({ name, avatar_url: user?.avatar_url })
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -133,7 +133,7 @@ function ProfileCard() {
       setCurrentPassword('')
       setNewPassword('')
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -329,11 +329,10 @@ function DebtTroubleCard() {
   )
 }
 
-/** Antes vivía como un ícono de escudo aparte en AppSidebar (header móvil +
- * sidebar) -- se movió aquí para no tener un botón de navegación flotando
- * fuera del flujo normal de la app. Solo se renderiza para admins; el guard
- * de verdad sigue siendo el backend + AdminLayout, esto es solo el punto de
- * entrada. */
+/** Used to live as a separate shield icon in AppSidebar (mobile header +
+ * sidebar) -- moved here so there isn't a navigation button floating
+ * outside the app's normal flow. Only renders for admins; the real guard
+ * is still the backend + AdminLayout, this is just the entry point. */
 function AdminAccessCard() {
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
@@ -403,10 +402,10 @@ function ConnectedAccountsCard() {
   )
 }
 
-/** Solo lectura -- no hay nada que "aceptar" de nuevo aqui, si llegaste a
- * ver este boton es porque DisclaimerGate ya te dejo pasar. Sirve para
- * releer el aviso cuando quieras, sin tener que esperar a que cambie de
- * version. */
+/** Read-only -- there's nothing to "accept" again here, if you got to see
+ * this button it's because DisclaimerGate already let you through. It's
+ * there to reread the notice whenever you want, without having to wait
+ * for it to change version. */
 function PrivacyCard() {
   const [open, setOpen] = useState(false)
   return (
@@ -484,7 +483,7 @@ function DataManagementCard() {
       setResult(res.erased)
       setSelected(new Set())
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -604,7 +603,7 @@ function DeleteAccountCard() {
       await deleteAccount.mutateAsync(password || undefined)
       navigate('/login')
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -752,10 +751,10 @@ export function Settings() {
     <div>
       <ViewHeader icon={<SettingsIcon />} title="Configuración" help={<SettingsHelp />} tourKey="settings" />
       <div>
-        {/* Cada columna empareja cards de altura parecida a proposito (Perfil
-            es la card mas alta de todas, por eso va sola con Seguridad, que
-            es la mas corta) -- la vez pasada quedo un hueco enorme cuando una
-            columna tenia mucho mas contenido que la otra. */}
+        {/* Each column deliberately pairs cards of similar height (Profile
+            is the tallest card of all, that's why it goes alone with
+            Security, which is the shortest) -- last time there was a huge
+            gap when one column had much more content than the other. */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <div className="flex flex-col gap-5">
             <ProfileCard />
@@ -778,10 +777,11 @@ export function Settings() {
           </div>
         </div>
 
-        {/* Zona de salida -- de menos a mas irreversible. Sesion y Borrar
-            datos son parecidas en alto (colapsadas) por eso van pareadas;
-            Eliminar cuenta va sola y a todo el ancho, separada del resto a
-            proposito -- es la unica accion sin vuelta atras de la pantalla. */}
+        {/* Exit zone -- from less to more irreversible. Session and Erase
+            data are similar in height (collapsed), that's why they're
+            paired; Delete account goes alone at full width, deliberately
+            separated from the rest -- it's the screen's only action with
+            no going back. */}
         <div className="border-t border-border mt-8 pt-6 grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
           <DataManagementCard />
           <SessionCard />

@@ -1,12 +1,13 @@
 import { useEffect } from 'react'
 
-/** Ctrl/Cmd+Enter envia el formulario activo sin tener que tabular hasta el
- * botón de Guardar/Crear -- mismo atajo que Slack/Linear. `target.closest`
- * cubre el caso normal (foco en un input/textarea real del formulario); el
- * fallback busca el <form> dentro del último Dialog visible porque un popup
- * portaleado (el buscador de categoría, cualquier <Select>) vive fuera del
- * <form> en el DOM real aunque logicamente pertenezca a él -- closest('form')
- * no lo encuentra si el foco quedó ahí. Montado una sola vez en App.tsx. */
+/** Ctrl/Cmd+Enter submits the active form without having to tab all the way
+ * to the Guardar/Crear button -- same shortcut as Slack/Linear.
+ * `target.closest` covers the normal case (focus on a real form
+ * input/textarea); the fallback looks for the <form> inside the last
+ * visible Dialog because a portaled popup (the category search, any
+ * <Select>) lives outside the <form> in the real DOM even though it
+ * logically belongs to it -- closest('form') won't find it if focus ended
+ * up there. Mounted once in App.tsx. */
 export function FormSubmitShortcut() {
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {

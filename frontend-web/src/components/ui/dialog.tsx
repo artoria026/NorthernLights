@@ -63,11 +63,10 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                // Tinte rojo al hover (no el hover neutro del variant="ghost"
-                // de base) -- estandar elegido para el boton de cerrar de
-                // TODOS los modales, ver modales-propuestas.html. Un solo
-                // cambio aqui porque DialogContent es compartido por toda
-                // la app.
+                // Red tint on hover (not the base variant="ghost" neutral
+                // hover) -- standard chosen for the close button of ALL
+                // modals, see modales-propuestas.html. A single change here
+                // because DialogContent is shared across the whole app.
                 className="absolute top-2 right-2 rounded-full hover:bg-destructive/10 hover:text-destructive"
                 size="icon-sm"
               />

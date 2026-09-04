@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 import { useUiStore, type Toast } from '@/stores/uiStore'
 
-/** Exito se lee rapido y no necesita quedarse en pantalla; un error suele
- * traer mas texto (viene de apiErrorMessage) y vale la pena darle mas
- * tiempo antes de que se vaya solo. Cualquiera de los dos sigue siendo
- * descartable con un click antes de que se cumpla el tiempo. */
+/** Success reads fast and doesn't need to stay on screen; an error usually
+ * carries more text (comes from apiErrorMessage) and it's worth giving it
+ * more time before it goes away on its own. Either one can still be
+ * dismissed with a click before the time is up. */
 const AUTO_DISMISS_MS: Record<Toast['variant'], number> = {
   success: 4000,
   error: 6000,

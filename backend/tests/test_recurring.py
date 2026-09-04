@@ -112,9 +112,9 @@ async def test_pause_and_cancel(client: AsyncClient):
 
 
 async def test_update_recurring_item_changes_amount_and_frequency(client: AsyncClient):
-    """PUT /{item_id} existia en el backend desde antes pero el front nunca
-    lo consumia -- ahora es el camino de "Editar" en /recurring-items, asi
-    que necesita su propia cobertura directa."""
+    """PUT /{item_id} existed in the backend before but the frontend never
+    consumed it -- now it's the "Edit" path in /recurring-items, so
+    it needs its own direct coverage."""
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     item = await _create_recurring_item(client, headers, item_type="service", amount="500.00")
@@ -129,7 +129,7 @@ async def test_update_recurring_item_changes_amount_and_frequency(client: AsyncC
     assert body["amount"] == "650.00"
     assert body["frequency"] == "biweekly"
     assert body["alert_urgency"] == "high"
-    # Lo que no se manda no cambia.
+    # What isn't sent doesn't change.
     assert body["name"] == item["name"]
     assert body["next_date"] == item["next_date"]
 
@@ -161,8 +161,8 @@ async def test_resume_reactivates_paused_item_and_fixes_stale_next_date(client: 
     assert resumed.status_code == 200
     data = resumed.json()["data"]
     assert data["status"] == "active"
-    # next_date estaba 40 dias en el pasado -- se adelanta a hoy en vez de
-    # dejar que Celery genere de golpe todos los cobros "vencidos".
+    # next_date was 40 days in the past -- it jumps forward to today instead of
+    # letting Celery generate all the "overdue" charges at once.
     assert data["next_date"] == date.today().isoformat()
 
 
@@ -230,8 +230,8 @@ async def test_process_due_deduplicates_pending_per_period(client: AsyncClient, 
         first_run = await recurring_service.process_due_recurring_items(session, uid, date.today())
         assert len(first_run) == 1
 
-        # Simula un segundo corrimiento de Celery antes de que el ciclo avance
-        # (p.ej. reintento tras un fallo parcial): next_date vuelve a quedar vencido.
+        # Simulates a second Celery run before the cycle advances
+        # (e.g. a retry after a partial failure): next_date becomes overdue again.
         db_item = await recurring_service.get_recurring_item(session, uid, uuid.UUID(item["id"]))
         db_item.next_date = date.today()
         await session.flush()

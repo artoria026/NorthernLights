@@ -158,12 +158,12 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-/** Llave = mismo formato kebab-case que categories.icon en la BD (ver
- * seed/migraciones de categorias del sistema, ej. "paw-print", "gamepad-2")
- * -- asi que las categorias del sistema ya renderizan bien sin tocar datos.
- * NUNCA renombrar/quitar una llave existente: rompe el icono de cualquier
- * categoria (del sistema o de un usuario) ya guardada con ese valor. Los
- * nuevos se agregan libremente. */
+/** Key = same kebab-case format as categories.icon in the DB (see
+ * seed/migrations for system categories, e.g. "paw-print", "gamepad-2")
+ * -- so system categories already render fine without touching data.
+ * NEVER rename/remove an existing key: it breaks the icon of any category
+ * (system or user-created) already saved with that value. New ones can be
+ * added freely. */
 const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   utensils: Utensils,
   wine: Wine,
@@ -196,7 +196,7 @@ const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   'trending-up': TrendingUp,
   landmark: Landmark,
   banknote: Banknote,
-  // -- primera ampliacion (antes 29) --
+  // -- first expansion (previously 29) --
   pizza: Pizza,
   apple: Apple,
   cake: Cake,
@@ -233,7 +233,7 @@ const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   umbrella: Umbrella,
   'tree-pine': TreePine,
   cat: Cat,
-  // -- segunda ampliacion: agrupado por tema (ver CATEGORY_ICON_META) --
+  // -- second expansion: grouped by theme (see CATEGORY_ICON_META) --
   'ice-cream': IceCreamCone,
   soup: Soup,
   sandwich: Sandwich,
@@ -336,10 +336,9 @@ export const CATEGORY_ICON_GROUPS = [
 ] as const
 export type CategoryIconGroup = (typeof CATEGORY_ICON_GROUPS)[number]
 
-/** Nombre en espanol para el tooltip del picker, grupo tematico (para el
- * riel del picker) y sinonimos extra para el buscador -- "gasolina" debe
- * encontrar `fuel`, no solo quien ya sepa que se llama "fuel" en el
- * sistema. */
+/** Spanish name for the picker tooltip, theme group (for the picker rail),
+ * and extra synonyms for the search -- "gasolina" should find `fuel`, not
+ * just someone who already knows it's called "fuel" in the system. */
 export const CATEGORY_ICON_META: Record<string, { label: string; group: CategoryIconGroup; keywords?: string[] }> = {
   utensils: { label: 'Comida', group: 'Comida y Bebidas', keywords: ['restaurante', 'comer'] },
   wine: { label: 'Vino', group: 'Comida y Bebidas', keywords: ['bebida', 'alcohol', 'copa'] },
@@ -505,8 +504,8 @@ export const CATEGORY_ICON_META: Record<string, { label: string; group: Category
   church: { label: 'Religión', group: 'Otros', keywords: ['iglesia'] },
 }
 
-/** Subconjunto curado para el picker de creacion/edicion -- todos resuelven
- * via CATEGORY_ICON_MAP y tienen entrada en CATEGORY_ICON_META. */
+/** Curated subset for the create/edit picker -- all resolve via
+ * CATEGORY_ICON_MAP and have an entry in CATEGORY_ICON_META. */
 export const CATEGORY_ICON_CHOICES: string[] = Object.keys(CATEGORY_ICON_MAP)
 
 export function categoryIcon(iconName: string | null | undefined): LucideIcon {
@@ -518,13 +517,13 @@ export function categoryIconLabel(iconName: string): string {
   return CATEGORY_ICON_META[iconName]?.label ?? iconName
 }
 
-/** Los iconos de un grupo tematico, en el mismo orden que CATEGORY_ICON_CHOICES. */
+/** The icons of a theme group, in the same order as CATEGORY_ICON_CHOICES. */
 export function iconsInGroup(group: CategoryIconGroup): string[] {
   return CATEGORY_ICON_CHOICES.filter((name) => CATEGORY_ICON_META[name]?.group === group)
 }
 
-/** Texto contra el que buscar: la llave, el nombre en espanol, y sinonimos.
- * Todo en minusculas, sin acentos, para que "cafe" encuentre "café". */
+/** Text to search against: the key, the Spanish name, and synonyms. All
+ * lowercase, without accents, so that "cafe" finds "café". */
 function normalize(s: string): string {
   return s
     .toLowerCase()
@@ -543,10 +542,9 @@ export function matchesIconSearch(iconName: string, query: string): boolean {
 const RECENT_ICONS_KEY = 'nl:recent-category-icons'
 const MAX_RECENT_ICONS = 8
 
-/** Ultimos iconos elegidos por este usuario en este navegador -- localStorage
- * a proposito (no vale la pena una tabla/endpoint de backend para una
- * preferencia puramente de UX del picker). Se lee/escribe solo desde
- * IconGridPicker. */
+/** Last icons chosen by this user in this browser -- localStorage on
+ * purpose (not worth a backend table/endpoint for a purely picker-UX
+ * preference). Read/written only from IconGridPicker. */
 export function getRecentCategoryIcons(): string[] {
   try {
     const raw = localStorage.getItem(RECENT_ICONS_KEY)
@@ -565,31 +563,32 @@ export function recordRecentCategoryIcon(iconName: string): void {
     const next = [iconName, ...current].slice(0, MAX_RECENT_ICONS)
     localStorage.setItem(RECENT_ICONS_KEY, JSON.stringify(next))
   } catch {
-    // localStorage no disponible (modo privado, etc.) -- no es critico, se ignora
+    // localStorage not available (private mode, etc.) -- not critical, ignored
   }
 }
 
-/** Los primeros 7 son la paleta original, la misma que ya usan las
- * categorias del sistema (ver migracion 4bb6c6945c68_distinct_system_category_colors)
- * -- se mantienen intactos y en el mismo orden para no correr el default
- * (CATEGORY_COLOR_CHOICES[0]) ni el color de ninguna categoria ya guardada.
- * Los siguientes son una ampliacion (mismo criterio: suficiente contraste
- * para el icono blanco encima, ver CategoryCard). El picker (ColorSwatchPicker
- * en Categorias.tsx) ademas deja elegir CUALQUIER hex con un <input
- * type="color"> nativo -- esta lista ya no es el techo, es el atajo rapido. */
+/** The first 7 are the original palette, the same one already used by
+ * system categories (see migration 4bb6c6945c68_distinct_system_category_colors)
+ * -- kept intact and in the same order so as not to shift the default
+ * (CATEGORY_COLOR_CHOICES[0]) or the color of any already-saved category.
+ * The rest are an expansion (same criteria: enough contrast for the white
+ * icon on top, see CategoryCard). The picker (ColorSwatchPicker in
+ * Categorias.tsx) also lets you pick ANY hex via a native <input
+ * type="color"> -- this list is no longer the ceiling, it's the quick
+ * shortcut. */
 export const CATEGORY_COLOR_CHOICES = [
   '#00c9a7', // --nl-accent (teal)
   '#4e8ef0', // --nl-blue
-  '#f5a623', // --nl-warning (naranja)
+  '#f5a623', // --nl-warning (orange)
   '#8b7cf6', // --nl-violet
-  '#f04e4e', // --nl-danger (rojo)
+  '#f04e4e', // --nl-danger (red)
   '#e85d9c', // --nl-pink
-  '#6f6f76', // --nl-text-secondary (gris neutro)
-  '#16a34a', // verde
-  '#ca8a04', // mostaza
-  '#0891b2', // cian
+  '#6f6f76', // --nl-text-secondary (neutral gray)
+  '#16a34a', // green
+  '#ca8a04', // mustard
+  '#0891b2', // cyan
   '#6366f1', // indigo
-  '#92400e', // café
-  '#334155', // azul marino
-  '#c026d3', // fucsia
+  '#92400e', // brown
+  '#334155', // navy blue
+  '#c026d3', // fuchsia
 ]

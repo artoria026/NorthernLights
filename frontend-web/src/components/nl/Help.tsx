@@ -2,10 +2,10 @@ import { ArrowRight, CircleHelp } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-/** Boton "?" que va en el header de cada pantalla (ver ViewHeader en
- * primitives.tsx) y abre un modal con el contenido de ayuda de esa pantalla.
- * Cada pagina arma su propio contenido con <HelpSection>/<HelpTip>/<DemoFlow>
- * de este mismo archivo -- ver p.ej. Transactions.tsx. */
+/** "?" button that goes in each screen's header (see ViewHeader in
+ * primitives.tsx) and opens a modal with that screen's help content. Each
+ * page builds its own content with <HelpSection>/<HelpTip>/<DemoFlow> from
+ * this same file -- see e.g. Transactions.tsx. */
 export function HelpTrigger({
   title,
   children,
@@ -13,8 +13,8 @@ export function HelpTrigger({
 }: {
   title: string
   children: ReactNode
-  /** Ancla opcional para el ultimo paso del recorrido guiado (ver
-   * TourHost.tsx) -- ViewHeader la pasa como `<tourKey>:help-button`. */
+  /** Optional anchor for the last step of the guided tour (see
+   * TourHost.tsx) -- ViewHeader passes it as `<tourKey>:help-button`. */
   dataTourId?: string
 }) {
   const [open, setOpen] = useState(false)
@@ -57,8 +57,8 @@ export function HelpSection({ heading, children }: { heading: string; children: 
   )
 }
 
-/** Nota destacada dentro de una seccion -- para "ojo con esto" / comportamientos
- * no obvios (p.ej. que el backend resuelve una cuenta interna solo). */
+/** Highlighted note inside a section -- for "watch out for this" / non-obvious
+ * behaviors (e.g. that the backend resolves an internal account on its own). */
 export function HelpTip({ children }: { children: ReactNode }) {
   return (
     <div
@@ -102,10 +102,10 @@ function DemoBox({ label, sublabel, tone = 'neutral' }: DemoItem) {
   )
 }
 
-/** Diagrama de flujo ilustrativo (A -> B -> C) para mostrar de donde a donde
- * se mueve el dinero en una funcionalidad -- no es un mockup de la UI real,
- * es una explicacion visual del efecto contable. La flecha tiene una animacion
- * sutil (CSS puro, sin JS) para que se sienta "viva" en vez de una imagen fija. */
+/** Illustrative flow diagram (A -> B -> C) to show where money moves from
+ * and to in a feature -- it's not a mockup of the real UI, it's a visual
+ * explanation of the accounting effect. The arrow has a subtle animation
+ * (pure CSS, no JS) so it feels "alive" instead of a static image. */
 export function DemoFlow({ items }: { items: DemoItem[] }) {
   return (
     <div className="flex items-center gap-2 flex-wrap justify-center bg-card border border-border rounded-md p-3.5">
@@ -125,7 +125,7 @@ export function DemoFlow({ items }: { items: DemoItem[] }) {
   )
 }
 
-/** Lista de pasos numerados, para flujos "haz esto, luego esto". */
+/** Numbered step list, for "do this, then this" flows. */
 export function DemoSteps({ steps }: { steps: string[] }) {
   return (
     <ol className="flex flex-col gap-1.5">

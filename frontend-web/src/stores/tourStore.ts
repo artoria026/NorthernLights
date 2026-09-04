@@ -4,11 +4,11 @@ import { TOUR_CONTENT, type ModuleKey, type TourStepContent } from '@/lib/tours'
 interface TourState {
   activeModuleKey: ModuleKey | null
   stepIndex: number
-  /** Subconjunto de TOUR_CONTENT[moduleKey].steps cuyo selector existia en el
-   * DOM al momento de iniciar el recorrido -- varios pasos son condicionales
-   * (banners, gaficas que solo aparecen con datos, etc.), asi que se filtran
-   * una sola vez aqui en vez de que TourHost aborte todo el recorrido en
-   * silencio la primera vez que un selector no aparece. */
+  /** Subset of TOUR_CONTENT[moduleKey].steps whose selector existed in the
+   * DOM at the moment the tour started -- several steps are conditional
+   * (banners, charts that only appear with data, etc.), so they're filtered
+   * once here instead of TourHost silently aborting the entire tour
+   * the first time a selector doesn't appear. */
   visibleSteps: TourStepContent[]
   start: (moduleKey: ModuleKey) => void
   setStep: (index: number) => void

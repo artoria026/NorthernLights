@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 
-# 'accounts' fuerza tambien 'transactions' y 'recurring' en el servicio (no se
-# puede borrar una cuenta mientras algo la sigue referenciando) -- ver
+# 'accounts' also forces 'transactions' and 'recurring' in the service (an
+# account can't be deleted while something still references it) -- see
 # data_service.erase_user_data.
 DATA_CATEGORIES = (
     "transactions",

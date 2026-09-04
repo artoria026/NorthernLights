@@ -2,8 +2,8 @@ import json
 
 
 def extract_json(text: str):
-    """Los prompts de generate_insights/review_insight piden JSON puro, pero
-    los modelos a veces lo envuelven en fences de markdown (```json ... ```)."""
+    """The generate_insights/review_insight prompts ask for pure JSON, but
+    models sometimes wrap it in markdown fences (```json ... ```)."""
     cleaned = text.strip()
     if cleaned.startswith("```"):
         cleaned = cleaned.strip("`")

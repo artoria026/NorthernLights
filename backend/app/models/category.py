@@ -9,17 +9,17 @@ from app.models.mixins import SoftDeleteMixin, TimestampMixin
 
 
 class Category(Base, TimestampMixin, SoftDeleteMixin):
-    """user_id NULL = categoria del sistema, visible para todos via RLS.
-    parent_id NULL = categoria de primer nivel; si tiene valor, es una
-    subcategoria (un solo nivel de anidamiento, validado en category_service).
-    Las transacciones pueden apuntar a cualquiera de los dos niveles."""
+    """user_id NULL = system category, visible to everyone via RLS.
+    parent_id NULL = top-level category; if it has a value, it's a
+    subcategory (a single level of nesting, validated in category_service).
+    Transactions can point to either level."""
 
     __tablename__ = "categories"
     __table_args__ = (
         CheckConstraint("type IN ('income', 'expense')", name="ck_categories_type"),
-        # Una subcategoria (parent_id no nulo) SIEMPRE requiere user_id -- no
-        # puede existir una subcategoria de sistema compartida entre todos
-        # los usuarios. Enforced a nivel de base de datos, no solo en
+        # A subcategory (non-null parent_id) ALWAYS requires user_id -- there
+        # can't be a system subcategory shared across all
+        # users. Enforced at the database level, not just in
         # category_service.create_category.
         CheckConstraint(
             "parent_id IS NULL OR user_id IS NOT NULL",

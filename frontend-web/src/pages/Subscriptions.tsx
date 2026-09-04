@@ -41,8 +41,9 @@ import type { RecurringFrequency, RecurringItem } from '@/types'
 const FREQUENCIES: RecurringFrequency[] = ['weekly', 'biweekly', 'monthly', 'bimonthly', 'annual']
 type StatusFilter = 'active' | 'paused' | 'cancelled' | 'all'
 
-/** Desde cuando esta activa, en meses -- created_at ya existia pero no se
- * mostraba; util para notar una suscripcion que lleva mucho sin revisarse. */
+/** How long it's been active, in months -- created_at already existed but
+ * wasn't shown; useful for noticing a subscription that's gone a long time
+ * without being reviewed. */
 function monthsSince(dateStr: string): number {
   const start = new Date(dateStr)
   const now = new Date()
@@ -79,7 +80,7 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
       await createItem.mutateAsync(form)
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -200,7 +201,7 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
       await updateItem.mutateAsync({ id: item.id, input: form })
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -312,9 +313,9 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
   const isDesktop = useIsDesktop()
   const oldEnough = item.status === 'active' && monthsSince(item.created_at) >= 12
 
-  // Un solo Dialog con estado local -- ver mismo comentario en
-  // RecurringItemRow (pages/Recurring.tsx). isDesktop decide cual layout de
-  // abajo se monta, nunca los dos a la vez.
+  // A single Dialog with local state -- see the same comment in
+  // RecurringItemRow (pages/Recurring.tsx). isDesktop decides which layout
+  // below gets mounted, never both at once.
   const actions = (
     <>
       <SoftBadge severity={STATUS_SEVERITY[item.status]}>{STATUS_LABELS[item.status]}</SoftBadge>

@@ -1,21 +1,21 @@
-/** Registro de contenido para el recorrido guiado (Bienvenida + tour con foco,
- * "Propuesta 5" -- ver recorridos-propuestas.html en la raiz del repo, que
- * probo la mecanica visual antes de portarla aqui). Una entrada por modulo;
- * los modulos que todavia no tienen entrada simplemente no muestran el
- * boton de recorrido ni el modal de bienvenida (ver ViewHeader en
- * primitives.tsx) -- asi el rollout es incremental sin tocar tipos.
+/** Content registry for the guided tour (Welcome + focus tour,
+ * "Proposal 5" -- see recorridos-propuestas.html at the repo root, which
+ * tested the visual mechanics before it was ported here). One entry per
+ * module; modules that don't have an entry yet simply don't show the tour
+ * button or the welcome modal (see ViewHeader in primitives.tsx) -- so the
+ * rollout is incremental without touching types.
  *
- * Varios `steps` son condicionales (banners, graficas que solo aparecen con
- * datos, botones detras de un toggle de Ajustes) -- tourStore filtra al
- * iniciar el recorrido los que no tienen selector en el DOM en ese momento,
- * asi que un usuario sin ese dato de todos modos ve un recorrido completo,
- * solo que mas corto. Por eso NINGUN step de aqui puede vivir dentro del
- * contenido de un Dialog/modal cerrado -- ese selector nunca existe hasta
- * que el usuario abre el dialog a mano, y el paso quedaria fuera del tour
- * siempre. Solo se anclan botones disparadores (DialogTrigger) o contenido
- * que ya esta en la pantalla. Lo que solo vive dentro de un formulario (ej.
- * el checkbox de "a meses sin intereses" en Nueva transaccion) se explica
- * como texto dentro de un step vecino que si tiene anclaje real. */
+ * Several `steps` are conditional (banners, charts that only appear with
+ * data, buttons behind a Settings toggle) -- tourStore filters out, when
+ * starting the tour, the ones that have no selector in the DOM at that
+ * moment, so a user without that data still sees a complete tour, just
+ * shorter. That's why NO step here may live inside the content of a closed
+ * Dialog/modal -- that selector never exists until the user opens the
+ * dialog by hand, and the step would always be left out of the tour. Only
+ * trigger buttons (DialogTrigger) or content that's already on screen get
+ * anchored. Anything that only lives inside a form (e.g. the "interest-free
+ * installments" checkbox in New transaction) is explained as text inside a
+ * neighboring step that does have a real anchor. */
 
 export type ModuleKey =
   | 'dashboard'
@@ -33,8 +33,8 @@ export type ModuleKey =
   | 'notifications'
 
 export interface TourStepContent {
-  /** Selector CSS de un elemento real de la pantalla, vía atributo
-   * `data-tour="<moduleKey>:<elemento>"`. */
+  /** CSS selector of a real element on screen, via the
+   * `data-tour="<moduleKey>:<element>"` attribute. */
   selector: string
   title: string
   text: string

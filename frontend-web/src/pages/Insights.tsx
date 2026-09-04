@@ -78,20 +78,20 @@ const STATUS_LABEL: Record<InsightStatus, string> = {
   resolved: 'Resuelto',
 }
 
-/** Las unicas 3 llaves que _extract_key_metrics (insight_service.py) escribe
- * en metrics_at_creation/metrics_at_last_review/InsightReview.metrics --
- * shape fijo, no hace falta manejar llaves arbitrarias. `higherIsBetter`
- * decide el color de la flecha de cambio (menos comprometido/mes SI es
- * mejora, por eso va en false). */
+/** The only 3 keys that _extract_key_metrics (insight_service.py) writes
+ * into metrics_at_creation/metrics_at_last_review/InsightReview.metrics --
+ * fixed shape, no need to handle arbitrary keys. `higherIsBetter` decides
+ * the change arrow's color (less monthly committed IS an improvement,
+ * that's why it's false). */
 const METRIC_FIELDS: { key: string; label: string; format: 'money' | 'score'; higherIsBetter: boolean }[] = [
   { key: 'net_worth', label: 'Patrimonio neto', format: 'money', higherIsBetter: true },
   { key: 'health_score', label: 'Salud financiera', format: 'score', higherIsBetter: true },
   { key: 'committed_monthly', label: 'Comprometido mensual', format: 'money', higherIsBetter: false },
 ]
 
-/** net_worth/committed_monthly llegan como string (Decimal -> str via
- * json_safe, igual que cualquier "amount" en el resto de la app) --
- * health_score si llega como float nativo. Hay que aceptar ambos. */
+/** net_worth/committed_monthly arrive as a string (Decimal -> str via
+ * json_safe, same as any "amount" in the rest of the app) -- health_score
+ * does arrive as a native float. Both need to be accepted. */
 function toNumber(value: unknown): number | null {
   if (typeof value === 'number') return value
   if (typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Number(value))) return Number(value)
@@ -138,9 +138,9 @@ function MetricsComparison({
   )
 }
 
-/** useInsightReviews solo se habilita con reviewsOpen=true -- si nunca abres
- * el modal de un insight, nunca se piden sus reviews (evita N fetches de
- * golpe al cargar la lista de activos). */
+/** useInsightReviews is only enabled with reviewsOpen=true -- if you never
+ * open an insight's modal, its reviews are never requested (avoids N
+ * fetches all at once when loading the active list). */
 function ReviewsDialog({ insight }: { insight: Insight }) {
   const [open, setOpen] = useState(false)
   const { data: reviews, isLoading } = useInsightReviews(open ? insight.id : null)

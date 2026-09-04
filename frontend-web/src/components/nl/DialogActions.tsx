@@ -5,11 +5,12 @@ type IconComp = ComponentType<{ size?: number; className?: string }>
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/.test(navigator.userAgent)
 
-/** Anuncia el atajo de FormSubmitShortcut.tsx (eso es lo que de verdad envia
- * el form, esto solo lo anuncia). Va dentro de <DialogFooter>, nunca pegado
- * al boton -- apilarlo debajo del boton primario lo corria de su lugar de
- * siempre y lo desalineaba de Cancelar ("Propuesta 2 -- misma fila, extremo
- * opuesto" de atajo-guardar-propuestas.html). */
+/** Announces the shortcut from FormSubmitShortcut.tsx (that's what actually
+ * submits the form, this only announces it). Goes inside <DialogFooter>,
+ * never stacked right under the button -- stacking it below the primary
+ * button moved it from its usual place and misaligned it with Cancelar
+ * ("Propuesta 2 -- misma fila, extremo opuesto" from
+ * atajo-guardar-propuestas.html). */
 export function SubmitShortcutHint() {
   return (
     <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -25,11 +26,11 @@ export function SubmitShortcutHint() {
   )
 }
 
-/** Fila estandar del pie de un dialogo: la pista de Ctrl/Cmd+Enter en el
- * extremo izquierdo, los botones (Cancelar/Guardar, o solo Guardar cuando el
- * form no tiene Cancelar propio y depende de la X del encabezado) agrupados
- * en el derecho. Usar esto en vez de armar el `<div className="flex justify-end...">`
- * a mano en cada pantalla -- es el unico lugar que sabe donde va el hint. */
+/** Standard row for a dialog's footer: the Ctrl/Cmd+Enter hint on the far
+ * left, the buttons (Cancelar/Guardar, or just Guardar when the form has no
+ * Cancelar of its own and relies on the header's X) grouped on the right.
+ * Use this instead of hand-building the `<div className="flex justify-end...">`
+ * on each screen -- it's the only place that knows where the hint goes. */
 export function DialogFooter({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div className={`flex items-center justify-between gap-2 pt-1 ${className}`}>
@@ -39,18 +40,18 @@ export function DialogFooter({ children, className = '' }: { children: ReactNode
   )
 }
 
-/** Botonera estandar de los modales de la app ("Contorno tranquilo", elegida
- * junto con el usuario tras comparar 5 propuestas -- ver
- * modales-propuestas.html en la raiz del repo). El primario es un boton con
- * borde de acento sin relleno que se rellena solo al hover; Cancelar es
- * texto plano sin borde. El boton de cerrar (X) del encabezado ya esta
- * centralizado en components/ui/dialog.tsx -- este archivo es la otra mitad
- * del estandar, para no repetir la misma receta de clases en cada pantalla.
+/** Standard button group for the app's modals ("Contorno tranquilo", chosen
+ * together with the user after comparing 5 proposals -- see
+ * modales-propuestas.html at the repo root). The primary is a button with
+ * an unfilled accent border that fills in only on hover; Cancelar is plain
+ * text with no border. The header's close (X) button is already
+ * centralized in components/ui/dialog.tsx -- this file is the other half
+ * of the standard, so the same class recipe isn't repeated on every screen.
  *
- * `--primary`/`--primary-foreground` (index.css) YA apuntan a
- * --nl-accent-ink/--nl-accent-fg, asi que estas clases usan los tokens
- * semanticos de Tailwind en vez de var(--nl-*) directo -- se adaptan solas
- * a claro/oscuro igual que el resto de la app. */
+ * `--primary`/`--primary-foreground` (index.css) ALREADY point to
+ * --nl-accent-ink/--nl-accent-fg, so these classes use Tailwind's semantic
+ * tokens instead of var(--nl-*) directly -- they adapt on their own to
+ * light/dark just like the rest of the app. */
 export function DialogPrimaryButton({
   icon: Icon,
   pending = false,

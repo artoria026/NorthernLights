@@ -63,26 +63,26 @@ class Account(Base, TimestampMixin, SoftDeleteMixin):
     currency: Mapped[str] = mapped_column(String, default="MXN")
     color: Mapped[str] = mapped_column(String, default="#6366F1")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Logo subido por el usuario (el suyo, bajo su propio riesgo -- la app
-    # nunca redistribuye logos de bancos reales). Se normaliza en el frontend
-    # a un PNG 128x128 antes de subirlo, por eso Text basta sin montar storage.
+    # Logo uploaded by the user (their own, at their own risk -- the app
+    # never redistributes real bank logos). Normalized on the frontend
+    # to a 128x128 PNG before uploading, so Text is enough without setting up storage.
     logo_data_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Balance: cache desnormalizado. Fuente de verdad = journal_lines.
+    # Balance: denormalized cache. Source of truth = journal_lines.
     balance: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=0)
     initial_balance: Mapped[Decimal] = mapped_column(Numeric(15, 2), default=0)
 
     is_active: Mapped[bool] = mapped_column(default=True)
-    # Cuenta contable interna (categorias income/expense, ledger de deudas
-    # informales) que el motor de doble entrada resuelve/crea solo -- nunca
-    # se le muestra al usuario. list_accounts() la excluye siempre.
+    # Internal accounting account (income/expense categories, informal debt
+    # ledger) that the double-entry engine resolves/creates on its own -- never
+    # shown to the user. list_accounts() always excludes it.
     is_internal: Mapped[bool] = mapped_column(default=False)
 
-    # Campos especificos de TDC (subtype=credit_card)
+    # Credit card specific fields (subtype=credit_card)
     credit_limit: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
     interest_rate: Mapped[Decimal | None] = mapped_column(Numeric(6, 4), nullable=True)
     billing_cycle_day: Mapped[int | None] = mapped_column(nullable=True)
     payment_due_day: Mapped[int | None] = mapped_column(nullable=True)
 
-    # Sync offline (mobile, Fase 4)
+    # Offline sync (mobile, Phase 4)
     client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)

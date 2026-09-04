@@ -1,4 +1,4 @@
-from app.tasks import (  # noqa: F401  (registra tareas en celery_app)
+from app.tasks import (  # noqa: F401  (registers tasks with celery_app)
     alerts,
     budget,
     debts,

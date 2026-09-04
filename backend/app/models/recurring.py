@@ -15,7 +15,7 @@ FREQUENCIES = ("weekly", "biweekly", "monthly", "bimonthly", "annual")
 RECURRING_STATUSES = ("active", "paused", "cancelled")
 ALERT_URGENCIES = ("normal", "high", "critical")
 
-# item_type -> alert_urgency por defecto al crear (el usuario puede sobreescribirlo).
+# item_type -> default alert_urgency on creation (the user can override it).
 DEFAULT_ALERT_URGENCY = {
     "subscription": "normal",
     "service": "high",
@@ -25,11 +25,11 @@ DEFAULT_ALERT_URGENCY = {
 
 
 class RecurringItem(Base, TimestampMixin, SoftDeleteMixin):
-    """Suscripciones, servicios y cobros periodicos sin saldo que liquidar.
+    """Subscriptions, services, and periodic charges with no balance to settle.
 
-    Celery los detecta en su `next_date` y genera un journal_entry con
-    status='pending' (M04) — nunca 'confirmed' directo. El usuario confirma
-    o rechaza desde el endpoint estandar de transacciones.
+    Celery detects them at their `next_date` and generates a journal_entry with
+    status='pending' (M04) — never 'confirmed' directly. The user confirms
+    or rejects it from the standard transactions endpoint.
     """
 
     __tablename__ = "recurring_items"
@@ -68,9 +68,9 @@ class RecurringItem(Base, TimestampMixin, SoftDeleteMixin):
     frequency: Mapped[str] = mapped_column(String, nullable=False)
     frequency_day: Mapped[int | None] = mapped_column(nullable=True)
 
-    # Cuenta de cobro/pago (banco, efectivo o TDC) y su contrapartida contable
-    # (cuenta type=expense o type=income). El spec de Notion solo modela un
-    # account_id; aqui hacen falta dos porque M04 exige doble entrada real.
+    # Charge/payment account (bank, cash, or credit card) and its accounting
+    # counterpart (type=expense or type=income account). The Notion spec only models one
+    # account_id; here two are needed because M04 requires real double-entry bookkeeping.
     account_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=False
     )

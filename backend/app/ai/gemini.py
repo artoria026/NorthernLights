@@ -15,15 +15,15 @@ from app.ai.prompts import (
 )
 from app.core.config import settings
 
-# Sin thinking_config, gemini-flash-latest piensa con presupuesto
-# "automatico" (thinking_budget sin setear == -1) -- ese pensamiento interno
-# sale del MISMO pool que max_output_tokens, no de uno aparte. En un turno
-# pesado (ej. extraer varias filas de un estado de cuenta en PDF, ver
-# STATEMENT_INSTRUCTIONS en advisor.py) el modelo puede gastar TODO
-# AI_MAX_TOKENS pensando y terminar con finish_reason=MAX_TOKENS sin haber
-# escrito una sola palabra visible ni un tool_call -- un truncado silencioso,
-# indistinguible en el chat de "no paso nada". Topar el presupuesto de
-# pensamiento deja el resto garantizado para el output real.
+# Without thinking_config, gemini-flash-latest thinks with an
+# "automatic" budget (thinking_budget unset == -1) -- that internal thinking
+# comes out of the SAME pool as max_output_tokens, not a separate one. On a
+# heavy turn (e.g. extracting several rows from a PDF bank statement, see
+# STATEMENT_INSTRUCTIONS in advisor.py) the model can spend ALL of
+# AI_MAX_TOKENS thinking and end up with finish_reason=MAX_TOKENS without having
+# written a single visible word or a tool_call -- a silent truncation,
+# indistinguishable in the chat from "nothing happened". Capping the thinking
+# budget guarantees the rest for the actual output.
 THINKING_BUDGET_TOKENS = 1024
 
 
@@ -63,14 +63,14 @@ def _build_tools(tools: list[dict]) -> list[types.Tool]:
 
 
 def _build_contents(messages: list[dict]) -> list[types.Content]:
-    """Traduce el formato generico (compartido con ClaudeProvider, ver
-    advisor.py) a `types.Content`. Gemini solo conoce los roles 'user'/'model'
-    y no tiene un rol 'tool': los resultados de tools se mandan como
+    """Translates the generic format (shared with ClaudeProvider, see
+    advisor.py) into `types.Content`. Gemini only knows the 'user'/'model' roles
+    and has no 'tool' role: tool results are sent as
     Content(role='user', parts=[Part.from_function_response(...)]).
 
-    Los bloques `tool_result` de advisor.py solo traen `tool_use_id`, no el
-    nombre de la tool -- lo recuperamos del `tool_use` correspondiente que ya
-    vimos antes en el mismo historial."""
+    The `tool_result` blocks from advisor.py only carry `tool_use_id`, not the
+    tool name -- we recover it from the matching `tool_use` we already
+    saw earlier in the same history."""
     tool_name_by_id: dict[str, str] = {}
     for message in messages:
         if message["role"] != "assistant" or not isinstance(message["content"], list):
@@ -108,11 +108,11 @@ def _build_contents(messages: list[dict]) -> list[types.Content]:
                         )
                     )
                 elif block["type"] == "document":
-                    # Shape nativo de Anthropic (advisor.py lo arma asi para
-                    # que Claude no necesite traduccion) -- aqui si hay que
-                    # convertirlo al Part de Gemini. Sin esta rama, un
-                    # adjunto se ignoraria en silencio (el for de arriba no
-                    # tiene `else`).
+                    # Anthropic's native shape (advisor.py builds it this way so
+                    # that Claude doesn't need translation) -- here it does
+                    # need converting to Gemini's Part. Without this branch, an
+                    # attachment would be silently ignored (the for loop above has
+                    # no `else`).
                     source = block["source"]
                     parts.append(
                         types.Part.from_bytes(
@@ -139,13 +139,13 @@ class GeminiProvider(AIProvider):
             thinking_config=types.ThinkingConfig(thinking_budget=THINKING_BUDGET_TOKENS),
         )
         try:
-            # google-genai ya reintenta internamente (tenacity) antes de
-            # rendirse -- esto es UN reintento mas, con una pausa mas larga,
-            # especifico para picos de demanda de pocos segundos ("Spikes in
-            # demand are usually temporary" es el mensaje literal del 503).
-            # Solo aplica ANTES de que llegue ningun chunk (abrir el
-            # stream), nunca a medio turno, para no repetir texto ya
-            # mandado.
+            # google-genai already retries internally (tenacity) before
+            # giving up -- this is ONE more retry, with a longer pause,
+            # specific to short demand spikes ("Spikes in
+            # demand are usually temporary" is the literal 503 message).
+            # Only applies BEFORE any chunk arrives (opening the
+            # stream), never mid-turn, to avoid repeating text already
+            # sent.
             try:
                 stream = await self._client.aio.models.generate_content_stream(
                     model=settings.GEMINI_MODEL, contents=contents, config=config
@@ -159,10 +159,10 @@ class GeminiProvider(AIProvider):
                 if not chunk.candidates:
                     continue
                 candidate = chunk.candidates[0]
-                # finish_reason viene en el chunk final, que a veces no trae
-                # `content` (por eso este chequeo va ANTES del `continue` de
-                # abajo -- si estuviera despues, un chunk vacio con solo el
-                # finish_reason se saltaria sin que nadie lo revisara nunca).
+                # finish_reason comes in the final chunk, which sometimes has no
+                # `content` (that's why this check goes BEFORE the `continue`
+                # below -- if it were after, an empty chunk with only the
+                # finish_reason would get skipped without anyone ever checking it).
                 finish_reason = getattr(candidate, "finish_reason", None)
                 if (
                     finish_reason is not None
@@ -182,9 +182,9 @@ class GeminiProvider(AIProvider):
                             "id": call_id,
                             "name": part.function_call.name,
                             "input": dict(part.function_call.args or {}),
-                            # Ver docstring de AIProvider.chat_stream: campo
-                            # opaco, especifico de Gemini, que el orquestador
-                            # solo reenvia sin interpretarlo.
+                            # See AIProvider.chat_stream docstring: opaque
+                            # field, specific to Gemini, that the orchestrator
+                            # just forwards without interpreting it.
                             "provider_state": part.thought_signature,
                         }
         except genai_errors.APIError as e:

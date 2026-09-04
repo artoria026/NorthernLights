@@ -137,7 +137,8 @@ async def test_health_score_perfect_with_no_debt_and_liquid_cash(client: AsyncCl
     response = await client.get("/api/v1/engine/health-score", headers=headers)
     assert response.status_code == 200
     body = response.json()["data"]
-    # Sin compromisos ni TDC: DTI=100, credito=100, emergencia=100 (committed=0 -> 99 meses)
+    # No commitments and no credit cards: DTI=100, credit=100, emergency=100
+    # (committed=0 -> 99 months)
     assert body["components"]["dti"]["score"] == 100.0
     assert body["components"]["credit_utilization"]["score"] == 100.0
     assert body["components"]["emergency_coverage_months"]["score"] == 100.0

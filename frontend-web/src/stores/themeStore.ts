@@ -5,8 +5,8 @@ import type { Theme } from '@/types'
 interface ThemeState {
   mode: Theme
   toggle: () => void
-  /** Fija el tema sin invertirlo -- para cuando la cuenta (backend) trae un
-   * valor distinto al que quedo guardado en este navegador. */
+  /** Sets the theme without toggling it -- for when the account (backend) carries a
+   * different value than what was saved in this browser. */
   setMode: (mode: Theme) => void
   apply: () => void
 }

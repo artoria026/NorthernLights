@@ -7,12 +7,12 @@ import { TOUR_CONTENT, type ModuleKey } from '@/lib/tours'
 import { hasSeenTourWelcome, markTourWelcomeSeen } from '@/lib/tourSeen'
 import { useTourStore } from '@/stores/tourStore'
 
-/** Mismo tema de color que ya usa la sidebar para agrupar Inicio/Cuentas/
+/** Same color scheme the sidebar already uses to group Inicio/Cuentas/
  * Transacciones/Presupuesto/Categorías/Metas ("Diario"), Deudas/Recurrentes/
- * Suscripciones ("Compromisos") y Asesor IA/Insights/Reportes ("Inteligencia")
- * -- ver navbar-and-font-proposals.html, Nav 02. Solo las pantallas de cuenta
- * o sistema (Ajustes, Notificaciones, Admin) no pertenecen a ningun grupo y
- * simplemente no pasan `section` a ViewHeader. */
+ * Suscripciones ("Compromisos") and Asesor IA/Insights/Reportes
+ * ("Inteligencia") -- see navbar-and-font-proposals.html, Nav 02. Only
+ * account or system screens (Ajustes, Notificaciones, Admin) don't belong
+ * to any group and simply don't pass `section` to ViewHeader. */
 export const HEADER_SECTIONS = {
   diario: { label: 'Diario', color: 'var(--nl-accent)', ink: 'var(--nl-accent-ink)' },
   compromisos: { label: 'Compromisos', color: 'var(--nl-blue)', ink: 'var(--nl-blue-ink)' },
@@ -21,14 +21,14 @@ export const HEADER_SECTIONS = {
 
 export type HeaderSection = (typeof HEADER_SECTIONS)[keyof typeof HEADER_SECTIONS]
 
-/** Header unico para toda la app, sin excepciones -- combina las propuestas 3
- * (acento de color bajo el titulo), 4 (eyebrow + subtitulo) y 5 (sticky al
- * hacer scroll) de header-proposals.html. Es la MISMA tarjeta que StatCard y
- * cualquier otro contenedor (mismo bg-card/borde/radio) para que se vea igual
- * en todas las pantallas, incluida Advisor.tsx -- ahi, como su columna
- * cancela el padding del Layout por su cuenta (para que el chat ocupe toda
- * la pantalla), el propio Advisor.tsx envuelve este componente en un div con
- * margen positivo que le devuelve el padding normal solo al header. */
+/** Single header for the whole app, no exceptions -- combines proposals 3
+ * (color accent below the title), 4 (eyebrow + subtitle) and 5 (sticky on
+ * scroll) from header-proposals.html. It's the SAME card as StatCard and
+ * any other container (same bg-card/border/radius) so it looks identical
+ * across every screen, including Advisor.tsx -- there, since its column
+ * cancels the Layout padding on its own (so the chat fills the whole
+ * screen), Advisor.tsx itself wraps this component in a div with positive
+ * margin that gives normal padding back to the header only. */
 export function ViewHeader({
   icon,
   title,
@@ -41,18 +41,18 @@ export function ViewHeader({
   icon: ReactNode
   title: string
   actions?: ReactNode
-  /** Contenido del modal de ayuda de esta pantalla (HelpSection/HelpTip/DemoFlow
-   * de components/nl/Help.tsx). Si se omite, no aparece el boton "?". */
+  /** Content of this screen's help modal (HelpSection/HelpTip/DemoFlow
+   * from components/nl/Help.tsx). If omitted, the "?" button doesn't appear. */
   help?: ReactNode
-  /** Uno de HEADER_SECTIONS -- pinta el eyebrow arriba del titulo y la
-   * rayita de color debajo. Se omite en pantallas sin grupo asignado. */
+  /** One of HEADER_SECTIONS -- paints the eyebrow above the title and the
+   * color stripe below. Omitted on screens with no assigned group. */
   section?: HeaderSection
-  /** Linea de contexto opcional debajo del titulo (ej. el saludo de Inicio). */
+  /** Optional context line below the title (e.g. the Inicio greeting). */
   subtitle?: ReactNode
-  /** Modulo de tours.ts -- si tiene entrada en TOUR_CONTENT, muestra el
-   * boton de "Recorrido" persistente y, la primera vez, el modal de
-   * bienvenida (ver TourHost.tsx). Los modulos sin entrada todavia no
-   * cambian nada aqui -- rollout incremental sin tocar tipos. */
+  /** Module from tours.ts -- if it has an entry in TOUR_CONTENT, shows the
+   * persistent "Recorrido" button and, the first time, the welcome modal
+   * (see TourHost.tsx). Modules without an entry don't change anything
+   * here yet -- incremental rollout without touching types. */
   tourKey?: ModuleKey
 }) {
   const startTour = useTourStore((s) => s.start)
@@ -61,23 +61,23 @@ export function ViewHeader({
 
   useEffect(() => {
     if (tourKey && tourContent && !hasSeenTourWelcome(tourKey)) setWelcomeOpen(true)
-    // Solo debe abrirse una vez al montar la pantalla, no en cada render.
+    // Should only open once when the screen mounts, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tourKey])
 
   return (
     <div
-      // [transform:translateZ(0)] promueve el header a su propia capa de
-      // composicion GPU -- sin esto, en algunos navegadores/GPUs el sticky
-      // con esquinas redondeadas queda repintando la misma capa que el
-      // contenido que scrollea detras, y deja un "ghosting" visible (frames
-      // viejos asomando un instante detras del header al scrollear).
-      // [isolation:isolate] + [contain:paint] fuerzan ademas un contexto de
-      // pintado propio -- translateZ(0) solo no alcanzo a eliminar el
-      // ghosting, esto evita que el navegador reutilice pixeles de la capa
-      // de abajo al repintar el header. Ojo: contain:paint recorta cualquier
-      // hijo del header que necesite pintar fuera de su caja (tooltips,
-      // dropdowns) -- hoy ViewHeader no tiene ninguno.
+      // [transform:translateZ(0)] promotes the header to its own GPU
+      // compositing layer -- without this, on some browsers/GPUs the sticky
+      // element with rounded corners ends up repainting the same layer as
+      // the content scrolling behind it, leaving a visible "ghosting"
+      // (old frames flashing behind the header for an instant while
+      // scrolling). [isolation:isolate] + [contain:paint] additionally
+      // force its own paint context -- translateZ(0) alone wasn't enough to
+      // eliminate the ghosting, this stops the browser from reusing pixels
+      // from the layer below when repainting the header. Careful:
+      // contain:paint clips any header child that needs to paint outside
+      // its box (tooltips, dropdowns) -- today ViewHeader has none.
       className="sticky top-3 z-10 mb-6 rounded-md border border-border bg-card px-4 lg:px-8 py-3.5 [transform:translateZ(0)] [isolation:isolate] [contain:paint]"
     >
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -124,11 +124,11 @@ export function ViewHeader({
           {subtitle && <p className="text-[12.5px] text-muted-foreground mt-1.5 ml-[30px]">{subtitle}</p>}
         </div>
         {actions && (
-          // w-full en movil -- una vez que este bloque cae a su propia linea
-          // (el flex-wrap del row de arriba), sigue siendo flex-shrink-0 por
-          // dentro y nunca se encoge bajo el ancho natural de su contenido a
-          // menos que tenga un ancho real del cual encoger primero. En
-          // desktop vuelve a w-auto para sentarse junto al titulo como antes.
+          // w-full on mobile -- once this block drops to its own line (the
+          // flex-wrap of the row above), it's still flex-shrink-0 on the
+          // inside and never shrinks below its content's natural width
+          // unless it has a real width to shrink from first. On desktop
+          // it goes back to w-auto to sit next to the title as before.
           <div className="flex items-center gap-3 flex-wrap w-full lg:w-auto lg:flex-shrink-0">
             {actions}
           </div>
@@ -172,11 +172,11 @@ export function StatCard({
   valueClassName?: string
   note?: ReactNode
   borderColor?: string
-  /** Version mas chica (menos padding, icono mas pegado, valor mas chico) --
-   * opcional y de un solo lado: nadie mas la pide hoy, solo Dashboard.tsx la
-   * usa para que las 6 tarjetas de arriba ocupen menos alto. */
+  /** Smaller version (less padding, icon closer, smaller value) --
+   * optional and one-sided: nobody else asks for it today, only
+   * Dashboard.tsx uses it so the 6 cards above take up less height. */
   compact?: boolean
-  /** Ancla opcional para un paso del recorrido guiado (ver TourHost.tsx). */
+  /** Optional anchor for a step of the guided tour (see TourHost.tsx). */
   dataTour?: string
 }) {
   return (
@@ -290,10 +290,10 @@ export function ToggleSwitch({
   )
 }
 
-/** `color` es el color REAL de la categoria (category.color, ver Categorias)
- * -- pasalo siempre que tengas category_id disponible. El hash por nombre
- * (categoryColor) solo aplica como respaldo cuando no hay una categoria de
- * verdad detras (ej. "Transferencia"/"Préstamo" en vez de una categoria). */
+/** `color` is the category's REAL color (category.color, see Categorias)
+ * -- pass it whenever you have category_id available. The name-based hash
+ * (categoryColor) only applies as a fallback when there's no real category
+ * behind it (e.g. "Transferencia"/"Préstamo" instead of a category). */
 export function CategoryBadge({ name, color }: { name: string; color?: string }) {
   return (
     <span

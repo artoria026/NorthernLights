@@ -9,11 +9,11 @@ from app.models.mixins import TimestampMixin
 
 
 class Feedback(Base, TimestampMixin):
-    """Reporte de bug o sugerencia de feature, mandado desde el modal de
-    novedades. `status` lo administra un admin desde /admin -- ver la policy
-    rls_feedback (migracion 293528f67338): a diferencia del resto de las
-    tablas, un admin ve y puede actualizar CUALQUIER fila, no solo la
-    propia."""
+    """Bug report or feature suggestion, sent from the what's new
+    modal. `status` is managed by an admin from /admin -- see the
+    rls_feedback policy (migration 293528f67338): unlike the rest of the
+    tables, an admin can see and update ANY row, not just their
+    own."""
 
     __tablename__ = "feedback"
     __table_args__ = (

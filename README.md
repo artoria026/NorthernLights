@@ -1,62 +1,62 @@
-# NorthernLights — Finanzas Personales
+# NorthernLights — Personal Finance
 
-App web de finanzas personales con contabilidad de doble entrada, seguimiento de deudas, presupuesto mensual, gastos recurrentes/suscripciones, reportes históricos, y un asesor financiero con IA (Claude/Gemini) que puede leer y crear movimientos por chat.
+Personal finance web app with double-entry accounting, debt tracking, monthly budget, recurring expenses/subscriptions, historical reports, and an AI financial advisor (Claude/Gemini) that can read and create transactions via chat.
 
 ## Stack
 
-- **Backend:** Python 3.12, FastAPI, SQLAlchemy 2.0 (async, asyncpg), PostgreSQL 16, Redis 7, Celery, Alembic. Gestor de paquetes: `uv`.
+- **Backend:** Python 3.12, FastAPI, SQLAlchemy 2.0 (async, asyncpg), PostgreSQL 16, Redis 7, Celery, Alembic. Package manager: `uv`.
 - **Frontend:** React 19, TypeScript, Vite 8, Tailwind CSS v4, shadcn/ui (Base UI), TanStack Query v5, Zustand, React Router v7.
-- **IA:** proveedor intercambiable vía `AI_PROVIDER` — Gemini (`gemini-flash-latest`, default) o Claude (`claude-sonnet-4-6`), function calling + streaming.
-- **Auth:** JWT propio (access + refresh token con rotación) + Google OAuth opcional.
+- **AI:** swappable provider via `AI_PROVIDER` — Gemini (`gemini-flash-latest`, default) or Claude (`claude-sonnet-4-6`), function calling + streaming.
+- **Auth:** custom JWT (access + refresh token with rotation) + optional Google OAuth.
 
-## Estructura del repo
+## Repo structure
 
 ```
 northern_lights/
 ├── backend/
 │   ├── app/
-│   │   ├── ai/            # providers (claude.py/gemini.py), prompts, tools del asesor
+│   │   ├── ai/            # providers (claude.py/gemini.py), prompts, advisor tools
 │   │   ├── core/           # config, database (RLS), security (JWT), celery, redis
 │   │   ├── models/         # SQLAlchemy ORM
-│   │   ├── routers/        # endpoints FastAPI (uno por módulo)
+│   │   ├── routers/        # FastAPI endpoints (one per module)
 │   │   ├── schemas/        # Pydantic
-│   │   ├── services/       # lógica de negocio (un archivo por módulo)
-│   │   └── tasks/          # jobs de Celery (alertas, reportes, recurrentes, etc.)
-│   ├── alembic/versions/   # migraciones (una cadena lineal, sin branches)
-│   └── tests/               # pytest, DB real (finanzas_test) por transacción/savepoint
+│   │   ├── services/       # business logic (one file per module)
+│   │   └── tasks/          # Celery jobs (alerts, reports, recurring items, etc.)
+│   ├── alembic/versions/   # migrations (a single linear chain, no branches)
+│   └── tests/               # pytest, real DB (finanzas_test) per transaction/savepoint
 ├── frontend-web/
 │   └── src/
-│       ├── pages/           # una página por ruta principal
-│       ├── components/nl/   # componentes compartidos del dominio (charts, help, etc.)
+│       ├── pages/           # one page per main route
+│       ├── components/nl/   # shared domain components (charts, help, etc.)
 │       ├── components/ui/   # shadcn/ui
-│       ├── hooks/            # un hook por recurso (TanStack Query)
-│       └── lib/              # utils, charts SVG propios, category icons
+│       ├── hooks/            # one hook per resource (TanStack Query)
+│       └── lib/              # utils, custom SVG charts, category icons
 ├── docs/
-│   ├── legal/DISCLAIMER.md  # aviso de privacidad (copia legible; el texto real vive en frontend-web/src/lib/disclaimer.ts)
-│   ├── DISCLAIMER_INPUTS.md # inventario de features/datos usado como insumo para el disclaimer
-│   ├── CONVENTIONS.md       # nomenclatura de branches y commits
-│   └── RELEASING.md         # checklist para liberar una versión y redactar el changelog
-├── CLAUDE.md                # instrucciones para agentes de IA que trabajen en este repo
-└── docker-compose.yml       # solo pgAdmin (opcional) — Postgres/Redis son nativos, no Docker
+│   ├── legal/DISCLAIMER.md  # privacy notice (readable copy; the real text lives in frontend-web/src/lib/disclaimer.ts)
+│   ├── DISCLAIMER_INPUTS.md # inventory of features/data used as input for the disclaimer
+│   ├── CONVENTIONS.md       # branch and commit naming conventions
+│   └── RELEASING.md         # checklist for releasing a version and writing the changelog
+├── CLAUDE.md                # instructions for AI agents working in this repo
+└── docker-compose.yml       # pgAdmin only (optional) — Postgres/Redis are native, not Docker
 ```
 
-## Setup en una máquina nueva
+## Setup on a new machine
 
-### Requisitos
+### Requirements
 
-- PostgreSQL 16+ y Redis corriendo (nativos o en Docker — el `docker-compose.yml` de este repo solo trae pgAdmin, asume que ya tienes ambos disponibles).
-- Python 3.12+ con [`uv`](https://docs.astral.sh/uv/) instalado.
+- PostgreSQL 16+ and Redis running (native or in Docker — this repo's `docker-compose.yml` only brings up pgAdmin, it assumes you already have both available).
+- Python 3.12+ with [`uv`](https://docs.astral.sh/uv/) installed.
 - Node.js 20+.
 
-### 1. Base de datos
+### 1. Database
 
 ```bash
-createuser -h localhost -p 5432 finanzas_user -P    # te pide poner un password
+createuser -h localhost -p 5432 finanzas_user -P    # prompts you for a password
 createdb   -h localhost -p 5432 -O finanzas_user finanzas_dev
-createdb   -h localhost -p 5432 -O finanzas_user finanzas_test   # para correr pytest
+createdb   -h localhost -p 5432 -O finanzas_user finanzas_test   # for running pytest
 ```
 
-Si ese puerto/usuario ya está ocupado por otro proyecto en tu máquina, usa cualquier otro — solo tiene que coincidir con `DATABASE_URL` en el `.env` del paso 3.
+If that port/user is already taken by another project on your machine, use any other — it just needs to match `DATABASE_URL` in the `.env` from step 3.
 
 ### 2. Backend
 
@@ -65,36 +65,36 @@ cd backend
 cp .env.example .env
 ```
 
-Completa en `.env`:
-- `DATABASE_URL` con el usuario/password/puerto del paso 1.
-- `SECRET_KEY` — cualquier string aleatorio largo (`python -c "import secrets; print(secrets.token_urlsafe(64))"`).
-- `ANTHROPIC_API_KEY` y/o `GOOGLE_AI_API_KEY` — necesitas al menos la del proveedor que dejes en `AI_PROVIDER` (default `gemini`) para que el Asesor funcione; sin ninguna, el resto de la app funciona igual.
-- `ADMIN_EMAIL`/`ADMIN_PASSWORD` — si los dejas, la migración inicial crea ese usuario con rol admin (idempotente, no rompe si los dejas vacíos).
-- `ADMIN_DB_PASSWORD` — cualquier password nuevo, lo vas a usar en el paso 4.
-- Google OAuth / Firebase / email quedan opcionales — sin configurarlos, esos flujos específicos no funcionan pero el resto de la app sí.
+Fill in `.env`:
+- `DATABASE_URL` with the user/password/port from step 1.
+- `SECRET_KEY` — any long random string (`python -c "import secrets; print(secrets.token_urlsafe(64))"`).
+- `ANTHROPIC_API_KEY` and/or `GOOGLE_AI_API_KEY` — you need at least the one for the provider set in `AI_PROVIDER` (default `gemini`) for the Advisor to work; without either, the rest of the app still works.
+- `ADMIN_EMAIL`/`ADMIN_PASSWORD` — if set, the initial migration creates that user with the admin role (idempotent, doesn't break if left empty).
+- `ADMIN_DB_PASSWORD` — any new password, you'll use it in step 4.
+- Google OAuth / Firebase / email remain optional — without configuring them, those specific flows won't work but the rest of the app will.
 
 ```bash
 uv sync
 uv run alembic upgrade head
 ```
 
-### 3. El rol de reportes de Admin (paso manual, una sola vez por base de datos)
+### 3. The Admin reporting role (manual step, once per database)
 
-El panel de Admin necesita ver datos de **todos** los usuarios (conteos totales), pero cada tabla de usuario tiene Row-Level Security con `FORCE` activo — ni el propio rol de la app puede saltarla sin permiso explícito. La única migración que falta correr es un `CREATE ROLE`, y Alembic no puede hacerlo solo porque el rol de la app (`finanzas_user`) **no tiene** `CREATEROLE` a propósito. Con cualquier superusuario de tu Postgres:
+The Admin panel needs to see **all** users' data (total counts), but every user table has Row-Level Security with `FORCE` enabled — not even the app's own role can bypass it without explicit permission. The one migration that can't run on its own is a `CREATE ROLE`, and Alembic can't do it alone because the app role (`finanzas_user`) deliberately **doesn't have** `CREATEROLE`. With any Postgres superuser:
 
 ```sql
-CREATE ROLE finanzas_admin LOGIN PASSWORD '<lo que pusiste en ADMIN_DB_PASSWORD>'
+CREATE ROLE finanzas_admin LOGIN PASSWORD '<what you set in ADMIN_DB_PASSWORD>'
     NOSUPERUSER NOCREATEDB NOCREATEROLE BYPASSRLS;
 GRANT finanzas_admin TO finanzas_user;
 ```
 
-Y luego, para que ese rol tenga los `SELECT` que necesita:
+And then, so that role has the `SELECT` grants it needs:
 
 ```bash
-uv run alembic upgrade head   # ahora sí encuentra el rol y otorga los GRANTs
+uv run alembic upgrade head   # now it finds the role and grants the GRANTs
 ```
 
-Sin este paso, la app funciona normal — solo el panel de Admin (`/admin`) falla al pedir `/admin/users` o `/admin/stats`.
+Without this step, the app works normally — only the Admin panel (`/admin`) fails when it requests `/admin/users` or `/admin/stats`.
 
 ```bash
 uv run uvicorn app.main:app --reload --port 8000
@@ -111,22 +111,22 @@ npm run dev
 # http://localhost:5173
 ```
 
-`VITE_ENABLE_DEV_LOGIN=true` en `.env.local` habilita el botón "Usar cuenta de prueba" en `/login` (además requiere modo dev de Vite — nunca aparece en `npm run build`). Necesitas registrar esa cuenta a mano una vez (`test@local.dev` / `test1234`, o cambia el hardcode en `Login.tsx` si prefieres otra).
+`VITE_ENABLE_DEV_LOGIN=true` in `.env.local` enables the "Use test account" button on `/login` (also requires Vite dev mode — it never shows up in `npm run build`). You need to register that account by hand once (`test@local.dev` / `test1234`, or change the hardcoded value in `Login.tsx` if you'd rather use something else).
 
-### 5. (Opcional) Celery — alertas, reportes automáticos, recordatorios
+### 5. (Optional) Celery — alerts, automatic reports, reminders
 
 ```bash
 cd backend
 uv run celery -A app.core.celery worker --loglevel=info
-uv run celery -A app.core.celery beat --loglevel=info   # scheduler de tareas periódicas
+uv run celery -A app.core.celery beat --loglevel=info   # periodic task scheduler
 ```
 
-La app funciona sin esto — solo no correrán los jobs periódicos (generar reportes mensuales, avisos de tarjeta por vencer, recordatorios de pagos pendientes).
+The app works without this — you just won't get the periodic jobs (generating monthly reports, upcoming card-payment alerts, pending-payment reminders).
 
 ## Tests
 
 ```bash
-cd backend && uv run pytest              # 220 tests, usa finanzas_test (se migra/desmigra sola en cada corrida)
+cd backend && uv run pytest              # 220 tests, uses finanzas_test (migrates/unmigrates itself on each run)
 cd backend && uv run ruff check .
 
 cd frontend-web && npm run test -- --run
@@ -134,48 +134,48 @@ cd frontend-web && npx tsc -b
 cd frontend-web && npm run lint
 ```
 
-`tests/test_rls_enforcement.py` prueba RLS contra un rol de verdad (sin superuser/bypassrls) para detectar violaciones reales, no solo razonadas. Ese rol (`finanzas_rls_test`) es fijo y se crea una sola vez a mano, mismo motivo que `finanzas_admin` (`finanzas_user` no tiene `CREATEROLE`):
+`tests/test_rls_enforcement.py` tests RLS against a real role (without superuser/bypassrls) to catch actual violations, not just reasoned-about ones. That role (`finanzas_rls_test`) is fixed and created by hand once, for the same reason as `finanzas_admin` (`finanzas_user` doesn't have `CREATEROLE`):
 
 ```sql
 CREATE ROLE finanzas_rls_test LOGIN PASSWORD 'regression-test-only' NOSUPERUSER NOBYPASSRLS;
 ```
 
-Sin ese rol, esos 5 tests se saltan solos (`skip`, no fallan) con la instrucción de arriba en el mensaje.
+Without that role, those 5 tests skip themselves (`skip`, not a failure) with the instructions above shown in the message.
 
-## Arquitectura — decisiones no obvias
+## Architecture — non-obvious decisions
 
-- **Doble entrada contable:** cada `JournalEntry` (transacción visible al usuario) tiene 2+ `JournalLine` (debe/haber) contra `Account`. Para income/expense simples el usuario nunca ve ni elige la cuenta contable interna del otro lado (`account_service.get_or_create_category_ledger_account`) — solo aplica en transfers, préstamos y gastos compartidos.
-- **RLS de verdad, no decorativo:** todas las tablas con datos de usuario tienen `ALTER TABLE ... FORCE ROW LEVEL SECURITY` (parte de la migración inicial `293528f67338`). Sin `FORCE`, Postgres exime al dueño de la tabla de sus propias policies — y el rol de la app es el dueño. Cada request autenticado pasa por `get_rls_db`, que hace `SET LOCAL app.current_user_id` antes de tocar cualquier tabla de usuario. `current_setting(..., true)` no da `NULL` cuando la variable nunca se seteó en la sesión (da `''`, que revienta el cast a `uuid`) — todas las policies envuelven el cast con `NULLIF(..., '')` (migración `a48efe292423`).
-- **Rol `finanzas_admin`:** único bypass deliberado de RLS, de solo lectura (`SELECT` nada más, ni siquiera puede escribir). `finanzas_user` es miembro suyo; `get_admin_db` hace `SET LOCAL ROLE finanzas_admin` sobre la misma conexión de siempre (no hay una segunda pool/engine). Ver paso 3 del setup.
-- **Categorías del sistema:** filas de `categories` con `user_id IS NULL`, fijas para todos los usuarios (9 de gasto + 3 de ingreso, sembradas directo en la migración inicial `293528f67338`). El asesor de IA y la importación por Excel resuelven categoría por nombre exacto (case-insensitive) contra las que existan en ese momento — si cambias los nombres, actualiza también la lista hardcodeada en `app/ai/advisor.py` (system prompt) y `frontend-web/src/pages/ImportarDatos.tsx` (texto de ayuda).
-- **Refresh tokens hasheados + rate-limit de login:** `devices.refresh_token` guarda `sha256(token)`, nunca el valor real — una fuga de esa tabla no entrega sesiones listas para usar. 5 intentos fallidos de login (por email, vía Redis) bloquean 15 minutos.
-- **Botón de login de prueba:** gateado por DOS condiciones (`import.meta.env.DEV` de Vite + `VITE_ENABLE_DEV_LOGIN=true`), nunca por una sola — así queda protegido tanto de un build de producción como de quedar prendido sin querer en un `dev` compartido.
-- **Montos como string:** los campos `Decimal` del backend se serializan como string en JSON (`json_safe()`), nunca como `number` — el frontend siempre hace `Number(valor)` antes de `toLocaleString`/aritmética, nunca asume que ya es numérico.
+- **Double-entry accounting:** every `JournalEntry` (the transaction the user sees) has 2+ `JournalLine`s (debit/credit) against an `Account`. For simple income/expense entries the user never sees or picks the internal ledger account on the other side (`account_service.get_or_create_category_ledger_account`) — that only surfaces for transfers, loans, and shared expenses.
+- **Real RLS, not decorative:** every table holding user data has `ALTER TABLE ... FORCE ROW LEVEL SECURITY` (part of the initial migration `293528f67338`). Without `FORCE`, Postgres exempts the table owner from its own policies — and the app role is the owner. Every authenticated request goes through `get_rls_db`, which runs `SET LOCAL app.current_user_id` before touching any user table. `current_setting(..., true)` doesn't return `NULL` when the variable was never set in the session (it returns `''`, which blows up the cast to `uuid`) — every policy wraps the cast with `NULLIF(..., '')` (migration `a48efe292423`).
+- **`finanzas_admin` role:** the one deliberate RLS bypass, read-only (`SELECT` only, can't even write). `finanzas_user` is a member of it; `get_admin_db` runs `SET LOCAL ROLE finanzas_admin` on the same connection as always (there's no second pool/engine). See step 3 of setup.
+- **System categories:** rows in `categories` with `user_id IS NULL`, fixed for every user (9 expense + 3 income, seeded directly in the initial migration `293528f67338`). The AI advisor and the Excel bulk import resolve categories by exact name (case-insensitive) against whatever exists at that moment — if you rename them, also update the hardcoded list in `app/ai/advisor.py` (system prompt) and `frontend-web/src/pages/ImportarDatos.tsx` (help text).
+- **Hashed refresh tokens + login rate-limiting:** `devices.refresh_token` stores `sha256(token)`, never the real value — a leak of that table doesn't hand out ready-to-use sessions. 5 failed login attempts (per email, via Redis) trigger a 15-minute lockout.
+- **Test login button:** gated by TWO conditions (Vite's `import.meta.env.DEV` + `VITE_ENABLE_DEV_LOGIN=true`), never just one — this protects it both from a production build and from being accidentally left on in a shared `dev` environment.
+- **Amounts as strings:** the backend's `Decimal` fields are serialized as strings in JSON (`json_safe()`), never as `number` — the frontend always does `Number(value)` before `toLocaleString`/arithmetic, never assumes it's already numeric.
 
-## Mapa de funcionalidades
+## Feature map
 
-| Módulo | Router backend | Service(s) | Página frontend |
+| Module | Backend router | Service(s) | Frontend page |
 |---|---|---|---|
-| Auth / perfil / dispositivos | `auth.py` | `auth_service.py`, `google_auth_service.py` | `Login`, `Register`, `Settings`, `AuthCallback` |
-| Cuentas | `accounts.py` | `account_service.py` | `Accounts` |
-| Categorías | `categories.py` | `category_service.py` | `Categorias` |
-| Transacciones | `transactions.py` | `transaction_service.py` | `Transactions` |
-| Deudas | `debts.py` | `debt_service.py` | `Debts` |
-| Recurrentes / suscripciones | `recurring.py` | `recurring_service.py` | `Recurring`, `Subscriptions` |
-| Presupuesto | `budget.py` | `budget_service.py` | `Budget` |
-| Motor financiero (snapshot, salud) | `engine.py` | `engine_service.py` | `Dashboard` |
+| Auth / profile / devices | `auth.py` | `auth_service.py`, `google_auth_service.py` | `Login`, `Register`, `Settings`, `AuthCallback` |
+| Accounts | `accounts.py` | `account_service.py` | `Accounts` |
+| Categories | `categories.py` | `category_service.py` | `Categorias` |
+| Transactions | `transactions.py` | `transaction_service.py` | `Transactions` |
+| Debts | `debts.py` | `debt_service.py` | `Debts` |
+| Recurring / subscriptions | `recurring.py` | `recurring_service.py` | `Recurring`, `Subscriptions` |
+| Budget | `budget.py` | `budget_service.py` | `Budget` |
+| Financial engine (snapshot, health) | `engine.py` | `engine_service.py` | `Dashboard` |
 | Insights | `insights.py` | `insight_service.py` | `Insights` |
-| Reportes | `reports.py` | `report_service.py`, `report_insight_service.py` | `Reports` |
-| Asesor IA | `ai.py` | `chat_service.py`, `app/ai/*` | `Advisor` |
-| Notificaciones | `notifications.py` | `notification_service.py`, `push_service.py` | `Notifications` |
-| Importación masiva (Excel) | `bulk_import.py` | `bulk_import_service.py` | `ImportarDatos` |
-| Exportar/borrar mis datos | `data.py` | `data_service.py` | `Settings` |
+| Reports | `reports.py` | `report_service.py`, `report_insight_service.py` | `Reports` |
+| AI advisor | `ai.py` | `chat_service.py`, `app/ai/*` | `Advisor` |
+| Notifications | `notifications.py` | `notification_service.py`, `push_service.py` | `Notifications` |
+| Bulk import (Excel) | `bulk_import.py` | `bulk_import_service.py` | `ImportarDatos` |
+| Export/delete my data | `data.py` | `data_service.py` | `Settings` |
 | Admin | `admin.py` | `admin_service.py` | `Admin` |
-| Feedback (bug/feature desde el modal de novedades) | `feedback.py` | `feedback_service.py` | — (modal, no página propia) |
+| Feedback (bug/feature request from the what's-new modal) | `feedback.py` | `feedback_service.py` | — (modal, no dedicated page) |
 
-## Pendientes conocidos
+## Known gaps
 
-- Sin proveedor de email real conectado — `app/tasks/email.py` solo loguea, el flujo de "olvidé mi password" funciona de punta a punta en backend pero no tiene pantalla en el frontend.
-- Sin proveedor de push (Firebase) configurado por default — `push_service.py` es no-op silencioso sin `FIREBASE_CREDENTIALS_JSON`.
-- Google OAuth requiere crear un proyecto real en Google Cloud Console — sin `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, ese botón redirige a una URL que Google rechaza (no rompe el resto de la app).
-- Celery worker/beat no arrancan solos — hay que levantarlos aparte si quieres los jobs periódicos (ver paso 5 del setup).
+- No real email provider connected — `app/tasks/email.py` only logs, the "forgot my password" flow works end-to-end on the backend but has no frontend screen.
+- No push provider (Firebase) configured by default — `push_service.py` is a silent no-op without `FIREBASE_CREDENTIALS_JSON`.
+- Google OAuth requires creating a real project in Google Cloud Console — without `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, that button redirects to a URL Google rejects (doesn't break the rest of the app).
+- Celery worker/beat don't start on their own — you have to run them separately if you want the periodic jobs (see step 5 of setup).

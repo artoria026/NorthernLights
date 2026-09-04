@@ -18,8 +18,8 @@ export interface AdminFeedback {
   updated_at: string
 }
 
-/** Reportar un bug o sugerir una feature -- ver ChangelogButton.tsx, es el
- * unico lugar de la app donde se manda esto por ahora. */
+/** Report a bug or suggest a feature -- see ChangelogButton.tsx, it's the
+ * only place in the app that sends this for now. */
 export function useCreateFeedback() {
   return useMutation({
     mutationFn: async (input: { type: FeedbackType; message: string }) => {

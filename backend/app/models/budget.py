@@ -10,10 +10,10 @@ from app.models.mixins import TimestampMixin
 
 
 class BudgetLimit(Base, TimestampMixin):
-    """Fuente de verdad del limite mensual actual por categoria.
+    """Source of truth for the current monthly limit per category.
 
-    `budget_periods.budgeted` es un snapshot historico tomado de aqui; cambiar
-    un limite nunca reescribe meses anteriores (ver budget_service.set_limits).
+    `budget_periods.budgeted` is a historical snapshot taken from here; changing
+    a limit never rewrites past months (see budget_service.set_limits).
     """
 
     __tablename__ = "budget_limits"
@@ -34,9 +34,9 @@ class BudgetLimit(Base, TimestampMixin):
 
 
 class BudgetPeriod(Base, TimestampMixin):
-    """Gasto real acumulado por mes y categoria. `budgeted` es el snapshot del
-    limite que aplicaba ese mes; `spent` se actualiza con cada transaccion
-    confirmada via budget_service.upsert_period_spent (llamado desde M04)."""
+    """Actual spend accumulated per month and category. `budgeted` is the snapshot of the
+    limit that applied that month; `spent` is updated with every confirmed
+    transaction via budget_service.upsert_period_spent (called from M04)."""
 
     __tablename__ = "budget_periods"
     __table_args__ = (

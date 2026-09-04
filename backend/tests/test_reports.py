@@ -12,9 +12,9 @@ pytestmark = pytest.mark.asyncio
 
 
 class _FakeReportAI:
-    """Evita llamadas reales de IA en cada test de reportes -- por default
-    devuelve un insight fijo; los tests que necesitan otro comportamiento
-    (o simular un fallo) sobreescriben `get_ai_provider` puntualmente."""
+    """Avoids real AI calls in every report test -- by default it
+    returns a fixed insight; tests that need different behavior
+    (or to simulate a failure) override `get_ai_provider` for that specific case."""
 
     async def generate_report_insights(self, summary: dict, period_label: str) -> list[dict]:
         return [
@@ -160,9 +160,9 @@ async def test_monthly_endpoint_generates_report_on_demand(client: AsyncClient):
 
 
 async def test_current_month_summary_is_cached(client: AsyncClient):
-    """Se cachea en redis (report:{user_id}:current:*) -- verificado leyendo
-    la key directo, no infiriendolo de si el numero cambia o no despues de
-    una mutacion (ver test siguiente para eso)."""
+    """It's cached in redis (report:{user_id}:current:*) -- verified by reading
+    the key directly, not by inferring it from whether the number changes or not after
+    a mutation (see the next test for that)."""
     from app.core.cache_keys import report_key
     from app.core.redis import get_redis
 
@@ -178,14 +178,14 @@ async def test_current_month_summary_is_cached(client: AsyncClient):
 
 
 async def test_current_month_summary_updates_after_new_transaction(client: AsyncClient):
-    """Bug real encontrado en produccion local (ver Notion, sección de
-    Troubleshooting del proyecto): cache_service.invalidate_user_current no
-    incluia el prefijo report:{user_id}:current, asi que este endpoint podia
-    quedar hasta 5 min desactualizado despues de CUALQUIER transaccion --
-    incluida una conciliacion de saldo recien hecha, justo el caso donde el
-    usuario mas quiere ver el numero fresco de inmediato. Ya corregido; este
-    test verifica que SI se actualiza (lo opuesto de lo que afirmaba antes
-    la version vieja de este test, que en realidad estaba documentando el bug)."""
+    """Real bug found in local production (see Notion, project
+    Troubleshooting section): cache_service.invalidate_user_current didn't
+    include the report:{user_id}:current prefix, so this endpoint could
+    stay up to 5 min stale after ANY transaction --
+    including a balance reconciliation just made, exactly the case where the
+    user most wants to see the fresh number immediately. Already fixed; this
+    test verifies that it DOES update (the opposite of what the old version of
+    this test used to assert, which was actually documenting the bug)."""
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     bank = await _create_account(client, headers, initial_balance="0")
@@ -239,8 +239,8 @@ async def test_generate_report_creates_ai_insights_for_full_month(client: AsyncC
     assert report["type"] == "monthly_manual"
     assert len(report["insights"]) == 1
     assert report["insights"][0]["flow_type"] == "expense"
-    # `_period_label` formatea mes+año (nombre del mes depende del locale del
-    # sistema) -- solo verificamos el año, que es estable.
+    # `_period_label` formats month+year (the month name depends on the
+    # system's locale) -- we only check the year, which is stable.
     assert "2026" in report["insights"][0]["description"]
 
 
@@ -388,9 +388,9 @@ async def _create_subcategory(client: AsyncClient, headers: dict, parent_id: str
 
 
 async def test_monthly_report_rolls_up_subcategory_spend_to_parent(client: AsyncClient):
-    """Decision de producto (ver Categorias): el gasto de una subcategoria
-    cuenta para el total de su categoria padre en reportes/graficas, con el
-    desglose por subcategoria disponible aparte, no como fila propia."""
+    """Product decision (see Categories): a subcategory's expense
+    counts toward its parent category's total in reports/charts, with the
+    per-subcategory breakdown available separately, not as its own row."""
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     bank = await _create_account(client, headers, initial_balance="1000")
@@ -445,10 +445,10 @@ async def test_yearly_report_merges_subcategory_breakdown_across_months(client: 
 
 
 async def test_force_regenerates_ready_report_without_duplicating_insights(client: AsyncClient):
-    """force=True es para el caso de backfill historico: un mes que ya se
-    genero (casi vacio) antes de que el usuario cargara transacciones viejas
-    -- sin force, generate_report es idempotente y ni se acerca a los datos
-    nuevos (ver test_generate_report_is_idempotent_for_same_period)."""
+    """force=True is for the historical backfill case: a month that was already
+    generated (nearly empty) before the user loaded old transactions
+    -- without force, generate_report is idempotent and doesn't come anywhere near the
+    new data (see test_generate_report_is_idempotent_for_same_period)."""
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     bank = await _create_account(client, headers, initial_balance="1000")
@@ -463,8 +463,8 @@ async def test_force_regenerates_ready_report_without_duplicating_insights(clien
     assert len(first.json()["data"]["insights"]) == 1
     first_generated_at = first.json()["data"]["generated_at"]
 
-    # Backfill: se agrega una transaccion vieja DESPUES de que el reporte del
-    # mes ya estaba 'ready'.
+    # Backfill: an old transaction is added AFTER the month's report
+    # was already 'ready'.
     await _confirm_income(client, headers, bank, income_category, "800.00", "2026-06-10")
 
     without_force = await client.post(
@@ -484,15 +484,15 @@ async def test_force_regenerates_ready_report_without_duplicating_insights(clien
     assert data["id"] == first.json()["data"]["id"]
     assert data["summary"]["income"]["total"] == "800.00"
     assert data["generated_at"] != first_generated_at
-    # No duplica los ReportInsight ya existentes al recalcular.
+    # Doesn't duplicate already existing ReportInsights when recalculating.
     assert len(data["insights"]) == 1
 
 
 async def test_force_yearly_regeneration_cascades_missing_months(client: AsyncClient):
-    """El agregado anual solo suma meses YA 'ready' -- forzar el año sin
-    tocar sus meses recalcularia sobre datos mensuales viejos. force=True
-    debe generar/recalcular los 12 meses primero (aqui: enero ya generado,
-    febrero ni siquiera existia todavia)."""
+    """The yearly aggregate only sums months that are ALREADY 'ready' -- forcing the year
+    without touching its months would recalculate over stale monthly data. force=True
+    must generate/recalculate the 12 months first (here: January already generated,
+    February didn't even exist yet)."""
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     bank = await _create_account(client, headers, initial_balance="1000")
@@ -509,8 +509,8 @@ async def test_force_yearly_regeneration_cascades_missing_months(client: AsyncCl
     )
     assert yearly_before.json()["data"]["summary"]["income"]["total"] == "3000.00"
 
-    # Backfill de febrero SIN generar su reporte mensual explicitamente --
-    # eso es justo lo que force=True debe resolver en el año.
+    # February backfill WITHOUT generating its monthly report explicitly --
+    # that's exactly what force=True must resolve at the yearly level.
     await _confirm_income(client, headers, bank, income_category, "500.00", "2026-02-10")
 
     yearly_forced = await client.post(

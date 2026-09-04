@@ -15,11 +15,11 @@ import { useLogin } from '@/hooks/useAuth'
 import { api, apiErrorMessage } from '@/services/api'
 import { AuthLayout, type AuthValueProp } from './AuthLayout'
 
-// Apagado a proposito: GOOGLE_CLIENT_ID/SECRET todavia estan vacios (ver
-// backend/app/core/config.py), asi que /auth/google/login hoy redirige a una
-// URL de Google que rechaza la solicitud. En vez de dejar el boton activo
-// mostrando un error confuso, se deshabilita aqui -- una sola linea para
-// prenderlo de vuelta en cuanto haya un proyecto real en Google Cloud Console.
+// Deliberately turned off: GOOGLE_CLIENT_ID/SECRET are still empty (see
+// backend/app/core/config.py), so /auth/google/login today redirects to a
+// Google URL that rejects the request. Instead of leaving the button active
+// and showing a confusing error, it's disabled here -- a single line to
+// turn it back on as soon as there's a real project in Google Cloud Console.
 const GOOGLE_LOGIN_ENABLED = false
 
 const VALUE_PROPS: AuthValueProp[] = [
@@ -55,7 +55,7 @@ export function Login() {
       await login.mutateAsync({ email, password })
       navigate('/')
     } catch {
-      // credenciales invalidas: se borra solo la contraseña, el email se deja
+      // invalid credentials: only the password gets cleared, the email is kept
       setPassword('')
     }
   }

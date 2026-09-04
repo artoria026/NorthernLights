@@ -31,12 +31,13 @@ async def _deactivate_device_token(session: AsyncSession, device_id: UUID) -> No
 async def send_push_notification(
     session: AsyncSession, user_id: UUID, title: str, body: str, data: dict | None = None
 ) -> None:
-    """Envia push a todos los dispositivos activos del usuario con push_token.
+    """Sends a push to every active device of the user that has a push_token.
 
-    No hay credenciales de Firebase configuradas todavia (FIREBASE_CREDENTIALS_JSON
-    vacio): se deja como no-op con log estructurado, listo para activarse en
-    cuanto exista un proyecto de Firebase real. El resto del flujo (deteccion
-    de eventos, anti-spam, notificacion in-app) ya es funcional sin esto.
+    No Firebase credentials configured yet (FIREBASE_CREDENTIALS_JSON
+    empty): left as a no-op with a structured log, ready to activate as
+    soon as a real Firebase project exists. The rest of the flow (event
+    detection, anti-spam, in-app notification) is already functional
+    without this.
     """
     devices = await _get_active_devices_with_token(session, user_id)
     if not devices:
@@ -51,7 +52,7 @@ async def send_push_notification(
         )
         return
 
-    import firebase_admin  # import perezoso: solo si hay credenciales configuradas
+    import firebase_admin  # lazy import: only if credentials are configured
     from firebase_admin import messaging
 
     if not firebase_admin._apps:
@@ -74,7 +75,7 @@ async def send_push_notification(
 
 
 async def send_push_if_enabled(session: AsyncSession, user_id: UUID, title: str, body: str) -> None:
-    """Solo envia push si el usuario tiene push_notifications=True."""
+    """Only sends a push if the user has push_notifications=True."""
     user = await session.get(User, user_id)
     if user is not None and user.preferences.push_notifications:
         await send_push_notification(session, user_id, title, body)

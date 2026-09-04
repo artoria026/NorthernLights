@@ -34,9 +34,9 @@ async def list_categories(
 async def list_hidden_categories(
     session: AsyncSession, user_id: UUID, type_: str | None = None
 ) -> list[Category]:
-    """Categorias de sistema que este usuario desactivo -- para la seccion
-    de 'reactivar' del frontend. Nunca incluye categorias propias (esas se
-    eliminan, no se ocultan)."""
+    """System categories this user deactivated -- for the frontend's
+    'reactivate' section. Never includes the user's own categories (those
+    get deleted, not hidden)."""
     query = (
         select(Category)
         .join(CategoryHide, CategoryHide.category_id == Category.id)
@@ -106,11 +106,12 @@ async def update_category(
 
 
 async def delete_category(session: AsyncSession, user_id: UUID, category_id: UUID) -> None:
-    """Elimina (soft-delete) una categoria propia y desvincula sus
-    transacciones -- category_id queda en NULL en vez de bloquear el borrado
-    (antes: 409 si tenia transacciones asociadas). Si tiene subcategorias
-    propias, se eliminan en cascada (mismo trato: transacciones desvinculadas,
-    no bloqueo) para no dejar subcategorias huerfanas de un padre borrado."""
+    """Deletes (soft-delete) a user's own category and unlinks its
+    transactions -- category_id is set to NULL instead of blocking the
+    deletion (previously: 409 if it had associated transactions). If it has
+    its own subcategories, they're deleted in cascade (same treatment:
+    transactions unlinked, no blocking) to avoid leaving orphaned
+    subcategories of a deleted parent."""
     category = await get_category(session, user_id, category_id)
     if category.is_system:
         raise HTTPException(
@@ -138,9 +139,9 @@ async def delete_category(session: AsyncSession, user_id: UUID, category_id: UUI
 
 
 async def deactivate_category(session: AsyncSession, user_id: UUID, category_id: UUID) -> Category:
-    """Oculta una categoria de sistema solo para este usuario (reversible
-    con reactivate_category) y desvincula sus transacciones -- nunca toca la
-    fila compartida de `categories`, asi que no afecta a otros usuarios."""
+    """Hides a system category only for this user (reversible with
+    reactivate_category) and unlinks its transactions -- never touches the
+    shared `categories` row, so it doesn't affect other users."""
     category = await get_category(session, user_id, category_id)
     if not category.is_system:
         raise HTTPException(
@@ -169,9 +170,9 @@ async def deactivate_category(session: AsyncSession, user_id: UUID, category_id:
 
 
 async def reactivate_category(session: AsyncSession, user_id: UUID, category_id: UUID) -> Category:
-    """Revierte deactivate_category -- la categoria vuelve a listarse para
-    este usuario. Las transacciones que se desvincularon al desactivarla NO
-    se restauran (esa asociacion se perdio)."""
+    """Reverts deactivate_category -- the category shows up again in this
+    user's list. Transactions that were unlinked when it was deactivated
+    are NOT restored (that association was lost)."""
     category = await get_category(session, user_id, category_id)
     if not category.is_system:
         raise HTTPException(
@@ -188,8 +189,8 @@ async def reactivate_category(session: AsyncSession, user_id: UUID, category_id:
 
 
 async def get_names_by_ids(session: AsyncSession, category_ids: list[UUID]) -> dict[UUID, str]:
-    """Nombres de categoria para mostrar en listas de transacciones -- RLS ya
-    filtra por visibilidad (propias + del sistema), no hace falta user_id aqui."""
+    """Category names to display in transaction lists -- RLS already
+    filters by visibility (own + system), no need for user_id here."""
     if not category_ids:
         return {}
     result = await session.execute(
@@ -201,9 +202,10 @@ async def get_names_by_ids(session: AsyncSession, category_ids: list[UUID]) -> d
 async def get_month_summary(
     session: AsyncSession, user_id: UUID, year: int, month: int
 ) -> dict[UUID, float]:
-    """Total por categoria (ingreso o gasto) en el mes dado, solo transacciones
-    confirmadas. Usado por la pantalla de Categorias para mostrar cuanto lleva
-    cada una -- no toca budget_periods, es un agregado directo sobre el diario."""
+    """Total per category (income or expense) in the given month, confirmed
+    transactions only. Used by the Categories screen to show how much each
+    one has so far -- doesn't touch budget_periods, it's a direct aggregate
+    over the journal."""
     start = date(year, month, 1)
     last_day = calendar.monthrange(year, month)[1]
     end = date(year, month, last_day)

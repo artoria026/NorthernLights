@@ -30,9 +30,9 @@ export function useLogout() {
 
   return useMutation({
     mutationFn: async () => {
-      // Best-effort: si el request falla (sin red, token ya invalido) el
-      // usuario debe poder salir de todos modos -- el estado local se limpia
-      // siempre, sin importar si el backend logro revocar el refresh token.
+      // Best-effort: if the request fails (no network, token already invalid) the
+      // user should still be able to log out -- local state is always
+      // cleared, regardless of whether the backend managed to revoke the refresh token.
       if (refreshToken) {
         await api.post('/auth/logout', { refresh_token: refreshToken }).catch(() => null)
       }
@@ -109,9 +109,9 @@ export function useDeleteAccount() {
   })
 }
 
-/** El backend estampa la version (settings.DISCLAIMER_VERSION) el mismo --
- * a diferencia de useUpdateSettings, este endpoint no acepta ningun valor
- * desde el cliente (ver DisclaimerGate.tsx). */
+/** The backend stamps the version (settings.DISCLAIMER_VERSION) itself --
+ * unlike useUpdateSettings, this endpoint doesn't accept any value
+ * from the client (see DisclaimerGate.tsx). */
 export function useAcceptDisclaimer() {
   const setUser = useAuthStore((s) => s.setUser)
   return useMutation({
@@ -154,10 +154,10 @@ export function useUpdateSettings() {
   })
 }
 
-/** Cambiar el tema debe verse al instante (no esperar la vuelta del server) y
- * quedar guardado en la cuenta (no solo en este navegador) -- usado tanto
- * por el toggle del sidebar como por el selector en Configuracion, para no
- * repetir la logica en los dos lugares. */
+/** Changing the theme must show up instantly (not wait for the server round-trip) and
+ * stay saved on the account (not just in this browser) -- used both
+ * by the sidebar toggle and the selector in Settings, to avoid
+ * repeating the logic in both places. */
 export function useSyncedTheme() {
   const mode = useThemeStore((s) => s.mode)
   const setMode = useThemeStore((s) => s.setMode)

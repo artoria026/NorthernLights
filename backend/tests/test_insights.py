@@ -22,7 +22,7 @@ class FakeAIProvider(AIProvider):
     async def chat_stream(
         self, messages: list[dict], tools: list[dict], system: str
     ) -> AsyncGenerator[dict, None]:
-        if False:  # pragma: no cover - solo para cumplir la firma de generador async
+        if False:  # pragma: no cover - only to satisfy the async generator signature
             yield {}
 
     async def generate_insights(self, snapshot: dict) -> list[dict]:

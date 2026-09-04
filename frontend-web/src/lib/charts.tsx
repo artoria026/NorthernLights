@@ -5,7 +5,7 @@ export interface Point {
   y: number
 }
 
-/** Catmull-Rom -> Bezier: curva suave que pasa exactamente por cada punto. */
+/** Catmull-Rom -> Bezier: smooth curve that passes exactly through each point. */
 export function smoothPath(points: Point[]): string {
   if (points.length === 0) return ''
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
@@ -24,7 +24,7 @@ export function smoothPath(points: Point[]): string {
   return d
 }
 
-/** Fondo de puntos decorativo usado detras de los line charts en el diseno. */
+/** Decorative dot background used behind line charts in the design. */
 export function DotGrid({ x, y, width, height }: { x: number; y: number; width: number; height: number }) {
   const id = useId().replace(/:/g, '')
   return (
@@ -314,11 +314,11 @@ export function RadarChart({
       ))}
       {axes.map((a, i) => {
         const p = pointAt(i, 1.16)
-        // Ancla el texto segun el lado del radar en el que cae la etiqueta
-        // -- "middle" (arriba/abajo) centra bien, pero para etiquetas casi
-        // horizontales (derecha/izquierda) centrar hace que la mitad del
-        // texto se salga del viewBox. "start"/"end" lo estira hacia el
-        // margen disponible en vez de hacia el centro del chart.
+        // Anchors the text depending on which side of the radar the label
+        // falls on -- "middle" (top/bottom) centers well, but for
+        // near-horizontal labels (right/left) centering pushes half of the
+        // text outside the viewBox. "start"/"end" stretches it toward the
+        // available margin instead of toward the chart's center.
         const cos = Math.cos(angleFor(i))
         const anchor = cos > 0.3 ? 'start' : cos < -0.3 ? 'end' : 'middle'
         return (
@@ -352,9 +352,9 @@ export function Donut({
   strokeWidth?: number
   centerLabel?: string
   centerSub?: string
-  /** Tamano de fuente del centerLabel -- el default (18) asume un donut
-   * grande (>=64px); en usos chicos (ej. DebtCard compacto) hay que bajarlo
-   * o el texto se sale del circulo. */
+  /** Font size of centerLabel -- the default (18) assumes a large donut
+   * (>=64px); in small uses (e.g. compact DebtCard) it needs to be lowered
+   * or the text spills outside the circle. */
   centerFontSize?: number
 }) {
   const r = (size - strokeWidth) / 2

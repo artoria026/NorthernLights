@@ -25,11 +25,11 @@ interface UpcomingEntry {
   amount: string
 }
 
-/** Mini-calendario dentro de Transacciones -- complementa la lista (no la
- * reemplaza): puntos verdes/rojos marcan dias con movimientos reales, un
- * punto ambar marca pagos proximos que aun no se registran. Click en un dia
- * filtra la tabla de la izquierda (el padre controla `selectedDate` via
- * dateFrom/dateTo, aqui no vive estado de seleccion). */
+/** Mini calendar inside Transacciones -- complements the list (doesn't
+ * replace it): green/red dots mark days with real transactions, an amber
+ * dot marks upcoming payments that haven't been recorded yet. Clicking a
+ * day filters the table on the left (the parent controls `selectedDate`
+ * via dateFrom/dateTo, no selection state lives here). */
 export function TransactionsCalendar({
   selectedDate,
   onSelectDate,

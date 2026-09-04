@@ -2,16 +2,16 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import { Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 
-/** Shell dedicado al area de administracion -- a proposito NO usa <Layout/>:
- * sin AppSidebar, sin el FAB de "agregar rapido", sin TransactionModals. Es
- * una vista completamente separada de la app normal, solo alcanzable desde
- * el boton-lanzador de AppSidebar (visible solo para admins) o entrando
- * directo a /admin.
+/** Shell dedicated to the admin area -- deliberately does NOT use <Layout/>:
+ * no AppSidebar, no "quick add" FAB, no TransactionModals. It's a view
+ * completely separate from the normal app, reachable only from AppSidebar's
+ * launcher button (visible only to admins) or by navigating directly to
+ * /admin.
  *
- * El guard de rol vive aqui (no en la pagina Admin) por la misma razon que
- * ProtectedRoute.tsx centraliza el guard de sesion: una sola fuente de
- * verdad, y cualquier pagina admin futura que se agregue bajo este layout lo
- * hereda gratis. */
+ * The role guard lives here (not in the Admin page) for the same reason
+ * ProtectedRoute.tsx centralizes the session guard: a single source of
+ * truth, and any future admin page added under this layout inherits it
+ * for free. */
 export function AdminLayout() {
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()

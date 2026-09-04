@@ -37,11 +37,11 @@ class AccountUpdate(BaseModel):
     logo_data_url: str | None = Field(
         default=None, max_length=IMAGE_DATA_URL_MAX_LENGTH, pattern=IMAGE_DATA_URL_PATTERN
     )
-    # Editable aunque ya existan transacciones -- update_account ajusta
-    # `balance` por el mismo delta para no romper el invariante
-    # balance = initial_balance + suma de deltas confirmados. El front debe
-    # advertir/confirmar antes de mandar esto si la cuenta ya tiene
-    # transacciones (ver Accounts.tsx), el backend no lo bloquea.
+    # Editable even if transactions already exist -- update_account adjusts
+    # `balance` by the same delta to avoid breaking the invariant
+    # balance = initial_balance + sum of confirmed deltas. The front must
+    # warn/confirm before sending this if the account already has
+    # transactions (see Accounts.tsx), the backend doesn't block it.
     initial_balance: Decimal | None = None
     credit_limit: Decimal | None = None
     interest_rate: Decimal | None = None

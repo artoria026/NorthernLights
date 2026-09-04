@@ -24,7 +24,7 @@ async def test_get_or_compute_hit_and_miss():
 
     assert first == {"value": 42}
     assert second == {"value": 42}
-    assert calls == 1  # segunda llamada vino del cache, no volvio a computar
+    assert calls == 1  # second call came from cache, didn't recompute
 
     await redis.delete(key)
 
@@ -75,7 +75,7 @@ async def test_debt_alert_anti_spam():
     assert await cache_service.debt_alert_already_sent(redis, user_id, debt_id, "due_soon") is False
     await cache_service.mark_debt_alert_sent(redis, user_id, debt_id, "due_soon")
     assert await cache_service.debt_alert_already_sent(redis, user_id, debt_id, "due_soon") is True
-    # Un alert_type distinto es una alerta distinta (no comparte el flag)
+    # A different alert_type is a different alert (doesn't share the flag)
     assert await cache_service.debt_alert_already_sent(redis, user_id, debt_id, "overdue") is False
 
 
