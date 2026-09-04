@@ -24,17 +24,17 @@ async function refreshAccessToken(): Promise<string> {
     `${api.defaults.baseURL}/auth/refresh`,
     { refresh_token: refreshToken },
   )
-  // El backend rota el refresh token en cada uso (single-use) -- si solo
-  // guardamos el access_token nuevo, el siguiente refresh manda el token
-  // viejo (ya invalido en el server) y la sesion muere sola sin aviso.
+  // The backend rotates the refresh token on every use (single-use) -- if we
+  // only stored the new access_token, the next refresh would send the old
+  // token (already invalid on the server) and the session would silently die.
   const { access_token, refresh_token } = response.data.data
   useAuthStore.getState().setTokens(access_token, refresh_token)
   return access_token
 }
 
-// Rutas que devuelven 401 por su cuenta (credenciales invalidas, registro)
-// y no tienen nada que ver con una sesion expirada -- no deben disparar el
-// refresh ni la redireccion a /login, o el error nunca llega a mostrarse.
+// Routes that return 401 on their own (invalid credentials, registration)
+// and have nothing to do with an expired session -- they must not trigger
+// the refresh or the redirect to /login, or the error never gets shown.
 const AUTH_ENDPOINTS_WITHOUT_SESSION = ['/auth/login', '/auth/register']
 
 api.interceptors.response.use(

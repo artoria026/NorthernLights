@@ -21,8 +21,8 @@ async def _register_and_login(client: AsyncClient, name: str = "Test") -> tuple[
 
 
 async def _register_admin(client: AsyncClient, session_factory) -> dict:
-    """Mismo patron que test_admin.py: promueve escribiendo el rol directo,
-    despues re-loguea (el JWT emitido al registrarse ya trae role='user')."""
+    """Same pattern as test_admin.py: promotes by writing the role directly,
+    then logs in again (the JWT issued at registration already carries role='user')."""
     _, user_id, email = await _register_and_login(client, name="Admin")
     async with session_factory() as session:
         await session.execute(
@@ -89,15 +89,15 @@ async def test_admin_sees_feedback_from_all_users(client: AsyncClient, session_f
     messages = {item["message"] for item in items}
     assert "Bug de usuario A" in messages
     assert "Sugerencia de usuario B" in messages
-    # El admin ve el nombre/email de quien lo mando, no solo el mensaje.
+    # The admin sees the name/email of who sent it, not just the message.
     names = {item["user_name"] for item in items}
     assert {"Usuario A", "Usuario B"}.issubset(names)
 
 
 async def test_regular_user_cannot_see_others_feedback_directly(client: AsyncClient):
-    """GET /feedback (abajo) ya cubre el listado propio de un usuario normal;
-    esto prueba ademas que la policy RLS en si misma aisla -- no es solo el
-    403 de require_admin lo que protege los datos de otros."""
+    """GET /feedback (below) already covers a normal user's own listing;
+    this also tests that the RLS policy itself isolates -- it's not just the
+    403 from require_admin that protects other users' data."""
     token_a, _, _ = await _register_and_login(client, name="Usuario A")
     headers_a = {"Authorization": f"Bearer {token_a}"}
     create = await client.post(
@@ -107,9 +107,9 @@ async def test_regular_user_cannot_see_others_feedback_directly(client: AsyncCli
 
     token_b, _, _ = await _register_and_login(client, name="Usuario B")
     headers_b = {"Authorization": f"Bearer {token_b}"}
-    # No hay GET /feedback/{id} publico; probamos el unico camino posible
-    # (intentar cambiarle el status) devuelve 403 por require_admin, no 404 --
-    # confirma que la ausencia de datos no es lo que bloquea.
+    # There's no public GET /feedback/{id}; we test the only possible path
+    # (trying to change its status) returns 403 from require_admin, not 404 --
+    # confirms that the absence of data isn't what's blocking it.
     patch = await client.patch(
         f"/api/v1/admin/feedback/{feedback_id}/status",
         headers=headers_b,
@@ -194,8 +194,8 @@ async def test_status_change_to_considered_notifies_user(client: AsyncClient, se
 
 
 async def test_status_change_to_read_does_not_notify_user(client: AsyncClient, session_factory):
-    """new/read son transiciones internas del admin -- no deben generar
-    notificacion, a diferencia de considered/discarded."""
+    """new/read are internal admin transitions -- they must not generate a
+    notification, unlike considered/discarded."""
     admin_headers = await _register_admin(client, session_factory)
     token, _, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}

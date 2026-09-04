@@ -58,7 +58,7 @@ describe('Login page', () => {
     await user.click(screen.getByRole('button', { name: /entrar/i }))
 
     expect(await screen.findByText('Usuario o contraseña incorrectos')).toBeInTheDocument()
-    // El email se conserva, solo se borra la contraseña
+    // The email is kept, only the password gets cleared
     expect(screen.getByLabelText(/correo/i)).toHaveValue('test@example.com')
     expect(screen.getByLabelText(/contraseña/i)).toHaveValue('')
   })

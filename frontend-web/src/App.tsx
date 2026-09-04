@@ -40,11 +40,11 @@ const queryClient = new QueryClient({
   },
 })
 
-/** Refresca el perfil desde el servidor al cargar la app (con sesion ya
- * guardada) y aplica el tema de la cuenta si difiere del que quedo en este
- * navegador -- sin esto, el tema solo vivia en localStorage y no viajaba
- * entre dispositivos. `useCurrentUser` ya existia pero no se usaba en
- * ningun lado. */
+/** Refreshes the profile from the server when the app loads (with a session
+ * already saved) and applies the account's theme if it differs from the one
+ * left in this browser -- without this, the theme only lived in localStorage
+ * and didn't travel between devices. `useCurrentUser` already existed but
+ * wasn't used anywhere. */
 function AuthBootstrap() {
   const { data: user } = useCurrentUser()
   const setUser = useAuthStore((s) => s.setUser)
@@ -70,8 +70,9 @@ function App() {
           <Route path="/auth/callback" element={<AuthCallback />} />
 
           <Route element={<ProtectedRoute />}>
-            {/* Area de admin: shell propio (AdminLayout), sin AppSidebar ni nada
-                del resto de la app -- ver AdminLayout.tsx para el guard de rol. */}
+            {/* Admin area: its own shell (AdminLayout), without AppSidebar or
+                anything else from the rest of the app -- see AdminLayout.tsx
+                for the role guard. */}
             <Route element={<AdminLayout />}>
               <Route path="/admin" element={<Admin />} />
             </Route>
@@ -94,9 +95,9 @@ function App() {
             </Route>
           </Route>
 
-          {/* "Importar Datos" se consolido dentro de Asesor IA (adjuntar PDF,
-              Excel y el prompt para otra IA ahora viven ahi) -- se deja el
-              redirect por si alguien tiene el link viejo guardado. */}
+          {/* "Importar Datos" was folded into the AI Advisor (attaching a PDF,
+              Excel, and the prompt for another AI now live there) -- the
+              redirect stays in case someone has the old link saved. */}
           <Route path="/importar" element={<Navigate to="/advisor" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -79,13 +79,13 @@ async def test_erase_transactions_keeps_accounts_and_debts(client: AsyncClient):
     assert erase.json()["data"]["erased"] == ["transactions"]
 
     account = await client.get(f"/api/v1/accounts/{account_id}", headers=headers)
-    assert account.json()["data"]["balance"] == "500.00"  # vuelve al balance inicial
+    assert account.json()["data"]["balance"] == "500.00"  # back to the initial balance
 
     transactions = await client.get("/api/v1/transactions?per_page=100", headers=headers)
     assert transactions.json()["meta"]["total"] == 0
 
     debts = await client.get("/api/v1/debts", headers=headers)
-    assert len(debts.json()["data"]) == 1  # las deudas no se tocan
+    assert len(debts.json()["data"]) == 1  # debts aren't touched
 
 
 async def test_erase_accounts_forces_transactions_and_recurring(client: AsyncClient):
@@ -134,7 +134,7 @@ async def test_erase_accounts_forces_transactions_and_recurring(client: AsyncCli
     accounts = await client.get("/api/v1/accounts", headers=headers)
     assert accounts.json()["data"] == []
 
-    # El token de sesion sigue funcionando -- solo se borraron los datos, no el usuario.
+    # The session token still works -- only the data was erased, not the user.
     me = await client.get("/api/v1/auth/me", headers=headers)
     assert me.status_code == 200
 
@@ -197,7 +197,7 @@ async def test_erase_categories_is_best_effort(client: AsyncClient):
         },
     )
 
-    # Solo 'categories', sin 'transactions': sigue en uso, no se borra.
+    # Only 'categories', without 'transactions': still in use, not erased.
     only_categories = await client.post(
         "/api/v1/data/erase",
         headers=headers,
@@ -207,10 +207,10 @@ async def test_erase_categories_is_best_effort(client: AsyncClient):
     still_there = await client.get("/api/v1/categories?type=expense", headers=headers)
     assert any(c["id"] == category_id for c in still_there.json()["data"])
 
-    # Ahora junto con 'transactions' y 'budgets' (una transaccion confirmada
-    # con categoria genera un budget_period aunque nunca hayas puesto un
-    # limite -- sigue "en uso" hasta que eso tambien se borre): ya no esta en
-    # uso, se borra.
+    # Now along with 'transactions' and 'budgets' (a confirmed transaction
+    # with a category generates a budget_period even if you never set a
+    # limit -- it stays "in use" until that also gets erased): it's no longer in
+    # use, it gets erased.
     both = await client.post(
         "/api/v1/data/erase",
         headers=headers,

@@ -30,9 +30,9 @@ async def _create_account(client: AsyncClient, headers: dict, **overrides) -> st
 
 def _build_upload(rows: list[dict]) -> bytes:
     """rows: [{'block': 'income'|'expense', 'amount', 'description', 'date',
-    'account', 'category'}] -- arma un .xlsx con el mismo layout que genera
-    build_template_workbook (Ingresos en A-E, Gastos en G-K, datos desde la
-    fila 3)."""
+    'account', 'category'}] -- builds an .xlsx with the same layout that
+    build_template_workbook generates (Income in A-E, Expenses in G-K, data starting
+    from row 3)."""
     wb = Workbook()
     ws = wb.active
     ws.title = "Transacciones"
@@ -205,4 +205,4 @@ async def test_upload_rls_isolation(client: AsyncClient):
         },
     )
     assert response.status_code == 200
-    assert response.json()["data"]["created"] == 0  # A no ve la cuenta de B
+    assert response.json()["data"]["created"] == 0  # A can't see B's account

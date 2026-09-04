@@ -88,13 +88,13 @@ function FeedbackForm() {
   )
 }
 
-/** Icono de novedades -- SOLO el trigger (boton + punto rojo). AppSidebar lo
- * dibuja dos veces (barra movil y sidebar de escritorio, ambas montadas
- * siempre a la vez, una nomas queda oculta por CSS segun el ancho de
- * pantalla). El modal en si vive en ChangelogDialog, una sola instancia
- * compartida (useUiStore) -- si el modal tambien viviera aqui, cada icono
- * tendria su propio auto-open y el changelog "salia dos veces" (cerrabas
- * uno y aparecia el otro detras). */
+/** Changelog icon -- ONLY the trigger (button + red dot). AppSidebar draws
+ * it twice (mobile bar and desktop sidebar, both always mounted, only one
+ * hidden via CSS depending on screen width). The modal itself lives in
+ * ChangelogDialog, a single shared instance (useUiStore) -- if the modal
+ * also lived here, each icon would get its own auto-open and the changelog
+ * would "show up twice" (you'd close one and the other would appear
+ * behind it). */
 export function ChangelogButton({ iconSize = 16 }: { iconSize?: number }) {
   const user = useAuthStore((s) => s.user)
   const setChangelogOpen = useUiStore((s) => s.setChangelogOpen)
@@ -123,13 +123,13 @@ export function ChangelogButton({ iconSize = 16 }: { iconSize?: number }) {
   )
 }
 
-/** El modal con el detalle de cada release y el formulario de feedback --
- * renderizado UNA sola vez (ver AppSidebar.tsx), aunque ChangelogButton
- * aparezca en mas de un lugar. Si el usuario todavia no vio la version mas
- * reciente (`user.last_seen_changelog_version` desactualizado o null), se
- * auto-abre una vez al cargar -- al cerrarlo (X, click afuera, o el boton
- * "Entendido") se marca como visto via useUpdateSettings, mismo patron que
- * el tema: viaja con la cuenta, no queda solo en este navegador. */
+/** The modal with the detail of each release and the feedback form --
+ * rendered ONCE (see AppSidebar.tsx), even though ChangelogButton appears
+ * in more than one place. If the user hasn't seen the latest version yet
+ * (`user.last_seen_changelog_version` stale or null), it auto-opens once
+ * on load -- closing it (X, click outside, or the "Entendido" button)
+ * marks it as seen via useUpdateSettings, same pattern as the theme: it
+ * travels with the account, not stuck to this browser alone. */
 export function ChangelogDialog() {
   const user = useAuthStore((s) => s.user)
   const updateSettings = useUpdateSettings()

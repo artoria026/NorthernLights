@@ -72,10 +72,10 @@ class ClaudeProvider(AIProvider):
                 tools=tools,
             )
 
-        # Un reintento mas, con una pausa mas larga que la que hace el SDK
-        # solo, para picos de sobrecarga de pocos segundos (529/500). Solo
-        # cubre abrir la conexion (__aenter__) -- nunca a medio turno, para
-        # no repetir texto que ya se haya mandado.
+        # One more retry, with a longer pause than the SDK does on its
+        # own, for short overload spikes (529/500). Only
+        # covers opening the connection (__aenter__) -- never mid-turn, to
+        # avoid repeating text that's already been sent.
         stream_cm = open_stream()
         try:
             try:

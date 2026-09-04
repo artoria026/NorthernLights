@@ -1,6 +1,6 @@
-# Subtipos de cuenta donde tiene sentido "contar lo que tienes fisicamente" --
-# usado tanto por engine_service (calculo de liquidez) como por
-# account_service (validacion de conciliacion de saldo). Vive en app/core en
-# vez de en cualquiera de los dos services para que ambos puedan importarlo
-# sin crear un ciclo (engine_service ya importa account_service).
+# Account subtypes where "count what you physically have" makes sense --
+# used both by engine_service (liquidity calculation) and by
+# account_service (balance reconciliation validation). Lives in app/core
+# instead of in either service so both can import it
+# without creating a cycle (engine_service already imports account_service).
 LIQUID_SUBTYPES = ("cash", "checking", "savings")

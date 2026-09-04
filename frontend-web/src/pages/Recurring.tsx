@@ -48,8 +48,8 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { apiErrorMessage } from '@/services/api'
 import type { Account, AlertUrgency, RecurringFrequency, RecurringItem, RecurringItemType, Transaction } from '@/types'
 
-// 'subscription' vive en su propia pagina dedicada (/subscriptions) -- este
-// formulario general solo cubre servicios/utilities/ingresos recurrentes.
+// 'subscription' lives on its own dedicated page (/subscriptions) -- this
+// general form only covers services/utilities/recurring income.
 const ITEM_TYPES: RecurringItemType[] = ['service', 'utility', 'income']
 const FREQUENCIES: RecurringFrequency[] = ['weekly', 'biweekly', 'monthly', 'bimonthly', 'annual']
 const URGENCIES: AlertUrgency[] = ['normal', 'high', 'critical']
@@ -70,8 +70,9 @@ const ITEM_TYPE_ICONS: Record<RecurringItemType, LucideIcon> = {
   subscription: CreditCard,
 }
 
-/** Solo high/critical llevan icono dentro del badge -- normal es el caso
- * comun y un icono ahi seria ruido visual sin informacion nueva. */
+/** Only high/critical carry an icon inside the badge -- normal is the
+ * common case and an icon there would be visual noise with no new
+ * information. */
 const URGENCY_ICONS: Partial<Record<AlertUrgency, LucideIcon>> = {
   high: AlertCircle,
   critical: AlertTriangle,
@@ -116,7 +117,7 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
       await createItem.mutateAsync(form)
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -238,9 +239,9 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
   )
 }
 
-/** item_type no se puede editar (ver UpdateRecurringItemInput) -- por eso,
- * a diferencia de NewRecurringItemForm, la categoria se filtra por el
- * entry_type que YA tenia el item (fijo), no por un selector de tipo. */
+/** item_type can't be edited (see UpdateRecurringItemInput) -- that's why,
+ * unlike NewRecurringItemForm, the category is filtered by the entry_type
+ * the item ALREADY had (fixed), not by a type selector. */
 function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: () => void }) {
   const { data: accounts } = useAccounts()
   const entryType = item.item_type === 'income' ? 'income' : 'expense'
@@ -264,7 +265,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
       await updateItem.mutateAsync({ id: item.id, input: form })
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -443,11 +444,12 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
   const TypeIcon = ITEM_TYPE_ICONS[item.item_type]
   const UrgencyIcon = URGENCY_ICONS[item.alert_urgency]
 
-  // Un solo Dialog con estado local -- si esto se duplicara en un arbol
-  // "desktop" y otro "mobile" ocultos por CSS, se montaria dos veces y
-  // abrirlo desde cualquier trigger mostraria dos modales. Por eso aqui se
-  // arma una sola vez y isDesktop (basado en window.matchMedia, no CSS)
-  // decide cual de los dos layouts de abajo se monta -- nunca ambos.
+  // A single Dialog with local state -- if this were duplicated across a
+  // "desktop" tree and a "mobile" one hidden via CSS, it would mount twice
+  // and opening it from either trigger would show two modals. That's why
+  // it's built just once here, and isDesktop (based on window.matchMedia,
+  // not CSS) decides which of the two layouts below gets mounted -- never
+  // both.
   const actions = (
     <>
       <SoftBadge severity={STATUS_SEVERITY[item.status]}>{STATUS_LABELS[item.status]}</SoftBadge>
@@ -571,11 +573,11 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
   )
 }
 
-/** Ultima fecha (YYYY-MM-DD) en que cortó una TDC con este dia de corte,
- * on/antes de hoy -- espejo en JS de account_service._last_occurrence
- * (mismo clamp de fin de mes). Comparacion de fechas como string ISO en vez
- * de Date evita el desfase de zona horaria de `new Date("YYYY-MM-DD")`
- * (se parsea como medianoche UTC, no local). */
+/** Last date (YYYY-MM-DD) a credit card with this billing day cut off, on
+ * or before today -- JS mirror of account_service._last_occurrence (same
+ * end-of-month clamp). Comparing dates as ISO strings instead of Date
+ * avoids the timezone offset from `new Date("YYYY-MM-DD")` (parsed as
+ * midnight UTC, not local). */
 function lastCycleBoundary(billingCycleDay: number, today: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   const daysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate()
@@ -596,19 +598,20 @@ function lastCycleBoundary(billingCycleDay: number, today: Date): string {
   return candidate
 }
 
-/** Fila de una TDC dentro de CreditCardCommitments -- cada una consulta su
- * propio ciclo y sus propias transacciones (ambas ya filtradas por
- * account_id en el backend -- nunca depende de en que posicion de `lines`
- * cae la cuenta real, para gastos esa posicion varia, ver
- * transaction_service._resolve_lines). Reporta su total a
- * CreditCardCommitments via onTotal para el gran total.
+/** A credit card's row inside CreditCardCommitments -- each one queries its
+ * own cycle and its own transactions (both already filtered by account_id
+ * on the backend -- never depends on which position in `lines` the real
+ * account falls on, for expenses that position varies, see
+ * transaction_service._resolve_lines). Reports its total to
+ * CreditCardCommitments via onTotal for the grand total.
  *
- * El "gasto del corte" NO usa cycle.current_cycle_balance (ese es neto de
- * pagos hechos en el corte, pensado para el detalle de Cuentas) -- aqui se
- * suma solo el gasto bruto, sin contar las compras MSI (esas ya estan
- * representadas por su mensualidad en `installmentTotal`, sumarlas tambien
- * aqui las contaria dos veces) ni los pagos (un pago a la tarjeta bajaria
- * este numero, dando la impresion de que debes menos el proximo corte). */
+ * The "cycle spend" does NOT use cycle.current_cycle_balance (that's net of
+ * payments made during the cycle, meant for the Accounts detail view) --
+ * here only the gross expense gets summed, not counting interest-free
+ * installment purchases (MSI) (those are already represented by their
+ * monthly amount in `installmentTotal`, adding them here too would double
+ * count them) nor payments (a card payment would lower this number, giving
+ * the impression you owe less by the next cutoff). */
 function CreditCardCommitmentRow({
   account,
   onTotal,
@@ -656,14 +659,15 @@ function CreditCardCommitmentRow({
   )
 }
 
-/** Compromiso de las TDC del usuario de cara al proximo corte -- mensualidad
- * MSI (fija, se paga si o si) + lo que ya lleva gastado en el corte abierto
- * (variable, sube hasta que corte). Puramente informativo: NO se suma al
- * "Comprometido / mes" de arriba (eso son solo Deudas + Recurrentes reales) --
- * sumarlo ahi doble-contaria el gasto, que ya se registro como su propia
- * transaccion y ya cuenta en "gastado" del presupuesto del mes. Decision
- * explicita del usuario: la TDC se queda fuera de la maquinaria de deuda/
- * compromiso salvo que se vuelva una deuda vencida en negociacion. */
+/** The user's credit card commitment ahead of the next cutoff -- the fixed
+ * MSI monthly amount (has to be paid no matter what) + what's already been
+ * spent in the open cycle (variable, keeps rising until the cutoff). Purely
+ * informative: NOT added to the "Comprometido / mes" above (that's only
+ * real Debts + Recurring items) -- adding it there would double count the
+ * expense, which was already registered as its own transaction and already
+ * counts toward the month's budget "spent". Explicit user decision: the
+ * credit card stays out of the debt/commitment machinery unless it becomes
+ * an overdue debt under negotiation. */
 function CreditCardCommitments({ creditCards }: { creditCards: Account[] }) {
   const [totals, setTotals] = useState<Record<string, number>>({})
   const handleTotal = useCallback((accountId: string, total: number) => {
@@ -757,8 +761,8 @@ export function Recurring() {
   const [open, setOpen] = useState(false)
 
   const pendingEntries = (pending ?? []) as Transaction[]
-  // La pagina dedicada de Suscripciones cubre item_type='subscription' --
-  // aqui solo servicios/utilities/ingresos.
+  // The dedicated Subscriptions page covers item_type='subscription' --
+  // here only services/utilities/income.
   const all = (items ?? []).filter((i) => i.item_type !== 'subscription')
   const active = all.filter((i) => i.status === 'active')
   const visible = status === 'all' ? all : all.filter((i) => i.status === status)
@@ -789,8 +793,8 @@ export function Recurring() {
     })
     .sort((a, b) => b.value - a.value)
 
-  // Igual que en la tabla principal, subscripciones fuera -- tienen su
-  // propia pantalla y su propio recordatorio de vencimiento.
+  // Same as in the main table, subscriptions left out -- they have their
+  // own screen and their own due-date reminder.
   const upcomingItems = (upcoming ?? []).filter((i) => i.item_type !== 'subscription')
 
   return (

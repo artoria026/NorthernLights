@@ -3,9 +3,9 @@ import type { ReactNode } from 'react'
 
 export interface Toast {
   id: number
-  /** ReactNode (no solo string) para poder resaltar una parte del mensaje
-   * (ej. el nombre de una cuenta en negritas) en vez de envolverla en
-   * comillas -- ver ToastHost.tsx. */
+  /** ReactNode (not just string) to be able to highlight part of the message
+   * (e.g. an account name in bold) instead of wrapping it in
+   * quotes -- see ToastHost.tsx. */
   message: ReactNode
   variant: 'error' | 'success'
 }
@@ -14,13 +14,13 @@ interface UiState {
   toasts: Toast[]
   pushToast: (message: ReactNode, variant?: Toast['variant']) => void
   dismissToast: (id: number) => void
-  /** AppSidebar dibuja el icono de "Novedades" dos veces (barra movil y
-   * sidebar de escritorio), pero el modal en si (con su auto-apertura al
-   * detectar una version nueva, ver ChangelogButton.tsx) debe existir UNA
-   * sola vez -- si cada icono tuviera su propio estado local, las dos copias
-   * se auto-abrian por separado y cerrar una revelaba la otra detras
-   * (el changelog "salia dos veces"). Compartiendo este boolean, ambos
-   * iconos son solo triggers de la misma ventana.
+  /** AppSidebar renders the "Novedades" icon twice (mobile bar and
+   * desktop sidebar), but the modal itself (with its auto-open when
+   * detecting a new version, see ChangelogButton.tsx) must exist ONE
+   * single time -- if each icon had its own local state, the two copies
+   * would auto-open separately and closing one would reveal the other behind it
+   * (the changelog "showed up twice"). By sharing this boolean, both
+   * icons are just triggers for the same window.
    */
   changelogOpen: boolean
   setChangelogOpen: (open: boolean) => void

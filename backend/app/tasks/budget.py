@@ -38,9 +38,9 @@ async def _initialize_month_for_all_users() -> int:
 
 @celery_app.task(name="budget.initialize_month")
 def initialize_monthly_budget() -> int:
-    """Corre el 1ro de cada mes: asegura que exista un budget_period por
-    categoria con limite configurado, con el snapshot del limite vigente,
-    aunque el usuario no confirme ninguna transaccion ese dia."""
+    """Runs on the 1st of every month: ensures a budget_period exists for
+    each category with a configured limit, with a snapshot of the current
+    limit, even if the user doesn't confirm any transaction that day."""
     count = asyncio.run(_initialize_month_for_all_users())
     logger.info("budget_initialize_month_completed", users=count)
     return count

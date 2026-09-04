@@ -26,12 +26,12 @@ import { useLogout, useSyncedTheme } from '@/hooks/useAuth'
 import { useUnreadCount } from '@/hooks/useNotifications'
 import { useAuthStore } from '@/stores/authStore'
 import { useConfirmStore } from '@/stores/confirmStore'
-// Version del build, mostrada en el pie de esta sidebar -- una sola fuente de
-// verdad (package.json) en vez de hardcodear el string aqui tambien.
+// Build version, shown in the footer of this sidebar -- a single source of
+// truth (package.json) instead of hardcoding the string here too.
 import pkg from '../../package.json'
 
-// Set de iconos "A -- Directo/concreto" (ver navbar-and-font-proposals.html):
-// prioriza la metafora mas literal de cada accion sobre un icono generico.
+// Icon set "A -- Direct/concrete" (see navbar-and-font-proposals.html):
+// prioritizes the most literal metaphor for each action over a generic icon.
 const PRINCIPAL_ITEMS = [
   { to: '/', end: true, icon: Home, label: 'Inicio' },
   { to: '/accounts', end: false, icon: Building2, label: 'Cuentas' },
@@ -125,9 +125,9 @@ export function AppSidebar() {
   }
   const [moreOpen, setMoreOpen] = useState(false)
   const [reportsOpen, setReportsOpen] = useState(true)
-  // El drawer completo (abajo) es "position: fixed" en mobile -- no empuja
-  // contenido, se abre encima. Se cierra solo en cada cambio de ruta para no
-  // tener que anotar un onClick en cada NavLink de este archivo.
+  // The full drawer (below) is "position: fixed" on mobile -- it doesn't push
+  // content, it opens on top. It closes automatically on every route change so
+  // we don't have to wire an onClick on every NavLink in this file.
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
@@ -143,8 +143,9 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Barra superior movil -- lo unico que ocupa espacio real en el flujo
-          en mobile (el drawer de abajo es un overlay fixed, no empuja nada). */}
+      {/* Mobile top bar -- the only thing that takes up real space in the
+          flow on mobile (the drawer below is a fixed overlay, it pushes
+          nothing). */}
       <header
         className="lg:hidden flex items-center justify-between h-14 px-4 border-b border-sidebar-border flex-shrink-0"
         style={{ background: 'var(--sidebar)' }}
@@ -256,8 +257,9 @@ export function AppSidebar() {
 
       <nav className="px-2 flex flex-col gap-0.5 mt-3.5">
         <SectionLabel>Principal</SectionLabel>
-        {/* Inicio primero, Asesor IA justo despues -- es la funcion principal de
-            la app, no un extra al fondo de "Inteligencia" (ver punto pulsante). */}
+        {/* Inicio first, Asesor IA right after -- it's the app's main
+            function, not an extra at the bottom of "Inteligencia" (see
+            pulsing dot). */}
         {PRINCIPAL_ITEMS.slice(0, 1).map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className={navItemClass}>
             <item.icon size={17} strokeWidth={2} />
@@ -357,8 +359,8 @@ export function AppSidebar() {
       </div>
       </div>
 
-      {/* Una sola instancia para los dos ChangelogButton de arriba (barra
-          movil + sidebar) -- ver comentario en ChangelogButton.tsx. */}
+      {/* A single instance for the two ChangelogButton above (mobile bar
+          + sidebar) -- see comment in ChangelogButton.tsx. */}
       <ChangelogDialog />
     </>
   )

@@ -60,9 +60,9 @@ export function useDismissInsight() {
       return data.data
     },
     onSuccess: (insight) => {
-      // Un insight descartado ya no es "activo" -- sacarlo de la lista visible
-      // al instante. El historial paginado (donde ahora aparece) se refresca
-      // aparte, no bloquea el feedback de "ya lo descarte".
+      // A dismissed insight is no longer "active" -- remove it from the visible list
+      // instantly. The paginated history (where it now appears) refreshes
+      // separately, it doesn't block the "already dismissed it" feedback.
       queryClient.setQueryData<Insight[]>(['insights', 'active'], (prev) =>
         (prev ?? []).filter((i) => i.id !== insight.id),
       )

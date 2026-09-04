@@ -55,7 +55,7 @@ async def test_create_and_list_unplanned_debt(client: AsyncClient):
 
 
 async def test_activate_unplanned_debt_preserves_quita(client: AsyncClient):
-    """Escenario real: BBVA TDC $34,318 negociada a $1,720 via SERTEC."""
+    """Real scenario: BBVA credit card $34,318 negotiated to $1,720 via SERTEC."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -83,7 +83,7 @@ async def test_activate_unplanned_debt_preserves_quita(client: AsyncClient):
     assert debt["total_amount"] == "1720.00"
     assert debt["current_balance"] == "1720.00"
 
-    # La deuda sin plan ya no aparece en la lista de pendientes
+    # The debt without a plan no longer appears in the pending list
     listing = await client.get("/api/v1/debts/unplanned", headers=headers)
     assert listing.json()["data"] == []
 
@@ -183,9 +183,9 @@ async def test_payment_that_clears_balance_completes_debt(client: AsyncClient):
 
 
 async def test_informal_debt_payment_works_without_linked_account(client: AsyncClient):
-    """Antes esto se rechazaba (la deuda informal no tenia forma de "ser" una
-    cuenta) -- ahora usa el ledger oculto de deudas informales, no requiere
-    linked_account_id. Solo TDC (la deuda ES la cuenta real) lo exige."""
+    """This used to be rejected (an informal debt had no way to "be" an
+    account) -- now it uses the hidden informal-debt ledger, it doesn't require
+    linked_account_id. Only credit cards (where the debt IS the real account) require it."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     bank_id = await _create_account(client, headers, initial_balance="500")
@@ -248,10 +248,10 @@ async def test_delete_debt_with_balance_conflicts(client: AsyncClient):
 
 
 async def test_update_debt_corrects_current_balance(client: AsyncClient):
-    """current_balance es la unica fuente de verdad del saldo de una deuda
-    (a diferencia de Account, que tiene initial_balance separado) -- pensado
-    para corregir el saldo despues de un backfill historico de pagos viejos,
-    sin tener que registrar cada pago uno a uno."""
+    """current_balance is the single source of truth for a debt's balance
+    (unlike Account, which has a separate initial_balance) -- meant
+    to correct the balance after a historical backfill of old payments,
+    without having to register each payment one by one."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -341,9 +341,9 @@ async def test_rls_isolates_debts_between_users(client: AsyncClient):
 
 
 async def test_owed_to_me_debt_funds_and_collects(client: AsyncClient):
-    """Prestarle a alguien (direction=owed_to_me) con funding_account_id: se
-    mueve efectivo real de una cuenta tuya al ledger oculto 'Prestamos por
-    cobrar', y el patrimonio total no cambia -- solo se mueve de bolsillo."""
+    """Lending someone money (direction=owed_to_me) with funding_account_id: real
+    cash moves from one of your accounts to the hidden 'Prestamos por
+    cobrar' ledger, and total net worth doesn't change -- it just moves between pockets."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     checking_id = await _create_account(client, headers, name="Santander", initial_balance="1000")
@@ -367,7 +367,7 @@ async def test_owed_to_me_debt_funds_and_collects(client: AsyncClient):
     checking = await client.get(f"/api/v1/accounts/{checking_id}", headers=headers)
     assert checking.json()["data"]["balance"] == "700.00"
 
-    # El ledger 'Prestamos por cobrar' nunca aparece en Cuentas.
+    # The 'Prestamos por cobrar' ledger never shows up in Accounts.
     accounts = (await client.get("/api/v1/accounts", headers=headers)).json()["data"]
     assert not any(a["name"] == "Préstamos por cobrar" for a in accounts)
 
@@ -386,8 +386,8 @@ async def test_owed_to_me_debt_funds_and_collects(client: AsyncClient):
 
 
 async def test_unplanned_debt_direction_and_activation_funding(client: AsyncClient):
-    """Deuda sin plan (owed_by_me: alguien me presta) nunca toca balances --
-    solo al activarla con un plan y una cuenta de fondeo entra el efectivo."""
+    """A debt without a plan (owed_by_me: someone lends me money) never touches balances --
+    only activating it with a plan and a funding account brings the cash in."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     checking_id = await _create_account(client, headers, initial_balance="0")
@@ -401,7 +401,7 @@ async def test_unplanned_debt_direction_and_activation_funding(client: AsyncClie
     assert unplanned.json()["data"]["direction"] == "owed_by_me"
 
     unchanged = await client.get(f"/api/v1/accounts/{checking_id}", headers=headers)
-    assert unchanged.json()["data"]["balance"] == "0.00"  # sin plan no mueve dinero
+    assert unchanged.json()["data"]["balance"] == "0.00"  # without a plan, no money moves
 
     activated = await client.post(
         f"/api/v1/debts/unplanned/{unplanned.json()['data']['id']}/activate",
@@ -417,7 +417,7 @@ async def test_unplanned_debt_direction_and_activation_funding(client: AsyncClie
     assert activated.json()["data"]["direction"] == "owed_by_me"
 
     funded = await client.get(f"/api/v1/accounts/{checking_id}", headers=headers)
-    assert funded.json()["data"]["balance"] == "1000.00"  # el efectivo prestado aterrizo aqui
+    assert funded.json()["data"]["balance"] == "1000.00"  # the borrowed cash landed here
 
 
 async def test_debt_summary_splits_by_direction(client: AsyncClient):
@@ -473,12 +473,12 @@ async def test_process_due_debt_payments_generates_pending_without_touching_bala
     assert generated[0].status == "pending"
     assert generated[0].debt_id == uuid.UUID(debt_id)
 
-    # El borrador no debe mover nada todavia -- ver docstring de _apply_payment.
+    # The draft must not move anything yet -- see the _apply_payment docstring.
     bank = await client.get(f"/api/v1/accounts/{bank_id}", headers=headers)
     assert bank.json()["data"]["balance"] == "5000.00"
     debt_after = await client.get(f"/api/v1/debts/{debt_id}", headers=headers)
     assert debt_after.json()["data"]["current_balance"] == "12000.00"
-    assert debt_after.json()["data"]["next_payment_date"] == "2026-09-01"  # ya avanzo
+    assert debt_after.json()["data"]["next_payment_date"] == "2026-09-01"  # already advanced
 
     pending = await client.get("/api/v1/debts/pending", headers=headers)
     assert pending.json()["meta"]["total"] == 1
@@ -511,7 +511,7 @@ async def test_process_due_debt_payments_is_idempotent_same_day(
         second = await debt_service.process_due_debt_payments(session, uid, date(2026, 8, 6))
 
     assert len(first) == 1
-    assert len(second) == 0  # ya habia un pending, no duplica
+    assert len(second) == 0  # a pending one already existed, doesn't duplicate
 
     pending = await client.get("/api/v1/debts/pending", headers=headers)
     assert pending.json()["meta"]["total"] == 1

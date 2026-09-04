@@ -100,9 +100,9 @@ export function useSetUserRole() {
   })
 }
 
-// Sin onSuccess que toque la cache de usuarios -- el reset no cambia ningun
-// campo que la tabla muestre, solo el password_hash (que nunca llega al
-// front salvo el valor temporal en texto plano de esta unica respuesta).
+// No onSuccess touching the user cache -- the reset doesn't change any
+// field the table shows, only password_hash (which never reaches the
+// front end except for the temporary plain-text value in this one response).
 export function useResetUserPassword() {
   return useMutation({
     mutationFn: async (id: string) => {

@@ -14,12 +14,12 @@ export function useMediaQuery(query: string): boolean {
   return matches
 }
 
-/** Mismo breakpoint `lg` que ya usa el resto de la app (sidebar, splits de
- * layout) -- una sola fuente de verdad para "estamos en vista de escritorio".
- * Usar esto (en vez de solo clases hidden/lg:hidden) es obligatorio cuando la
- * fila tiene un Dialog con estado local: dos arboles CSS-ocultos montarian el
- * Dialog dos veces, y al abrir cualquiera de los dos triggers apareceria por
- * duplicado. Con este hook solo un arbol existe en el DOM a la vez. */
+/** Same `lg` breakpoint already used by the rest of the app (sidebar, layout
+ * splits) -- a single source of truth for "we're in desktop view".
+ * Using this (instead of just hidden/lg:hidden classes) is mandatory when the
+ * row has a Dialog with local state: two CSS-hidden trees would mount the
+ * Dialog twice, and opening either of the two triggers would show it
+ * duplicated. With this hook only one tree exists in the DOM at a time. */
 export function useIsDesktop(): boolean {
   return useMediaQuery('(min-width: 1024px)')
 }

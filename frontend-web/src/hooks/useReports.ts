@@ -31,9 +31,9 @@ export function useCurrentMonthSummary() {
 export interface GenerateReportInput {
   period_start?: string
   period_end?: string
-  /** Recalcula desde cero un periodo que ya tiene un reporte listo -- para
-   * cuando el usuario backfillea historial viejo y el mes/año ya se habia
-   * generado (casi vacio) antes de cargar esas transacciones. */
+  /** Recalculates from scratch a period that already has a report ready -- for
+   * when the user backfills old history and the month/year had already been
+   * generated (nearly empty) before those transactions were loaded. */
   force?: boolean
 }
 

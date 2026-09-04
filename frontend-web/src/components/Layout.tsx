@@ -4,8 +4,8 @@ import { AppSidebar } from '@/components/AppSidebar'
 import { TransactionModals } from '@/components/nl/TransactionModals'
 import { useTransactionModalStore } from '@/stores/transactionModalStore'
 
-// Paginas donde el FAB "Agregar rapido" no aplica -- Configuracion no tiene
-// nada que agregar rapido, y el boton flotante ahi solo tapaba contenido.
+// Pages where the "Agregar rapido" FAB doesn't apply -- Configuracion has
+// nothing to quick-add, and the floating button there only covered content.
 const QUICK_ADD_FAB_HIDDEN_PATHS = ['/settings']
 
 export function Layout() {
@@ -17,54 +17,53 @@ export function Layout() {
     <div className="min-h-screen lg:h-screen flex flex-col lg:flex-row bg-background text-foreground">
       <AppSidebar />
       <div className="flex-1 min-w-0 lg:min-h-0 flex flex-col">
-        {/* flex flex-col ademas de flex-1: no cambia nada para la mayoria de
-            las pantallas (su root div sigue sizeando a su contenido, como
-            antes), pero le da a Advisor.tsx un `lg:flex-1 lg:min-h-0` real
-            para llenar el alto disponible SIN necesitar un `calc(100vh-Npx)`
-            a mano ni bleed-ear el padding -- asi su chat queda con el mismo
-            gutter que cualquier otra pantalla.
+        {/* flex flex-col in addition to flex-1: doesn't change anything for
+            most screens (their root div still sizes to its content, as
+            before), but it gives Advisor.tsx a real `lg:flex-1 lg:min-h-0`
+            to fill the available height WITHOUT needing a hand-rolled
+            `calc(100vh-Npx)` or bleeding the padding -- so its chat keeps
+            the same gutter as any other screen.
 
-            El `lg:h-screen` de arriba (en vez de solo min-h-screen) es lo
-            que de verdad hace el truco, no el min-h-0 solo: min-height NO le
-            da a los descendientes flex un tamaño DEFINIDO del cual encoger
-            -- sin una altura definida en algun punto de la cadena, el
-            "minimo automatico 0" de un item con overflow-auto nunca se
-            llega a aplicar de verdad (nunca hay una negociacion real de
-            encoger), y todo termina renderizando a su alto de contenido de
-            todas formas, empujando la pagina entera. Para paginas normales
-            (que SI quieren poder crecer mas de 100vh y hacer scroll normal)
-            no cambia nada: si su contenido es mas alto que 100vh, igual
-            se desborda visualmente hacia abajo (nada aqui tiene
-            overflow-hidden) y el scroll de pagina de siempre sigue
-            funcionando igual -- h-screen vs min-h-screen solo importa
-            para el calculo de flexbox interno, no para el overflow visible. */}
+            The `lg:h-screen` above (instead of just min-h-screen) is what
+            actually makes this work, not min-h-0 alone: min-height does NOT
+            give flex descendants a DEFINED size to shrink from -- without a
+            defined height somewhere in the chain, the "automatic minimum 0"
+            of an overflow-auto item never truly kicks in (there's never a
+            real shrink negotiation), and everything ends up rendering at
+            its content height anyway, pushing the whole page. For normal
+            pages (which DO want to be able to grow past 100vh and scroll
+            normally) nothing changes: if their content is taller than
+            100vh, it still visually overflows downward (nothing here has
+            overflow-hidden) and the usual page scroll keeps working the
+            same -- h-screen vs min-h-screen only matters for the internal
+            flexbox calculation, not for the visible overflow. */}
         <main
-          // pb-20 (en vez de solo p-4) deja espacio de sobra abajo en movil para
-          // que el FAB "Agregar rapido" (fixed bottom-5, ver mas abajo) nunca
-          // quede encima de contenido real al hacer scroll hasta el fondo --
-          // confirmado con el calendario de Transacciones, donde sin este
-          // padding el FAB tapaba los ultimos dias del mes.
+          // pb-20 (instead of just p-4) leaves extra room at the bottom on
+          // mobile so the "Agregar rapido" FAB (fixed bottom-5, see below)
+          // never sits on top of real content when scrolling to the bottom --
+          // confirmed with the Transacciones calendar, where without this
+          // padding the FAB covered the last days of the month.
           //
-          // OJO: el padding de ARRIBA de <main> se movio a margin-top en el
-          // wrapper de <Outlet/> (ver abajo) a proposito -- padding-top en el
-          // propio contenedor con scroll se suma al offset "top" del header
-          // sticky (ViewHeader usa top-3), asi que con `pt-4`/`lg:pt-7` aqui
-          // el header quedaba pegado ~28-40px mas abajo de lo que su propio
-          // `top-3` dice, dejando un hueco sin cubrir arriba del header por
-          // el que se alcanzaba a ver contenido de mas abajo scrolleando
-          // (parecia "ghosting" pero era contenido real, no un glitch de
-          // pintado). Un margin-top en un wrapper normal (no el scroll
-          // container) da el mismo espacio visual sin arrastrar ese offset.
+          // NOTE: the TOP padding of <main> was moved to margin-top on the
+          // <Outlet/> wrapper (see below) on purpose -- padding-top on the
+          // scroll container itself adds to the sticky header's "top" offset
+          // (ViewHeader uses top-3), so with `pt-4`/`lg:pt-7` here the header
+          // ended up stuck ~28-40px further down than its own `top-3` says,
+          // leaving an uncovered gap above the header through which you
+          // could see content from further below while scrolling (it looked
+          // like "ghosting" but was real content, not a paint glitch). A
+          // margin-top on a normal wrapper (not the scroll container) gives
+          // the same visual spacing without carrying that offset along.
           className="flex-1 lg:min-h-0 flex flex-col px-4 pb-20 lg:px-8 lg:pb-8 max-w-[1600px] w-full mx-auto overflow-x-hidden"
           style={{ animation: 'fadeInView 150ms ease' }}
         >
-          {/* Franja decorativa que tapa con un degradado lo poco que el
-              header sticky (top-3, 12px) todavia no cubre arriba suyo.
-              h-0 + hijo absoluto: no ocupa espacio en el flujo (nada de
-              margin negativo, nada de margin-collapse raro con el mt-4/
-              lg:mt-7 de abajo). z-[5] queda por debajo del z-10 del header
-              (ViewHeader en primitives.tsx) para que el header, ya opaco,
-              siga ganando en la franja donde se solapan. */}
+          {/* Decorative strip that covers, with a gradient, the little bit
+              that the sticky header (top-3, 12px) still doesn't cover above
+              itself. h-0 + absolute child: takes up no space in the flow
+              (no negative margin, no weird margin-collapse with the mt-4/
+              lg:mt-7 below). z-[5] stays below the header's z-10
+              (ViewHeader in primitives.tsx) so the header, already opaque,
+              still wins in the strip where they overlap. */}
           <div aria-hidden="true" className="sticky top-0 z-[5] h-0 pointer-events-none">
             <div
               className="h-12 w-full"
@@ -74,11 +73,12 @@ export function Layout() {
               }}
             />
           </div>
-          {/* flex-1 lg:min-h-0 flex flex-col aqui replica lo que <main> ya
-              hacia como contenedor directo de Outlet -- Advisor.tsx depende
-              de que su propio `lg:flex-1 lg:min-h-0` encuentre un padre flex
-              que si crezca (ver Layout.tsx original y el comentario de
-              Advisor.tsx), y ahora ese padre directo es este div, no main. */}
+          {/* flex-1 lg:min-h-0 flex flex-col here replicates what <main>
+              already did as Outlet's direct container -- Advisor.tsx
+              depends on its own `lg:flex-1 lg:min-h-0` finding a flex
+              parent that actually grows (see the original Layout.tsx and
+              the comment in Advisor.tsx), and now that direct parent is
+              this div, not main. */}
           <div className="mt-4 lg:mt-7 flex-1 lg:min-h-0 flex flex-col">
             <Outlet />
           </div>

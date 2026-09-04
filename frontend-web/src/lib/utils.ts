@@ -6,9 +6,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/** Los montos del backend suelen llegar como string (Decimal serializado) --
- * String.prototype.toLocaleString ignora silenciosamente las opciones de
- * moneda, por eso el Number() es obligatorio aqui y no cosmetico. */
+/** Amounts from the backend usually arrive as a string (serialized
+ * Decimal) -- String.prototype.toLocaleString silently ignores currency
+ * options, which is why the Number() here is mandatory and not cosmetic. */
 export function formatMoney(
   value: string | number | null | undefined,
   opts?: { maximumFractionDigits?: number },
@@ -20,10 +20,10 @@ export function formatMoney(
   })
 }
 
-/** Rojo si es negativo, verde si es positivo, sin color (texto normal) en
- * cero -- para no forzar un verde "falso" en un monto que en realidad es
- * $0. Mismo criterio en toda la app: saldo de cuenta, patrimonio neto,
- * disponible de la semana, etc. */
+/** Red if negative, green if positive, no color (normal text) at zero --
+ * so as not to force a "false" green on an amount that's actually $0. Same
+ * criteria across the whole app: account balance, net worth, weekly
+ * available, etc. */
 export function amountColor(value: string | number | null | undefined): string | undefined {
   const n = Number(value ?? 0)
   if (n < 0) return "var(--nl-danger-ink)"
@@ -31,24 +31,24 @@ export function amountColor(value: string | number | null | undefined): string |
   return undefined
 }
 
-/** Saldo de una cuenta -- para un pasivo (TDC) amountColor lo pintaba verde
- * "positivo" solo porque el numero es > 0, dando a entender que es dinero a
- * tu favor cuando en realidad es lo que debes. Un pasivo se muestra en azul
- * neutro sin importar el signo; el resto de tipos de cuenta conserva el
- * criterio normal de amountColor. */
+/** Balance of an account -- for a liability (credit card) amountColor used
+ * to paint it "positive" green just because the number is > 0, implying
+ * it's money in your favor when it's actually what you owe. A liability is
+ * shown in neutral blue regardless of sign; the rest of the account types
+ * keep amountColor's normal criteria. */
 export function accountBalanceColor(account: { type: string; balance: string }): string | undefined {
   if (account.type === "liability") return "var(--nl-blue-ink)"
   return amountColor(account.balance)
 }
 
-/** Select nativo con el mismo tratamiento visual que <Input> (no hay un
- * componente shadcn/select en este proyecto; se centraliza aqui para no
- * repetir la clase larga en cada pagina). */
+/** Native select with the same visual treatment as <Input> (there's no
+ * shadcn/select component in this project; centralized here to avoid
+ * repeating the long class on every page). */
 export const selectClass =
   "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
 
-/** Etiqueta en espanol para entry_type -- usada como respaldo cuando una
- * transaccion no tiene category_name (transfer/prestamos no llevan categoria). */
+/** Spanish label for entry_type -- used as a fallback when a transaction
+ * has no category_name (transfers/loans don't carry a category). */
 const ENTRY_TYPE_LABELS: Record<string, string> = {
   expense: "Gasto",
   income: "Ingreso",
@@ -57,8 +57,8 @@ const ENTRY_TYPE_LABELS: Record<string, string> = {
   loan_repayment: "Pago de préstamo",
   loan_given: "Préstamo otorgado",
   loan_collection: "Cobro de préstamo",
-  // Misma etiqueta para ambas direcciones a propósito (elegido con el
-  // usuario) -- el color del monto ya distingue entrada/salida, ver
+  // Same label for both directions on purpose (chosen with the user) --
+  // the amount's color already distinguishes in/out, see
   // isPositiveEntryType.
   adjustment_in: "Ajuste de saldo",
   adjustment_out: "Ajuste de saldo",
@@ -68,18 +68,18 @@ export function entryTypeLabel(entryType: string): string {
   return ENTRY_TYPE_LABELS[entryType] ?? entryType
 }
 
-/** entry_type que suman al balance de la cuenta (se muestran en verde) --
- * usado en vez de comparar `=== 'income'` a mano en cada pantalla, ahora que
- * adjustment_in tambien cuenta como "entrada" igual que income. */
+/** entry_types that add to the account balance (shown in green) -- used
+ * instead of comparing `=== 'income'` by hand on every screen, now that
+ * adjustment_in also counts as an "entry" just like income. */
 export function isPositiveEntryType(entryType: string): boolean {
   return entryType === "income" || entryType === "adjustment_in"
 }
 
-/** Solo expense/income/transfer con exactamente 2 lines son editables desde
- * EditTransactionModal -- loans, adjustments y gastos divididos (>2 lines)
- * tienen sus propios flujos dedicados (Deudas, Reconciliar cuenta, gasto
- * dividido) y editarlos de forma generica seria incorrecto sin logica
- * adicional que no se pidio. */
+/** Only expense/income/transfer with exactly 2 lines are editable from
+ * EditTransactionModal -- loans, adjustments and split expenses (>2 lines)
+ * have their own dedicated flows (Debts, Reconcile account, split expense)
+ * and editing them generically would be incorrect without additional logic
+ * that wasn't requested. */
 export function isTransactionEditable(tx: Transaction): boolean {
   return (
     (tx.entry_type === "expense" || tx.entry_type === "income" || tx.entry_type === "transfer") &&
@@ -87,8 +87,8 @@ export function isTransactionEditable(tx: Transaction): boolean {
   )
 }
 
-/** Etiqueta en espanol para el subtype/type de una cuenta (AccountCreate.subtype
- * en el backend) -- mismo patron que ENTRY_TYPE_LABELS arriba. */
+/** Spanish label for an account's subtype/type (AccountCreate.subtype in
+ * the backend) -- same pattern as ENTRY_TYPE_LABELS above. */
 const ACCOUNT_SUBTYPE_LABELS: Record<string, string> = {
   cash: "Efectivo",
   checking: "Cuenta de débito",
@@ -109,7 +109,7 @@ export function accountSubtypeLabel(subtype: string | null | undefined): string 
   return ACCOUNT_SUBTYPE_LABELS[subtype] ?? subtype
 }
 
-/** Etiqueta en espanol para Debt.type -- mismo patron que ACCOUNT_SUBTYPE_LABELS. */
+/** Spanish label for Debt.type -- same pattern as ACCOUNT_SUBTYPE_LABELS. */
 const DEBT_TYPE_LABELS: Record<string, string> = {
   personal_loan: "Préstamo personal",
   payroll_loan: "Crédito de nómina",
@@ -122,9 +122,9 @@ export function debtTypeLabel(type: string): string {
   return DEBT_TYPE_LABELS[type] ?? type
 }
 
-/** Etiqueta en espanol para PaymentFrequency (deudas) -- distinto de
- * FREQUENCY_LABELS en lib/recurring.ts porque incluye "irregular" y no
- * "bimonthly"/"annual" (esos son solo de recurring items, no de deudas). */
+/** Spanish label for PaymentFrequency (debts) -- different from
+ * FREQUENCY_LABELS in lib/recurring.ts because it includes "irregular" and
+ * not "bimonthly"/"annual" (those are only for recurring items, not debts). */
 const PAYMENT_FREQUENCY_LABELS: Record<string, string> = {
   weekly: "Semanal",
   biweekly: "Quincenal",
@@ -136,12 +136,12 @@ export function paymentFrequencyLabel(frequency: string): string {
   return PAYMENT_FREQUENCY_LABELS[frequency] ?? frequency
 }
 
-/** "2026-08-25" -> "25 ago" -- para columnas angostas donde la fecha ISO
- * completa no cabe (ver Recurring.tsx/Subscriptions.tsx, listas de "próximos
- * pagos/renovaciones"). Sin año a propósito: estas listas solo muestran
- * fechas dentro de los próximos 7 días, nunca cruzan de año. timeZone: 'UTC'
- * porque el string de entrada no trae hora -- sin esto, en zonas horarias
- * negativas (UTC-N) el dia mostrado se recorre uno hacia atrás. */
+/** "2026-08-25" -> "25 ago" -- for narrow columns where the full ISO date
+ * doesn't fit (see Recurring.tsx/Subscriptions.tsx, "upcoming
+ * payments/renewals" lists). No year on purpose: these lists only show
+ * dates within the next 7 days, never crossing a year boundary. timeZone:
+ * 'UTC' because the input string carries no time -- without this, in
+ * negative time zones (UTC-N) the shown day shifts one day back. */
 export function formatShortDate(value: string): string {
   return new Date(value).toLocaleDateString("es-MX", {
     day: "numeric",

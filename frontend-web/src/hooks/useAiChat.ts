@@ -39,13 +39,13 @@ export function useClearAiHistory() {
 export interface StreamingChatMessage {
   role: 'user' | 'assistant'
   content: string
-  /** Solo nombres, para el chip de "adjunto" en la burbuja -- los PDFs en si
-   * nunca se persisten (ver ChatAttachments), asi que esto tampoco sobrevive
-   * un reload: es una comodidad de la sesion actual, no historial real. */
+  /** Names only, for the "attachment" chip in the bubble -- the PDFs themselves
+   * are never persisted (see ChatAttachments), so this doesn't survive
+   * a reload either: it's a convenience for the current session, not real history. */
   attachmentNames?: string[]
-  /** Se llena despues de que el stream termina (ver el fetch a /ai/history
-   * en el finally de sendMessage) -- si trae alguna de WRITE_TOOLS, esta
-   * respuesta de verdad registro algo, no es solo texto proponiendolo. */
+  /** Filled in after the stream ends (see the fetch to /ai/history
+   * in sendMessage's finally) -- if it carries any of WRITE_TOOLS, this
+   * response actually recorded something, it's not just text proposing it. */
   toolCalls?: { tool: string; result: unknown }[]
 }
 
@@ -55,8 +55,8 @@ export interface SavedInsightRef {
 }
 
 export interface ChatAttachments {
-  /** Estados de cuenta en PDF -- se mandan tal cual, el backend les quita la
-   * contraseña antes de pasarlos al modelo (nunca se persisten). */
+  /** PDF account statements -- sent as-is, the backend strips the password
+   * before passing them to the model (they're never persisted). */
   files: File[]
   password?: string
 }
@@ -67,10 +67,10 @@ export function useChatStream() {
   const [error, setError] = useState<string | null>(null)
   const [savedInsight, setSavedInsight] = useState<SavedInsightRef | null>(null)
   const queryClient = useQueryClient()
-  // Guarda el ultimo mensaje que de verdad fallo (excepcion de red o payload
-  // {error} del SSE, ej. limite diario) para poder reintentarlo tal cual sin
-  // que el usuario tenga que reescribirlo. Se limpia en cuanto un intento
-  // termina sin errores.
+  // Stores the last message that actually failed (network exception or SSE
+  // {error} payload, e.g. daily limit) so it can be retried as-is without
+  // the user having to rewrite it. Cleared as soon as an attempt
+  // finishes without errors.
   const lastFailedMessageRef = useRef<string | null>(null)
 
   const sendMessage = useCallback(
@@ -78,11 +78,11 @@ export function useChatStream() {
       setError(null)
       setSavedInsight(null)
       const attachmentNames = attachments?.files.length ? attachments.files.map((f) => f.name) : undefined
-      // Lo que se ve en la burbuja (mensaje limpio + chip de adjuntos) y lo
-      // que de verdad viaja al backend ya no son el mismo string -- al de
-      // red se le agrega el nombre del archivo en texto para que el
-      // historial guardado en el server siga teniendo ese contexto aunque
-      // los chips (attachmentNames) no se persistan.
+      // What's shown in the bubble (clean message + attachment chip) and
+      // what actually travels to the backend are no longer the same string -- the
+      // network one gets the file name appended as text so the
+      // history saved on the server keeps that context even though
+      // the chips (attachmentNames) aren't persisted.
       const displayMessage = message || (attachmentNames ? 'Aquí están mis estados de cuenta.' : '')
       const networkMessage = attachmentNames
         ? `${displayMessage} (adjunto: ${attachmentNames.join(', ')})`
@@ -98,9 +98,9 @@ export function useChatStream() {
       let hadError = false
 
       try {
-        // multipart/form-data siempre (no solo cuando hay adjuntos): el
-        // endpoint ya no acepta JSON, ver backend/app/routers/ai.py. El
-        // browser pone el Content-Type con el boundary solo.
+        // multipart/form-data always (not only when there are attachments): the
+        // endpoint no longer accepts JSON, see backend/app/routers/ai.py. The
+        // browser sets the Content-Type with the boundary on its own.
         const form = new FormData()
         form.append('message', networkMessage)
         if (attachments?.password) form.append('pdf_password', attachments.password)
@@ -164,11 +164,11 @@ export function useChatStream() {
               params: { page: 1, per_page: 1 },
             })
             const toolCalls = data.data[0]?.tool_calls ?? undefined
-            // Le pega los tool_calls reales (create_transaction, create_account,
-            // etc.) al mensaje del asistente que se acaba de terminar de
-            // transmitir -- el stream de SSE solo manda texto, esto es lo unico
-            // que le dice a la UI "aqui de verdad se registro algo" en vez de
-            // adivinar por palabras del texto.
+            // Attaches the real tool_calls (create_transaction, create_account,
+            // etc.) to the assistant message that just finished
+            // streaming -- the SSE stream only sends text, this is the only thing
+            // that tells the UI "something was actually recorded here" instead of
+            // guessing from the wording of the text.
             if (toolCalls) {
               setMessages((prev) => {
                 const next = [...prev]
@@ -183,7 +183,7 @@ export function useChatStream() {
               setSavedInsight({ id: result.insight_id, title: result.title ?? '' })
             }
           } catch {
-            // Best-effort: si esto falla no afecta el chat en si.
+            // Best-effort: if this fails it doesn't affect the chat itself.
           }
         }
       }
@@ -194,8 +194,8 @@ export function useChatStream() {
   const retryLast = useCallback(() => {
     if (!lastFailedMessageRef.current || isStreaming) return
     const message = lastFailedMessageRef.current
-    // Quita el par (usuario, asistente vacio) del intento fallido antes de
-    // volver a mandarlo -- sendMessage ya agrega su propio par nuevo.
+    // Removes the (user, empty assistant) pair from the failed attempt before
+    // resending it -- sendMessage already adds its own new pair.
     setMessages((prev) => prev.slice(0, -2))
     void sendMessage(message)
   }, [isStreaming, sendMessage])

@@ -1,8 +1,8 @@
 import { addMonths, addWeeks, addYears, isAfter, isBefore, parseISO } from 'date-fns'
 import type { PaymentFrequency, RecurringFrequency } from '@/types'
 
-/** Espeja `compute_next_date` en `recurring_service.py` -- si cambia una,
- * cambia la otra. */
+/** Mirrors `compute_next_date` in `recurring_service.py` -- if one changes,
+ * change the other. */
 export function advanceRecurringDate(current: Date, frequency: RecurringFrequency): Date {
   switch (frequency) {
     case 'weekly':
@@ -18,8 +18,8 @@ export function advanceRecurringDate(current: Date, frequency: RecurringFrequenc
   }
 }
 
-/** Espeja `_advance_date` en `debt_service.py`. `irregular` (o sin
- * frecuencia) no se puede proyectar hacia adelante. */
+/** Mirrors `_advance_date` in `debt_service.py`. `irregular` (or no
+ * frequency) cannot be projected forward. */
 export function advanceDebtDate(current: Date, frequency: PaymentFrequency | null): Date | null {
   switch (frequency) {
     case 'weekly':
@@ -33,10 +33,10 @@ export function advanceDebtDate(current: Date, frequency: PaymentFrequency | nul
   }
 }
 
-/** El backend solo guarda la *proxima* fecha de cada item recurrente/deuda
- * (avanza cuando se confirma esa ocurrencia), no cada ocurrencia futura. Para
- * pintar un mes completo en el calendario proyectamos hacia adelante desde
- * esa fecha usando la misma regla de frecuencia que usa el backend. */
+/** The backend only stores the *next* date of each recurring item/debt
+ * (it advances when that occurrence is confirmed), not every future
+ * occurrence. To render a full month in the calendar we project forward
+ * from that date using the same frequency rule the backend uses. */
 export function projectOccurrences(
   startDateIso: string,
   advance: (current: Date) => Date | null,

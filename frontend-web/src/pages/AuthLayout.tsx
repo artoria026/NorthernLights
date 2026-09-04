@@ -3,8 +3,8 @@ import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import logoMain from '@/assets/logos/main.png'
 import { Donut, GroupedBars, LineChart } from '@/lib/charts'
-// Version del build, mostrada al pie de este panel -- misma fuente de verdad
-// que el pie del sidebar (AppSidebar.tsx), no hardcodear el string aqui.
+// Build version, shown at the bottom of this panel -- same source of truth
+// as the sidebar footer (AppSidebar.tsx), don't hardcode the string here.
 import pkg from '../../package.json'
 
 export interface AuthValueProp {
@@ -13,15 +13,15 @@ export interface AuthValueProp {
   text: string
 }
 
-// Login y Register montan el mismo AuthLayout con contenido distinto, asi
-// que cada vez que se navega de uno a otro este componente se vuelve a
-// montar entero -- 'animation' en el style dispara la entrada en cada
-// mount, sin depender de ningun estado. El panel de texto (izquierda) entra
-// deslizando desde la izquierda; la card del form (derecha) NO desliza,
-// solo se desvanece/aparece. viewTransitionName es un plus: en browsers con
-// soporte para la View Transitions API (Chrome/Edge) ademas cruza el
-// snapshot viejo con el nuevo en vez de cortar seco -- ver las reglas
-// ::view-transition-* en index.css.
+// Login and Register mount the same AuthLayout with different content, so
+// every time you navigate from one to the other this component fully
+// remounts -- 'animation' in the style triggers the entrance on every
+// mount, without depending on any state. The text panel (left) slides in
+// from the left; the form card (right) does NOT slide, it only fades
+// in/out. viewTransitionName is a bonus: in browsers that support the View
+// Transitions API (Chrome/Edge) it also cross-fades the old snapshot with
+// the new one instead of a hard cut -- see the ::view-transition-* rules
+// in index.css.
 const heroCopyTransitionStyle: CSSProperties = {
   viewTransitionName: 'auth-hero-copy',
   animation: 'authInLeft 1400ms cubic-bezier(0.22, 1, 0.36, 1)',
@@ -31,13 +31,13 @@ const formCardTransitionStyle: CSSProperties = {
   animation: 'authFadeIn 500ms ease-out 120ms both',
 } as CSSProperties
 
-/** Slides fijos, iguales en Login y Register -- el slide 0 usa el copy que
- * le manda cada pantalla (heroTitle/heroSubtitle/valueProps, ver
- * HeroCarousel); estos de aca son la "vitrina" de features con datos de
- * ejemplo (no reales -- esto es marketing de la pantalla de acceso, no un
- * dashboard) usando los mismos componentes de chart que el resto de la app
- * (lib/charts.tsx) para que se sientan parte de NorthernLights, no un mockup
- * aparte inventado solo para esta pantalla. */
+/** Fixed slides, same on Login and Register -- slide 0 uses the copy each
+ * screen sends it (heroTitle/heroSubtitle/valueProps, see HeroCarousel);
+ * these here are the feature "showcase" with sample data (not real -- this
+ * is marketing for the access screen, not a dashboard) using the same
+ * chart components as the rest of the app (lib/charts.tsx) so they feel
+ * part of NorthernLights, not a separate mockup invented just for this
+ * screen. */
 const FEATURE_SLIDES: { title: string; subtitle: string; visual: ReactNode }[] = [
   {
     title: 'Tu salud financiera, mes a mes',
@@ -87,11 +87,11 @@ const FEATURE_SLIDES: { title: string; subtitle: string; visual: ReactNode }[] =
 
 const SLIDE_INTERVAL_MS = 5000
 
-/** El slide 0 es el copy propio de Login/Register (heroTitle/heroSubtitle/
- * valueProps); los siguientes son FEATURE_SLIDES, iguales en ambas
- * pantallas. Avanza solo cada SLIDE_INTERVAL_MS; los puntos de abajo
- * permiten saltar a cualquiera y reinician el temporizador (si no, saltar
- * manualmente se sentiria "peleado" con el auto-avance). */
+/** Slide 0 is Login/Register's own copy (heroTitle/heroSubtitle/valueProps);
+ * the following ones are FEATURE_SLIDES, the same on both screens. It
+ * advances on its own every SLIDE_INTERVAL_MS; the dots below let you jump
+ * to any of them and reset the timer (otherwise, jumping manually would
+ * feel "at odds" with the auto-advance). */
 function HeroCarousel({
   heroTitle,
   heroSubtitle,
@@ -195,10 +195,10 @@ export function AuthLayout({
       <div
         className="hidden lg:flex w-[42%] flex-col justify-between p-12 relative overflow-hidden"
         style={{
-          // Fondo propio de este panel (no --nl-bg-sidebar, ese es el del
-          // nav real de la app) -- mas claro a proposito: los vectores
-          // grises decorativos que trae el PNG del logo (main.png) casi no
-          // se distinguian contra el negro casi puro de --nl-bg-sidebar.
+          // This panel's own background (not --nl-bg-sidebar, that's the
+          // app's real nav) -- deliberately lighter: the decorative gray
+          // vectors baked into the logo's PNG (main.png) were barely
+          // distinguishable against the near-pure black of --nl-bg-sidebar.
           background: '#1c1f26',
           borderRight: '1px solid var(--nl-border)',
         }}
@@ -213,12 +213,12 @@ export function AuthLayout({
         />
 
         <div className="relative">
-          {/* -mt-12 -ml-12 cancela el p-12 del panel: el PNG (main.png)
-              trae el wireframe decorativo empezando practicamente en su
-              esquina (0,0) -- con el padding normal se veia flotando, con
-              un borde recto donde el canvas del PNG "cortaba" las lineas
-              a medio trazo. Pegado al borde real del panel, ese corte
-              coincide con el borde real y deja de notarse. */}
+          {/* -mt-12 -ml-12 cancels the panel's p-12: the PNG (main.png)
+              carries the decorative wireframe starting practically at its
+              corner (0,0) -- with normal padding it looked like it was
+              floating, with a straight edge where the PNG canvas "cut"
+              the lines mid-stroke. Pinned to the panel's actual edge, that
+              cut lines up with the real border and stops being noticeable. */}
           <img
             src={logoMain}
             alt="NorthernLights"
@@ -234,10 +234,10 @@ export function AuthLayout({
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12 overflow-hidden relative">
-        {/* Mismo glow que el panel izquierdo, pero solo mobile/tablet (en
-            desktop ya esta ahi, y este lado queda deliberadamente limpio) --
-            sin esto, el header con el logo se sentia flotando en un fondo
-            vacio antes de llegar al form. */}
+        {/* Same glow as the left panel, but mobile/tablet only (on desktop
+            it's already there, and this side is deliberately left clean) --
+            without this, the header with the logo felt like it was floating
+            on an empty background before reaching the form. */}
         <div
           className="lg:hidden absolute -top-20 left-1/2 -translate-x-1/2 w-[360px] h-[360px] rounded-full opacity-20 blur-3xl pointer-events-none"
           style={{ background: 'var(--nl-accent)' }}

@@ -51,13 +51,13 @@ celery_app.conf.beat_schedule = {
     },
     "generate-yearly-reports": {
         "task": "reports.generate_yearly",
-        # Despues del job mensual (1:00 AM) del 1ro de enero -- para entonces
-        # ya existe el reporte mensual de diciembre del año que cierra.
+        # After the monthly job (1:00 AM) on January 1st -- by then
+        # the closing year's December monthly report already exists.
         "schedule": crontab(month_of_year="1", day_of_month="1", hour="2", minute="0"),
     },
 }
 
-# autodiscover_tasks importa "<pkg>.tasks" por cada paquete en la lista; como
-# nuestro paquete de tareas ya se llama "app.tasks", hay que apuntar a "app"
-# (importa app.tasks, cuyo __init__ registra los submodulos reales).
+# autodiscover_tasks imports "<pkg>.tasks" for each package in the list; since
+# our tasks package is already called "app.tasks", we need to point to "app"
+# (imports app.tasks, whose __init__ registers the actual submodules).
 celery_app.autodiscover_tasks(["app"])

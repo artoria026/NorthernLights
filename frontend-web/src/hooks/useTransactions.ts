@@ -31,15 +31,15 @@ export interface CreateTransactionInput {
   tags?: string[]
   entry_type: EntryType
   category_id?: string | null
-  /** Forma simple (income/expense): el backend resuelve solo la cuenta
-   * contable interna de la categoría, nunca la elige el usuario. */
+  /** Simple form (income/expense): the backend resolves only the category's
+   * internal accounting account, the user never chooses it. */
   account_id?: string
   amount?: string
-  /** Forma explícita, solo para transfer: dos cuentas reales del usuario. */
+  /** Explicit form, transfer only: two real accounts of the user. */
   lines?: { account_id: string; amount: string; type: 'debit' | 'credit' }[]
-  /** Solo para entry_type='expense' en forma simple, pagando con una TDC:
-   * marca la compra como a meses sin intereses. El backend valida la cuenta
-   * y calcula el progreso al vuelo -- ver Transaction.installment. */
+  /** Only for entry_type='expense' in simple form, paying with a credit card:
+   * marks the purchase as interest-free installments (Meses Sin Intereses). The backend validates the account
+   * and computes progress on the fly -- see Transaction.installment. */
   installment_total?: number
 }
 
@@ -64,8 +64,8 @@ export interface SplitExpenseInput {
   category_id: string
   paying_account_id: string
   my_share: string
-  /** Se resuelve/crea solo en Deudas (direction=owed_to_me) por nombre --
-   * nunca se elige una cuenta para esto. */
+  /** Resolved/created only in Debts (direction=owed_to_me) by name --
+   * an account is never chosen for this. */
   debtors: { person_name: string; amount: string }[]
 }
 
@@ -89,11 +89,11 @@ export interface UpdateTransactionInput {
   description?: string
   notes?: string
   category_id?: string | null
-  /** Forma simple (expense/income): mismo patrón que crear -- el backend
-   * resuelve la cuenta contable interna, el front solo manda la cuenta real. */
+  /** Simple form (expense/income): same pattern as create -- the backend
+   * resolves the internal accounting account, the front end only sends the real account. */
   account_id?: string
   amount?: string
-  /** Forma explícita, solo para transfer. */
+  /** Explicit form, transfer only. */
   lines?: { account_id: string; amount: string; type: 'debit' | 'credit' }[]
 }
 
@@ -105,9 +105,9 @@ export function useUpdateTransaction() {
       return data.data
     },
     onSuccess: () => {
-      // A diferencia de eliminar, aqui casi cualquier campo pudo cambiar
-      // (fecha, monto, cuenta) -- invalidar en vez de parchear en el cliente,
-      // mismo patron que useCreateTransaction.
+      // Unlike deleting, here almost any field could have changed
+      // (date, amount, account) -- invalidate instead of patching on the client,
+      // same pattern as useCreateTransaction.
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
     },
@@ -122,10 +122,10 @@ export function useDeleteTransaction() {
       return id
     },
     onSuccess: (id) => {
-      // A diferencia de crear (donde el lugar correcto en el orden/paginado
-      // depende de logica del servidor que no queremos duplicar en el
-      // cliente), quitar una fila es seguro en cualquier pagina/filtro
-      // cacheado: nunca genera ambiguedad de orden.
+      // Unlike creating (where the correct spot in the order/pagination
+      // depends on server logic we don't want to duplicate on the
+      // client), removing a row is safe in any cached page/filter:
+      // it never creates ordering ambiguity.
       const queries = queryClient.getQueryCache().findAll({ queryKey: ['transactions'] })
       for (const query of queries) {
         queryClient.setQueryData<ApiSuccess<Transaction[]> & { meta: Meta }>(

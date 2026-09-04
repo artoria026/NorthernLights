@@ -1,8 +1,8 @@
-/** Prompt reusable para que el usuario lo pegue en OTRA IA (ChatGPT, Gemini,
- * etc. -- la conversación donde ya lleva el registro informal de sus
- * finanzas) y traiga de vuelta un resumen en el formato que el Asesor IA
- * espera para importarlo. Vivía en ImportarDatos.tsx antes de que esa
- * pantalla se consolidara dentro de Asesor IA. */
+/** Reusable prompt for the user to paste into ANOTHER AI (ChatGPT, Gemini,
+ * etc. -- the conversation where they already keep an informal record of
+ * their finances) and bring back a summary in the format the AI Advisor
+ * expects for importing it. Used to live in ImportarDatos.tsx before that
+ * screen was consolidated into AI Advisor. */
 export const EXPORT_PROMPT = `A partir de todo nuestro historial de conversación sobre mis finanzas, genera
 un resumen en Markdown que voy a importar a mi app de finanzas personales.
 No inventes cifras que no hayamos discutido — si algo no está claro o no lo

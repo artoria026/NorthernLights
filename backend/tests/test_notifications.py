@@ -83,8 +83,8 @@ async def test_delete_notification(client: AsyncClient, session_factory):
 
 
 async def test_budget_alert_creates_real_notification(client: AsyncClient):
-    """M07 (_check_budget_alert) ahora crea una notificacion real via M14 en
-    vez de solo loguear -- confirma la integracion end-to-end."""
+    """M07 (_check_budget_alert) now creates a real notification via M14
+    instead of just logging -- confirms the end-to-end integration."""
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     category = await client.get("/api/v1/categories?type=expense", headers=headers)
@@ -135,7 +135,7 @@ async def test_email_notification_respects_user_preference(client: AsyncClient, 
     await client.put("/api/v1/auth/settings", headers=headers, json={"email_notifications": False})
 
     async with rls_session(session_factory, uid) as session:
-        # No debe lanzar ni intentar enviar: solo retorna sin hacer nada.
+        # Must not raise or try to send: it should just return without doing anything.
         await notification_service.send_email_notification(session, uid, "Asunto", "<p>Hola</p>")
 
 

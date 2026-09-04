@@ -2,9 +2,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { DISCLAIMER_TEXT } from '@/lib/disclaimer'
 
-/** Mismo texto en los 3 lugares donde se muestra el aviso (registro,
- * DisclaimerGate, Ajustes) -- un solo componente para no divergir el estilo
- * entre ellos. */
+/** Same text in the 3 places where the notice is shown (registration,
+ * DisclaimerGate, Settings) -- a single component so the style doesn't
+ * diverge between them. */
 const COMPONENTS = {
   h2: ({ ...props }) => (
     <h2 className="text-[15px] font-semibold mt-5 mb-2 first:mt-0" {...props} />

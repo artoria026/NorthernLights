@@ -146,9 +146,9 @@ async def test_transfer_with_category_rejected(client: AsyncClient):
 
 
 async def test_adjustment_in_simple_form_increases_balance(client: AsyncClient):
-    """El endpoint de reconciliacion (test_accounts.py) usa exactamente esta
-    forma simple internamente -- este test cubre el entry_type nuevo de
-    forma aislada, sin pasar por /accounts/{id}/reconcile."""
+    """The reconciliation endpoint (test_accounts.py) uses exactly this
+    simple form internally -- this test covers the new entry_type in
+    isolation, without going through /accounts/{id}/reconcile."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     cash_id = await _create_account(
@@ -198,11 +198,11 @@ async def test_adjustment_out_simple_form_decreases_balance(client: AsyncClient)
 
 
 async def test_adjustment_with_category_rejected(client: AsyncClient):
-    """Igual que transfer/loan (test_transfer_with_category_rejected):
-    adjustment_in/out son movimientos contables, no aceptan category_id --
-    si se mezclaran con una categoria real se distorsionaria el historial de
-    gasto/ingreso de esa categoria (ver Notion, buenas practicas de
-    conciliacion)."""
+    """Same as transfer/loan (test_transfer_with_category_rejected):
+    adjustment_in/out are accounting entries, they don't accept category_id --
+    if they were mixed with a real category it would distort that category's
+    expense/income history (see Notion, reconciliation best
+    practices)."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     cash_id = await _create_account(client, headers, subtype="cash", initial_balance="100")
@@ -224,9 +224,9 @@ async def test_adjustment_with_category_rejected(client: AsyncClient):
 
 
 async def test_two_adjustments_share_same_hidden_ledger_account(client: AsyncClient):
-    """adjustment_in y adjustment_out deben resolver a LA MISMA cuenta
-    contable interna equity ('Ajustes de saldo'), a diferencia de
-    income/expense que tienen una cuenta interna cada uno -- ver
+    """adjustment_in and adjustment_out must resolve to THE SAME internal
+    equity ledger account ('Ajustes de saldo'), unlike
+    income/expense which each have their own internal account -- see
     account_service.get_or_create_category_ledger_account."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
@@ -247,8 +247,8 @@ async def test_two_adjustments_share_same_hidden_ledger_account(client: AsyncCli
         assert response.status_code == 201
 
     accounts = await client.get("/api/v1/accounts", headers=headers)
-    # La cuenta interna 'Ajustes de saldo' es is_internal=True -- no debe
-    # listarse junto a las cuentas reales del usuario.
+    # The internal 'Ajustes de saldo' account is is_internal=True -- it must not
+    # be listed alongside the user's real accounts.
     names = {a["name"] for a in accounts.json()["data"]}
     assert names == {"Cuenta"}
 
@@ -311,13 +311,14 @@ async def test_split_expense_charges_full_amount_and_tracks_receivables(client: 
     expense = await client.get(f"/api/v1/accounts/{my_share_line['account_id']}", headers=headers)
     debts = (await client.get("/api/v1/debts?direction=owed_to_me", headers=headers)).json()["data"]
 
-    assert paying.json()["data"]["balance"] == "500.00"  # cargo completo a la TDC
-    assert expense.json()["data"]["balance"] == "100.00"  # mi parte, cuenta interna resuelta sola
+    assert paying.json()["data"]["balance"] == "500.00"  # full charge to the credit card
+    # my share, internal account resolved on its own
+    assert expense.json()["data"]["balance"] == "100.00"
     assert len(debts) == 1
     assert debts[0]["name"] == "Amigo"
-    assert debts[0]["current_balance"] == "400.00"  # lo que me debe el amigo -- vive en Deudas
+    assert debts[0]["current_balance"] == "400.00"  # what the friend owes me -- lives in Debts
 
-    # El ledger interno "Préstamos por cobrar" nunca se lista como cuenta del usuario.
+    # The internal "Préstamos por cobrar" ledger is never listed as a user account.
     accounts = (await client.get("/api/v1/accounts", headers=headers)).json()["data"]
     assert not any(a["name"] == "Préstamos por cobrar" for a in accounts)
 
@@ -344,15 +345,15 @@ async def test_split_expense_accumulates_same_person(client: AsyncClient):
         assert response.status_code == 201
 
     debts = (await client.get("/api/v1/debts?direction=owed_to_me", headers=headers)).json()["data"]
-    assert len(debts) == 1  # "erick" repetido no crea una deuda nueva
+    assert len(debts) == 1  # repeated "erick" doesn't create a new debt
     assert debts[0]["current_balance"] == "100.00"
 
 
 async def test_installment_purchase_creates_plan_with_progress(client: AsyncClient):
-    """Una compra a meses sin intereses (installment_total) no crea una Deuda
-    aparte -- es metadata de la transaccion real contra la TDC, y el progreso
-    (paid_installments/monthly_amount) se calcula al vuelo a partir de la
-    fecha de esa transaccion (ver transaction_service._get_installment_map)."""
+    """A purchase in interest-free installments (Meses Sin Intereses, installment_total)
+    doesn't create a separate Debt -- it's metadata on the real transaction against the
+    credit card, and the progress (paid_installments/monthly_amount) is computed on the fly
+    from that transaction's date (see transaction_service._get_installment_map)."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     tdc_id = await _create_account(
@@ -377,7 +378,7 @@ async def test_installment_purchase_creates_plan_with_progress(client: AsyncClie
     assert created.status_code == 201, created.text
 
     tdc = await client.get(f"/api/v1/accounts/{tdc_id}", headers=headers)
-    assert tdc.json()["data"]["balance"] == "12000.00"  # cargo completo, de una vez
+    assert tdc.json()["data"]["balance"] == "12000.00"  # full charge, all at once
 
     listing = await client.get("/api/v1/transactions", headers=headers)
     entry = listing.json()["data"][0]
@@ -412,9 +413,9 @@ async def test_installment_purchase_rejected_without_credit_card_account(client:
 
 
 async def test_update_transaction_changes_amount_and_account(client: AsyncClient):
-    """PUT con account_id/amount sueltos (forma simple) cambia de cuenta Y de
-    monto sin que el front tenga que conocer la cuenta contable interna de la
-    categoria -- se resuelve igual que en create (_resolve_lines)."""
+    """PUT with loose account_id/amount (simple form) changes both account AND
+    amount without the frontend having to know the category's internal
+    accounting account -- it's resolved the same way as in create (_resolve_lines)."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
     banco_a = await _create_account(client, headers, name="Banco A", initial_balance="1000")
@@ -447,10 +448,10 @@ async def test_update_transaction_changes_amount_and_account(client: AsyncClient
     )
     assert updated.status_code == 200
 
-    # Banco A recupera su saldo (se revirtio el delta viejo)...
+    # Banco A recovers its balance (the old delta was reverted)...
     banco_a_after = await client.get(f"/api/v1/accounts/{banco_a}", headers=headers)
     assert banco_a_after.json()["data"]["balance"] == "1000.00"
-    # ...y Banco B absorbe el nuevo monto.
+    # ...and Banco B absorbs the new amount.
     banco_b_after = await client.get(f"/api/v1/accounts/{banco_b}", headers=headers)
     assert banco_b_after.json()["data"]["balance"] == "350.00"
 
@@ -493,6 +494,6 @@ async def test_update_transaction_lines_for_transfer(client: AsyncClient):
     origin = await client.get(f"/api/v1/accounts/{origin_id}", headers=headers)
     dest = await client.get(f"/api/v1/accounts/{dest_id}", headers=headers)
     dest2 = await client.get(f"/api/v1/accounts/{dest2_id}", headers=headers)
-    assert origin.json()["data"]["balance"] == "300.00"  # sin cambio neto (200 salio, sigue saliendo)
-    assert dest.json()["data"]["balance"] == "0.00"  # se revirtio, ya no recibio nada
-    assert dest2.json()["data"]["balance"] == "200.00"  # ahora recibe el destino nuevo
+    assert origin.json()["data"]["balance"] == "300.00"  # no net change (200 went out, still goes out)
+    assert dest.json()["data"]["balance"] == "0.00"  # reverted, no longer received anything
+    assert dest2.json()["data"]["balance"] == "200.00"  # now receives the new destination's amount

@@ -15,12 +15,12 @@ from app.models.category import Category
 from app.schemas.transaction import TransactionCreate
 from app.services import account_service, category_service, transaction_service
 
-# Layout: dos bloques lado a lado en una sola hoja, como una hoja de calculo
-# casera tipica (ver el ejemplo que trajo el usuario) -- Ingresos en A-E,
-# columna F vacia de separador, Gastos en G-K. Mismas 5 columnas en ambos:
-# Monto, Descripcion, Fecha, Cuenta, Categoria (las ultimas dos son las que
-# le agregamos a su formato original -- la app las necesita para saber a
-# donde va cada movimiento).
+# Layout: two blocks side by side on a single sheet, like a typical
+# homemade spreadsheet (see the example the user brought) -- Income in A-E,
+# empty column F as a separator, Expenses in G-K. Same 5 columns in both:
+# Amount, Description, Date, Account, Category (the last two are the ones
+# we added to their original format -- the app needs them to know where
+# each transaction goes).
 SHEET_NAME = "Transacciones"
 LISTS_SHEET = "Listas"
 TEMPLATE_ROWS = 200
@@ -54,9 +54,9 @@ def build_template_workbook(
     income_categories: list[Category],
     expense_categories: list[Category],
 ) -> BytesIO:
-    """Plantilla descargable: dos tablas (Ingresos/Gastos) con Cuenta y
-    Categoria como listas desplegables (referencian una hoja oculta 'Listas'
-    -- Excel no soporta listas largas inline mas alla de ~255 caracteres)."""
+    """Downloadable template: two tables (Income/Expenses) with Account and
+    Category as dropdown lists (referencing a hidden 'Listas' sheet
+    -- Excel doesn't support long inline lists beyond ~255 characters)."""
     wb = Workbook()
     ws = wb.active
     ws.title = SHEET_NAME
@@ -141,7 +141,7 @@ def _parse_date(value: object) -> date_type | None:
     if isinstance(value, str):
         for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
             try:
-                return datetime.strptime(value.strip(), fmt).date()  # noqa: DTZ007 (fecha de negocio, sin hora)
+                return datetime.strptime(value.strip(), fmt).date()  # noqa: DTZ007 (business date, no time)
             except ValueError:
                 continue
     return None
@@ -159,8 +159,8 @@ def _parse_amount(value: object) -> Decimal | None:
 
 
 def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int) -> tuple:
-    """start_col es 0-indexado dentro de `row_cells` (0 para Ingresos/A,
-    6 para Gastos/G). Retorna (ParsedRow | None, error dict | None)."""
+    """start_col is 0-indexed within `row_cells` (0 for Income/A,
+    6 for Expenses/G). Returns (ParsedRow | None, error dict | None)."""
     block_label = "Ingreso" if entry_type == "income" else "Gasto"
     amount_cell = row_cells[start_col].value
     if amount_cell in (None, ""):

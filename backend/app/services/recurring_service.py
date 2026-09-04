@@ -25,8 +25,8 @@ FREQUENCY_FACTORS = {
     "annual": Decimal("1") / 12,
 }
 
-# item_type == 'utility' escala diario desde el dia 1; 'high' desde el dia 3;
-# 'normal' cada 3 dias. 'income' no aplica (los ingresos no llevan recordatorio).
+# item_type == 'utility' escalates daily starting day 1; 'high' starting
+# day 3; 'normal' every 3 days. 'income' doesn't apply (income doesn't get reminders).
 _REMINDER_INTERVAL_DAYS = {"critical": 1, "high": 1, "normal": 3}
 _REMINDER_START_DAY = {"critical": 0, "high": 3, "normal": 3}
 
@@ -79,8 +79,8 @@ async def get_recurring_item(session: AsyncSession, user_id: UUID, item_id: UUID
 async def create_recurring_item(
     session: AsyncSession, user_id: UUID, data: RecurringItemCreate
 ) -> RecurringItem:
-    # El item genera un journal_entry expense/income (M04): la categoria debe
-    # coincidir con ese tipo o create_transaction rechazara la generacion.
+    # The item generates an expense/income journal_entry (M04): the category
+    # must match that type or create_transaction will reject the generation.
     expected_entry_type = "income" if data.item_type == "income" else "expense"
     category = await category_service.get_category(session, user_id, data.category_id)
     if category.type != expected_entry_type:
@@ -90,8 +90,8 @@ async def create_recurring_item(
             f"'{expected_entry_type}' que genera item_type='{data.item_type}'",
         )
 
-    # Contraparte contable (income/expense): el usuario nunca la elige, se
-    # resuelve sola -- igual que en transacciones simples y gasto compartido.
+    # Accounting counterpart (income/expense): the user never picks it, it
+    # resolves itself -- same as in simple transactions and shared expense.
     ledger_account = await account_service.get_or_create_category_ledger_account(
         session, user_id, expected_entry_type
     )
@@ -152,10 +152,10 @@ async def cancel_recurring_item(
 async def resume_recurring_item(
     session: AsyncSession, user_id: UUID, item_id: UUID
 ) -> RecurringItem:
-    """Reactiva un item pausado o cancelado. Si `next_date` quedo en el pasado
-    (pausado/cancelado por un tiempo), lo adelanta a hoy -- de otro modo
-    Celery generaria de golpe todos los cobros que se "vencieron" mientras
-    estaba inactivo."""
+    """Reactivates a paused or cancelled item. If `next_date` ended up in
+    the past (paused/cancelled for a while), it's advanced to today --
+    otherwise Celery would generate all at once every charge that "came
+    due" while it was inactive."""
     item = await get_recurring_item(session, user_id, item_id)
     if item.status == "active":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Este item ya esta activo")
@@ -242,9 +242,10 @@ async def get_summary(
 async def process_due_recurring_items(
     session: AsyncSession, user_id: UUID, today: date
 ) -> list[JournalEntry]:
-    """Tarea Celery `recurring.process_due` (por usuario). Genera un
-    journal_entry `pending` por item vencido; dedup: si ya existe un pending
-    para ese recurring_id, no genera otro en el mismo periodo."""
+    """Celery task `recurring.process_due` (per user). Generates a
+    `pending` journal_entry for each overdue item; dedup: if a pending
+    already exists for that recurring_id, it doesn't generate another one
+    in the same period."""
     result = await session.execute(
         select(RecurringItem).where(
             RecurringItem.user_id == user_id,
@@ -314,9 +315,9 @@ async def process_due_recurring_items(
 
 
 async def remind_pending_recurring(session: AsyncSession, user_id: UUID, today: date) -> list[dict]:
-    """Tarea Celery `recurring.remind_pending` (por usuario). M14 (Notificaciones)
-    no existe todavia: registra un log estructurado por cada recordatorio que
-    tocaria enviar, en vez de escribir a una tabla notifications inexistente."""
+    """Celery task `recurring.remind_pending` (per user). M14 (Notifications)
+    doesn't exist yet: logs a structured entry for each reminder that would
+    need to be sent, instead of writing to a nonexistent notifications table."""
     pending_entries = await get_pending(session, user_id)
 
     reminders = []

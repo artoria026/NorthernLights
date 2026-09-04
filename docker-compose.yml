@@ -1,15 +1,12 @@
-# Postgres y Redis usan el motor nativo compartido de esta maquina (ver
-# ~/.infra/context/architecture.md) en vez de contenedores propios del
-# proyecto: puerto 5432 (Postgres 16.14) y 6379 (Redis 7.0.15), ambos
-# ya activos via systemd. pgAdmin (opcional) se conecta a ese Postgres
-# nativo a traves de host.docker.internal.
+# Postgres/Redis run natively on the host (see README), not as containers.
+# pgAdmin (optional) reaches native Postgres via host.docker.internal.
 services:
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: finanzas_pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@finanzas.local
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-changeme}
     ports:
       - "5050:80"
     extra_hosts:

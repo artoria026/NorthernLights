@@ -28,14 +28,14 @@ class ChatMessage(Base):
     tokens_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
     ai_provider: Mapped[str | None] = mapped_column(String, nullable=True)
 
-    # default de Python (no server_default=func.now()) a proposito: el turno
-    # user+assistant de un chat se guarda en la MISMA transaccion (ver
-    # advisor.chat) y func.now() devuelve la hora de inicio de la transaccion
-    # -- ambas filas quedarian con el mismo created_at, y el ORDER BY
-    # created_at DESC de list_history ya no distinguiria cual fue primero
-    # (bug real: el mensaje del usuario podia salir "despues" del de la IA).
-    # datetime.now(UTC) evaluado en Python le da a cada fila su propio
-    # timestamp real, aunque sea por microsegundos.
+    # Python-side default (not server_default=func.now()) on purpose: a chat's
+    # user+assistant turn is saved in the SAME transaction (see
+    # advisor.chat) and func.now() returns the transaction's start time
+    # -- both rows would end up with the same created_at, and list_history's
+    # ORDER BY created_at DESC would no longer distinguish which came first
+    # (real bug: the user's message could show up "after" the AI's).
+    # datetime.now(UTC) evaluated in Python gives each row its own
+    # real timestamp, even if only by microseconds.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

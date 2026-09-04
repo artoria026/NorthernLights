@@ -20,19 +20,19 @@ DEBT_TYPES = (
 DEBT_STATUSES = ("active", "completed", "negotiating")
 PAYMENT_FREQUENCIES = ("weekly", "biweekly", "monthly", "irregular")
 UNPLANNED_STATUSES = ("pending", "converted")
-# owed_by_me: dinero que YO debo (Mireya, el banco, mi abuelo). owed_to_me:
-# dinero que ME deben (le preste a alguien) -- mismo modelo, misma UI de
-# "sin plan"/plan completo, solo cambia quien le debe a quien. Sustituye al
-# viejo esquema de cuentas 'loan_receivable' en Accounts (ver migracion
-# que agrega esta columna).
+# owed_by_me: money that I owe (Mireya, the bank, my grandfather). owed_to_me:
+# money that's owed TO me (I lent it to someone) -- same model, same
+# "no plan"/full plan UI, only who owes whom changes. Replaces the
+# old 'loan_receivable' account scheme in Accounts (see the migration
+# that adds this column).
 DEBT_DIRECTIONS = ("owed_by_me", "owed_to_me")
 
 
 class UnplannedDebt(Base, TimestampMixin, SoftDeleteMixin):
-    """Deuda que existe pero sin plan de pago activo: solo recordatorio.
+    """A debt that exists but has no active payment plan: reminder only.
 
-    No afecta balances, presupuesto ni alertas. Puede migrar a `Debt` via
-    activate_unplanned_debt() cuando el usuario negocia un plan.
+    Doesn't affect balances, budget, or alerts. Can migrate to `Debt` via
+    activate_unplanned_debt() when the user negotiates a plan.
     """
 
     __tablename__ = "unplanned_debts"
@@ -58,8 +58,8 @@ class UnplannedDebt(Base, TimestampMixin, SoftDeleteMixin):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
-    # FK a debts declarada aqui (nombre de tabla como string); en la migracion
-    # se agrega con ALTER TABLE una vez que `debts` ya existe (referencia circular).
+    # FK to debts declared here (table name as string); added in the migration
+    # with ALTER TABLE once `debts` already exists (circular reference).
     converted_to_debt_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("debts.id"), nullable=True
     )
@@ -116,10 +116,11 @@ class Debt(Base, TimestampMixin, SoftDeleteMixin):
     linked_account_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=True
     )
-    # Cuenta real de la que sale/entra cada pago periodico -- distinta de
-    # linked_account_id (esa es "la deuda es esta cuenta", p.ej. la TDC de
-    # una MSI). Sin esto no hay de donde generar el pago automatico: solo
-    # las deudas con este campo entran a debts.process_due_payments.
+    # Real account each periodic payment comes out of/into -- different from
+    # linked_account_id (that one is "the debt is this account", e.g. the credit
+    # card for an interest-free installment plan). Without this there's nowhere
+    # to generate the automatic payment from: only debts with this field are
+    # picked up by debts.process_due_payments.
     payment_source_account_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("accounts.id"), nullable=True
     )
@@ -166,12 +167,13 @@ class DebtPayment(Base):
 
 
 class InstallmentPlan(Base, TimestampMixin):
-    """Metadata de una compra a meses sin intereses (MSI) hecha con una TDC.
+    """Metadata for a purchase made in interest-free installments (Meses Sin
+    Intereses, MSI) with a credit card.
 
-    1:1 con el journal_entry que representa la compra real -- no duplica su
-    monto ni su fecha. `monthly_amount` y en que cuota va se calculan al
-    vuelo a partir de esa transaccion (ver transaction_service), nunca se
-    guardan aqui, para que nunca puedan desincronizarse de ella.
+    1:1 with the journal_entry representing the actual purchase -- doesn't duplicate
+    its amount or date. `monthly_amount` and which installment it's on are calculated
+    on the fly from that transaction (see transaction_service), never
+    stored here, so they can never get out of sync with it.
     """
 
     __tablename__ = "installment_plans"

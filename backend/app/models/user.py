@@ -29,11 +29,11 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
     google_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
     is_active: Mapped[bool] = mapped_column(default=True)
 
-    # 1:1 con user_preferences (M01 es dueno de identidad/auth; las
-    # preferencias de comportamiento -- tema, notificaciones, ciclo de pago --
-    # las consumen M06/M11/M13/M14 y viven en su propia tabla a proposito.
-    # lazy="selectin" para que cualquier fetch de User la traiga sola, sin
-    # tener que acordarse de un selectinload() en cada call site.
+    # 1:1 with user_preferences (M01 owns identity/auth; behavioral
+    # preferences -- theme, notifications, pay cycle -- are
+    # consumed by M06/M11/M13/M14 and live in their own table on purpose.
+    # lazy="selectin" so that any User fetch brings it along automatically,
+    # without having to remember a selectinload() at every call site.
     preferences: Mapped["UserPreferences"] = relationship(
         back_populates="user", uselist=False, lazy="selectin", cascade="all, delete-orphan"
     )
@@ -53,27 +53,27 @@ class UserPreferences(Base, TimestampMixin):
     pay_cycle: Mapped[str] = mapped_column(String, nullable=False, default="monthly")
     email_notifications: Mapped[bool] = mapped_column(default=True)
     push_notifications: Mapped[bool] = mapped_column(default=True)
-    # Apagado por defecto a proposito: la seccion de "deuda sin plan" en /debts
-    # (boton, stat card, listado) y el tool de advisor get_problem_debts solo
-    # se activan si el usuario indica explicitamente que tiene una deuda
-    # vencida o con problemas de pago -- no queremos que sea lo primero que
-    # ve alguien sin ese problema.
+    # Off by default on purpose: the "debt in trouble" section in /debts
+    # (button, stat card, listing) and the advisor's get_problem_debts tool only
+    # activate if the user explicitly indicates they have an overdue debt
+    # or one with payment problems -- we don't want that to be the first thing
+    # someone without that problem sees.
     debt_trouble_mode: Mapped[bool] = mapped_column(default=False)
-    # Version del changelog (frontend/src/lib/changelog.ts) que el usuario ya
-    # vio -- NULL para cuentas creadas antes de esta feature o que nunca
-    # cerraron el modal. Comparado contra la version mas reciente del array
-    # en el frontend, no hay tabla de releases en el backend.
+    # Changelog version (frontend/src/lib/changelog.ts) the user has already
+    # seen -- NULL for accounts created before this feature or that never
+    # closed the modal. Compared against the most recent version in the
+    # frontend's array, there's no releases table in the backend.
     last_seen_changelog_version: Mapped[str | None] = mapped_column(String, nullable=True)
-    # Version del aviso de privacidad (docs/legal/DISCLAIMER.md en la raiz del
-    # repo, texto real en frontend/src/lib/disclaimer.ts) que el usuario acepto --
-    # NULL para cuentas creadas antes de esta feature. A diferencia de
-    # last_seen_changelog_version (solo informativo), este SI se hace cumplir:
-    # DisclaimerGate en el frontend bloquea toda la app hasta que coincida con
-    # settings.DISCLAIMER_VERSION, y /auth/register no crea la cuenta sin
-    # aceptarlo. Se guarda server-side (POST /auth/accept-disclaimer, ver
-    # auth_service.accept_disclaimer) en vez de aceptar el string desde el
-    # cliente como last_seen_changelog_version -- es un campo de cumplimiento,
-    # no se puede confiar en que el cliente diga la verdad de si lo acepto.
+    # Privacy disclaimer version (docs/legal/DISCLAIMER.md at the repo root,
+    # actual text in frontend/src/lib/disclaimer.ts) that the user accepted --
+    # NULL for accounts created before this feature. Unlike
+    # last_seen_changelog_version (informational only), this one IS enforced:
+    # DisclaimerGate in the frontend blocks the whole app until it matches
+    # settings.DISCLAIMER_VERSION, and /auth/register won't create the account without
+    # accepting it. Saved server-side (POST /auth/accept-disclaimer, see
+    # auth_service.accept_disclaimer) instead of trusting the string from the
+    # client like last_seen_changelog_version -- it's a compliance field,
+    # the client can't be trusted to tell the truth about whether it was accepted.
     accepted_disclaimer_version: Mapped[str | None] = mapped_column(String, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="preferences")

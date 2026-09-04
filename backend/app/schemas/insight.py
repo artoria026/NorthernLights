@@ -9,7 +9,7 @@ from app.models.insight import INSIGHT_CATEGORIES, INSIGHT_PRIORITIES
 
 
 class InsightCreateFromChat(BaseModel):
-    """Payload del tool `create_insight` de M10."""
+    """Payload for the `create_insight` tool from M10."""
 
     title: str = Field(min_length=1)
     description: str = Field(min_length=1)

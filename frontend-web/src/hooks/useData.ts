@@ -30,8 +30,8 @@ export function useEraseData() {
       return data.data
     },
     onSuccess: () => {
-      // El blast radius de un borrado masivo cubre casi cualquier dominio de
-      // la app -- mas simple invalidar todo el cache que enumerar cada uno.
+      // The blast radius of a mass deletion covers almost every domain of
+      // the app -- simpler to invalidate the entire cache than to enumerate each one.
       queryClient.invalidateQueries()
     },
   })

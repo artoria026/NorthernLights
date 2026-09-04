@@ -7,9 +7,9 @@ const CATEGORY_TOKENS = [
   'var(--nl-accent-ink)',
 ] as const
 
-/** Color de texto determinístico por nombre de categoría (hash simple, sin
- * lista fija de nombres -- funciona igual para las categorías del sistema y
- * para las que el usuario cree). Mismo nombre siempre da el mismo color. */
+/** Deterministic text color by category name (simple hash, no fixed list of
+ * names -- works the same for system categories and ones the user creates).
+ * Same name always gives the same color. */
 export function categoryColor(name: string): string {
   let hash = 0
   for (let i = 0; i < name.length; i++) {

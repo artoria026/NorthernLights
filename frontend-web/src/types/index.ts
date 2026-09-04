@@ -15,9 +15,9 @@ export interface User {
   debt_trouble_mode: boolean
   last_seen_changelog_version: string | null
   accepted_disclaimer_version: string | null
-  /** Siempre = version vigente en el backend (settings.DISCLAIMER_VERSION) --
-   * comparar contra accepted_disclaimer_version es lo que decide si
-   * DisclaimerGate bloquea la app (ver components/DisclaimerGate.tsx). */
+  /** Always = the version currently in effect on the backend (settings.DISCLAIMER_VERSION) --
+   * comparing it against accepted_disclaimer_version is what decides whether
+   * DisclaimerGate blocks the app (see components/DisclaimerGate.tsx). */
   current_disclaimer_version: string
   created_at: string
 }
@@ -125,8 +125,8 @@ export interface Transaction {
   is_recurring: boolean
   created_at: string
   lines: JournalLine[]
-  /** Solo presente si la compra se registro "a meses sin intereses" contra
-   * una TDC -- ver installment_total en useCreateTransaction. */
+  /** Only present if the purchase was recorded as "interest-free installments" (meses sin intereses) against
+   * a credit card -- see installment_total in useCreateTransaction. */
   installment: InstallmentInfo | null
 }
 
@@ -139,9 +139,9 @@ export type DebtType =
 
 export type PaymentFrequency = 'weekly' | 'biweekly' | 'monthly' | 'irregular'
 
-/** owed_by_me: dinero que TU debes (Mireya, el banco, tu abuelo). owed_to_me:
- * dinero que TE deben (le prestaste a alguien). Mismo modelo, misma UI de
- * "sin plan"/plan completo -- solo cambia quien le debe a quien. */
+/** owed_by_me: money YOU owe (Mireya, the bank, your grandpa). owed_to_me:
+ * money owed TO you (you lent it to someone). Same model, same UI for
+ * "unplanned"/full plan -- only who owes whom changes. */
 export type DebtDirection = 'owed_by_me' | 'owed_to_me'
 
 export interface UnplannedDebt {
@@ -337,15 +337,15 @@ export type ReportType = 'monthly_auto' | 'monthly_manual' | 'yearly_auto' | 'ye
 export type ReportInsightFlowType = 'income' | 'expense' | 'general'
 export type ReportStatus = 'generating' | 'ready' | 'error'
 
-/** amount es Decimal en el backend -- json_safe() lo serializa como string
- * (mismo patron que cualquier otro monto en la app, ver Transaction.amount)
- * antes de guardarlo en reports.summary (JSONB). savings_rate/dti/health_score
- * SI son floats nativos de Python, por eso son los unicos number de aqui. */
+/** amount is Decimal on the backend -- json_safe() serializes it as a string
+ * (same pattern as any other amount in the app, see Transaction.amount)
+ * before saving it into reports.summary (JSONB). savings_rate/dti/health_score
+ * ARE native Python floats, that's why they're the only numbers here. */
 export interface ReportCategoryAmount {
   category: string
   amount: string
-  /** Solo presente en la fila de una categoria padre -- el gasto/ingreso de
-   * sus subcategorias ya esta sumado en `amount`, esto es el desglose. */
+  /** Only present on a parent category's row -- the expense/income of
+   * its subcategories is already summed into `amount`, this is the breakdown. */
   subcategories?: ReportCategoryAmount[]
 }
 
@@ -354,9 +354,9 @@ export interface ReportSummary {
   income: { total: string; by_category: ReportCategoryAmount[] }
   expenses: { total: string; by_category: ReportCategoryAmount[] }
   committed: { debts_paid: string; recurring_paid: string }
-  // Ausente en reportes generados antes de que existiera esta feature (el
-  // JSON ya persistido en `reports.summary` no se regenera solo) -- siempre
-  // opcional en el tipo, nunca asumir que existe sin chequear.
+  // Absent in reports generated before this feature existed (the
+  // JSON already persisted in `reports.summary` doesn't regenerate on its own) -- always
+  // optional in the type, never assume it exists without checking.
   adjustments?: { total_in: string; total_out: string; net: string; count: number }
   net_worth: { start: string; end: string; delta: string }
   health_score: { value: number; previous: number | null; trend: InsightTrend | null }

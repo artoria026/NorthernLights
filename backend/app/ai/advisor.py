@@ -70,10 +70,10 @@ Reglas:
 - Responde siempre en espanol
 """
 
-# Se agrega a SYSTEM_PROMPT SOLO en los turnos donde el usuario adjunta un PDF
-# (ver chat()) -- asi las preguntas normales del dia a dia no cargan con estas
-# instrucciones de mas. Viene del viejo IMPORT_SYSTEM_PROMPT: "Importar Datos"
-# ya no es una pantalla aparte, se consolido dentro de Asesor IA.
+# Added to SYSTEM_PROMPT ONLY on turns where the user attaches a PDF
+# (see chat()) -- so normal day-to-day questions don't carry this extra
+# instructions overhead. Comes from the old IMPORT_SYSTEM_PROMPT: "Import Data"
+# is no longer a separate screen, it got consolidated into the AI Advisor.
 STATEMENT_INSTRUCTIONS = """
 El usuario adjunto uno o mas PDFs con el detalle de movimientos de una
 tarjeta (estados de cuenta), normalmente varios meses seguidos. Lee la tabla
@@ -114,8 +114,8 @@ del sistema ya existen, son fijas, y debes usar el nombre EXACTO:
 
 MAX_TOOL_ITERATIONS = 20
 
-# Nombres de las tools de escritura (app/ai/write_tools.py) para el dispatch
-# del chat normal en chat() -- ver _run_tool_loop.
+# Names of the write tools (app/ai/write_tools.py) for dispatch
+# in the normal chat() -- see _run_tool_loop.
 WRITE_TOOL_NAMES = {t["name"] for t in WRITE_TOOLS}
 
 logger = structlog.get_logger(__name__)
@@ -135,8 +135,8 @@ async def _run_tool_loop(
     execute: ToolExecutor,
     max_iterations: int,
 ) -> AsyncGenerator[tuple[str, Any], None]:
-    """Corre el loop de streaming + tool-calling de chat(). Yields
-    ('text', str) por cada fragmento y termina con
+    """Runs the streaming + tool-calling loop for chat(). Yields
+    ('text', str) for each fragment and finishes with
     ('done', {'full_response': str, 'tool_calls': list[dict]})."""
     full_response = ""
     tool_calls_made: list[dict] = []
@@ -156,22 +156,22 @@ async def _run_tool_loop(
             elif chunk["type"] == "truncated":
                 truncated = True
 
-        # Un corte por limite de tokens no lanza excepcion (el proveedor
-        # termina el stream "bien"), asi que sin este chequeo el turno se
-        # trataria como una respuesta completa y exitosa -- exactamente el
-        # bug reportado: la respuesta se corta a media lista, sin tool-call
-        # de confirmacion despues, y el usuario no se entera de nada. Se avisa
-        # como texto (markdown, se renderiza en cursiva) en vez de un campo
-        # nuevo en el protocolo SSE -- no hace falta tocar el frontend.
+        # A cutoff from the token limit doesn't raise an exception (the provider
+        # ends the stream "cleanly"), so without this check the turn would be
+        # treated as a complete, successful response -- exactly the
+        # reported bug: the response cuts off mid-list, with no confirmation
+        # tool-call after it, and the user never finds out. It's surfaced
+        # as text (markdown, rendered in italics) instead of a new field
+        # in the SSE protocol -- no need to touch the frontend.
         if truncated:
             if not full_response.strip() and not tool_calls_made:
-                # Nada de texto ni tool-calls en NINGUN turno hasta ahora --
-                # el modelo agoto el limite de longitud (razonando
-                # internamente, ver THINKING_BUDGET_TOKENS en gemini.py) sin
-                # llegar a producir nada visible. "Pideme que continue" no
-                # tiene sentido aqui (no hay nada de que continuar), asi que
-                # el aviso apunta a la causa mas probable: un adjunto pesado
-                # (ver STATEMENT_INSTRUCTIONS, estados de cuenta en PDF).
+                # No text and no tool-calls in ANY turn so far --
+                # the model exhausted the length limit (reasoning
+                # internally, see THINKING_BUDGET_TOKENS in gemini.py) without
+                # producing anything visible. "Ask me to continue" doesn't
+                # make sense here (there's nothing to continue), so
+                # the notice points to the most likely cause: a heavy attachment
+                # (see STATEMENT_INSTRUCTIONS, PDF bank statements).
                 notice = (
                     "\n\n_No alcancé a generar una respuesta: se agotó el límite de longitud "
                     "antes de producir texto o una acción. Es más probable con archivos "
@@ -200,13 +200,13 @@ async def _run_tool_loop(
                     "id": tool_use["id"],
                     "name": tool_use["name"],
                     "input": tool_use["input"],
-                    # Opaco: cada AIProvider decide si usa este campo y para
-                    # que (ver docstring de chat_stream en app/ai/base.py).
-                    # Hoy solo GeminiProvider lo llena (su "thought
-                    # signature"); ClaudeProvider nunca lo produce, asi que
-                    # queda en None y este orquestador lo ignora sin saber
-                    # que es -- no debe conocer detalles de un provider
-                    # concreto (ver SOLID en app/ai/base.py).
+                    # Opaque: each AIProvider decides whether it uses this field and
+                    # for what (see chat_stream docstring in app/ai/base.py).
+                    # Today only GeminiProvider fills it in (its "thought
+                    # signature"); ClaudeProvider never produces it, so
+                    # it stays None and this orchestrator ignores it without knowing
+                    # what it is -- it shouldn't know the details of a concrete
+                    # provider (see SOLID in app/ai/base.py).
                     "provider_state": tool_use.get("provider_state"),
                 }
             )
@@ -225,12 +225,12 @@ async def _run_tool_loop(
             )
         messages.append({"role": "user", "content": tool_result_blocks})
     else:
-        # El for termino sin ningun `break` -- se agotaron los
-        # max_iterations pasos automaticos (ej. un estado de cuenta con
-        # muchos movimientos, uno por tool-call). Mismo problema que el
-        # truncado por tokens: sin este aviso, el ultimo tool_result
-        # simplemente no tiene una respuesta de texto despues y el usuario
-        # no sabe si termino o se corto.
+        # The for loop finished without any `break` -- the
+        # max_iterations automatic steps ran out (e.g. a bank statement with
+        # many transactions, one per tool-call). Same problem as the
+        # token truncation: without this notice, the last tool_result
+        # simply has no text response after it and the user
+        # doesn't know whether it finished or got cut off.
         notice = (
             "\n\n_(Se alcanzó el límite de pasos automáticos para esta solicitud — "
             "pídeme que continúe si falta algo.)_"
@@ -242,10 +242,10 @@ async def _run_tool_loop(
 
 
 async def _refresh_snapshot(session: Any, redis: Redis, user_id: UUID) -> dict:
-    """Recalcula el snapshot financiero y lo re-cachea. Usado al abrir chat()
-    (cache-aside normal) y tambien despues de cada tool de escritura exitosa
-    dentro del mismo turno, para que una lectura inmediata (ej. "agrega este
-    gasto y dime como queda mi presupuesto") no vea datos viejos."""
+    """Recomputes the financial snapshot and re-caches it. Used when opening chat()
+    (normal cache-aside) and also after each successful write tool
+    within the same turn, so that an immediate read (e.g. "add this
+    expense and tell me how my budget looks") doesn't see stale data."""
     snapshot = await engine_service.build_financial_snapshot(session, user_id)
     await cache_service.cache_financial_snapshot(redis, user_id, snapshot)
     return snapshot
@@ -258,17 +258,17 @@ async def chat(
     role: str = "user",
     attachments: list[bytes] | None = None,
 ) -> AsyncGenerator[str, None]:
-    """Abre su propia sesion RLS (en vez de recibir la del request) porque
-    `StreamingResponse` sigue leyendo este generador despues de que la
-    dependencia de FastAPI del endpoint ya se cerro -- mismo patron que
-    `rls_session` usa para las tareas de Celery.
+    """Opens its own RLS session (instead of receiving the request's) because
+    `StreamingResponse` keeps reading this generator after the endpoint's
+    FastAPI dependency has already closed -- same pattern that
+    `rls_session` uses for Celery tasks.
 
-    `attachments`: PDFs ya sin contrasena (se la quita el router antes de
-    llegar aqui, ver app/ai/pdf_utils.py) -- estados de cuenta que el usuario
-    adjunto en este turno desde el mismo chat del dia a dia (ver
-    STATEMENT_INSTRUCTIONS). Se mandan al modelo como bloques `document` en
-    el shape nativo de Anthropic (Claude los pasa tal cual, sin traducir;
-    Gemini los traduce a Part.from_bytes en _build_contents)."""
+    `attachments`: PDFs already without a password (the router strips it before
+    reaching here, see app/ai/pdf_utils.py) -- bank statements that the user
+    attached in this turn from the same day-to-day chat (see
+    STATEMENT_INSTRUCTIONS). They're sent to the model as `document` blocks in
+    Anthropic's native shape (Claude passes them through as-is, no translation;
+    Gemini translates them to Part.from_bytes in _build_contents)."""
     if role != "admin":
         can_query, _ = await cache_service.check_ai_rate_limit(
             redis, user_id, settings.AI_RATE_LIMIT_PER_USER_DAY
@@ -312,18 +312,18 @@ async def chat(
             async def execute(name: str, tool_input: dict) -> dict:
                 nonlocal snapshot
                 if name == PROPOSE_ACTION_NAME:
-                    # No toca la base de datos -- solo confirma de vuelta al
-                    # modelo que la propuesta quedo registrada en tool_calls
-                    # (ver frontend: Advisor.tsx la detecta ahi y dibuja la
-                    # tarjeta con los botones, esto no ejecuta nada solo).
+                    # Doesn't touch the database -- just confirms back to the
+                    # model that the proposal got recorded in tool_calls
+                    # (see frontend: Advisor.tsx detects it there and draws the
+                    # card with the buttons, this alone doesn't execute anything).
                     return {"proposed": True, **tool_input}
                 if name in WRITE_TOOL_NAMES:
                     result = await execute_write_tool(session, user_id, name, tool_input, role)
                     if "error" not in result:
-                        # El snapshot capturado en `system` ya se mando, pero
-                        # las siguientes tools de lectura de este mismo turno
-                        # (ej. get_financial_summary despues de crear un
-                        # gasto) deben ver el dato fresco.
+                        # The snapshot captured in `system` was already sent, but
+                        # the following read tools in this same turn
+                        # (e.g. get_financial_summary after creating an
+                        # expense) must see the fresh data.
                         snapshot = await _refresh_snapshot(session, redis, user_id)
                     return result
                 return await execute_tool(session, redis, user_id, name, tool_input, snapshot)
@@ -354,11 +354,11 @@ async def chat(
                 ai_provider=settings.AI_PROVIDER,
             )
         except AIProviderError as e:
-            # Ya viene traducido a un mensaje para el usuario (ver
-            # _translate_error en app/ai/claude.py y app/ai/gemini.py) --
-            # distingue rate limit, proveedor caido, credenciales invalidas,
-            # etc. en vez del generico de abajo. warning, no exception: ya
-            # sabemos la causa, no es un bug de esta app.
+            # Already comes translated into a user-facing message (see
+            # _translate_error in app/ai/claude.py and app/ai/gemini.py) --
+            # distinguishes rate limit, provider down, invalid credentials,
+            # etc. instead of the generic one below. warning, not exception: we
+            # already know the cause, it's not a bug in this app.
             logger.warning(
                 "ai_provider_error", user_id=str(user_id), error=str(e), retryable=e.retryable
             )

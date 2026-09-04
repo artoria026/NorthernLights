@@ -9,9 +9,9 @@ from app.models.user import User
 from app.schemas.feedback import FeedbackCreate
 from app.services import notification_service
 
-# Solo estos dos estados son "resoluciones" que ameritan avisarle al usuario
-# -- new/read son transiciones puramente internas del lado admin, notificarlas
-# saturaria al usuario sin decirle nada nuevo sobre su reporte.
+# Only these two statuses are "resolutions" that warrant notifying the user
+# -- new/read are purely internal admin-side transitions, notifying those
+# would spam the user without telling them anything new about their report.
 _NOTIFY_STATUSES = {
     "considered": "Tu feedback fue considerado",
     "discarded": "Tu feedback no será implementado",
@@ -33,9 +33,9 @@ async def list_own_feedback(session: AsyncSession, user_id: UUID) -> list[Feedba
 
 
 async def list_feedback(session: AsyncSession, status_filter: str | None = None) -> list[dict]:
-    """Requiere una sesion RLS de un usuario admin -- la policy rls_feedback
-    es la que realmente habilita ver filas de otros usuarios, esto no hace
-    ningun bypass propio (ver require_admin en el router)."""
+    """Requires an RLS session from an admin user -- the rls_feedback policy
+    is what actually enables seeing other users' rows, this doesn't do any
+    bypass of its own (see require_admin in the router)."""
     query = (
         select(Feedback, User.name, User.email)
         .join(User, User.id == Feedback.user_id)
@@ -78,17 +78,18 @@ async def update_status(
 
     title = _NOTIFY_STATUSES.get(new_status)
     if title is not None:
-        # `notifications` tiene FORCE ROW LEVEL SECURITY con
-        # user_id = current_user_id de la sesion -- la sesion de este request
-        # trae seteado el id del admin, no el del dueño del feedback (casi
-        # siempre otra persona), asi que el INSERT normal fallaria el WITH
-        # CHECK. En vez de abrir una conexion nueva (rompe bajo el harness de
-        # tests, que inyecta la sesion de request por dependencia atada a una
-        # sola conexion/transaccion por test), se reapunta `app.current_user_id`
-        # a el en LA MISMA sesion/transaccion -- set_config(..., true) es
-        # LOCAL a la transaccion y se puede recambiar cuantas veces haga
-        # falta -- y se restaura al id del admin antes de devolver el control
-        # al router, por si el request hace algo mas despues.
+        # `notifications` has FORCE ROW LEVEL SECURITY with
+        # user_id = current_user_id from the session -- this request's
+        # session has the admin's id set, not the feedback owner's (almost
+        # always someone else), so the normal INSERT would fail the WITH
+        # CHECK. Instead of opening a new connection (breaks under the test
+        # harness, which injects the request session via a dependency tied
+        # to a single connection/transaction per test), `app.current_user_id`
+        # is repointed to them in THE SAME session/transaction -- set_config(
+        # ..., true) is LOCAL to the transaction and can be switched back as
+        # many times as needed -- and it's restored to the admin's id before
+        # returning control to the router, in case the request does
+        # something else afterward.
         await session.execute(
             text("SELECT set_config('app.current_user_id', :uid, true)"),
             {"uid": str(feedback.user_id)},

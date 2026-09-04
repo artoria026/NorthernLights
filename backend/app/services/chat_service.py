@@ -9,8 +9,8 @@ from app.models.chat_message import ChatMessage
 async def get_recent_messages(
     session: AsyncSession, user_id: UUID, limit_pairs: int = 10
 ) -> list[ChatMessage]:
-    """Ultimos `limit_pairs` pares user/assistant, en orden cronologico, para
-    construir el contexto que se envia al modelo (M10 regla #3)."""
+    """Last `limit_pairs` user/assistant pairs, in chronological order, to
+    build the context sent to the model (M10 rule #3)."""
     result = await session.execute(
         select(ChatMessage)
         .where(ChatMessage.user_id == user_id)

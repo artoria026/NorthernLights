@@ -45,13 +45,13 @@ import type { Category } from '@/types'
 
 type CatType = 'income' | 'expense'
 
-/** Las pastillas de siempre + una ultima "personalizado" que abre el color
- * picker nativo del navegador (<input type="color">, sin librerias) -- el
- * input real queda invisible encima del circulo, asi el click abre el
- * picker del sistema operativo directo, sin un dialogo propio que
- * mantener. Mientras el color activo no sea ninguna de las pastillas fijas,
- * esa ultima bolita muestra el hex elegido (y el anillo de "seleccionado"
- * se mueve ahi) en vez de quedarse en el degradado de invitacion. */
+/** The usual swatches + one last "custom" that opens the browser's native
+ * color picker (<input type="color">, no libraries) -- the real input
+ * stays invisible on top of the circle, so the click opens the OS picker
+ * directly, with no dialog of our own to maintain. While the active color
+ * isn't any of the fixed swatches, that last dot shows the chosen hex (and
+ * the "selected" ring moves there) instead of staying on the inviting
+ * gradient. */
 function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
   const isCustom = !CATEGORY_COLOR_CHOICES.includes(value)
 
@@ -124,14 +124,14 @@ function IconCell({
   )
 }
 
-/** Buscador + "usados recientemente" + un solo scroll con secciones por tema
- * -- reemplaza la grilla plana de antes (29 iconos sin forma de encontrar
- * nada, ahora son 155). Buscar cruza los 8 grupos a la vez, en una grilla
- * plana de resultados; sin busqueda, todos los grupos se ven uno debajo del
- * otro en el mismo scroll (con su encabezado pegajoso mientras se recorre),
- * en vez de un panel separado por seleccionar. Los recientes vienen de
- * localStorage (ver categoryIcons.ts) y no se filtran por busqueda: son un
- * atajo fijo, no otra vista de la misma lista. */
+/** Search box + "used recently" + a single scroll with sections by topic --
+ * replaces the old flat grid (29 icons with no way to find anything, now
+ * there are 155). Searching crosses all 8 groups at once, into a flat
+ * results grid; without a search, all groups show one below the other in
+ * the same scroll (with their header staying sticky while scrolling),
+ * instead of a separate panel per selection. The recent ones come from
+ * localStorage (see categoryIcons.ts) and aren't filtered by search: they're
+ * a fixed shortcut, not another view of the same list. */
 function IconGridPicker({
   value,
   onChange,
@@ -232,7 +232,7 @@ function NewCategoryForm({
       })
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -281,7 +281,7 @@ function EditCategoryForm({ category, onDone }: { category: Category; onDone: ()
       })
       onDone()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -311,10 +311,10 @@ function EditCategoryForm({ category, onDone }: { category: Category; onDone: ()
   )
 }
 
-/** Barra apilada proporcional al gasto de cada subcategoría (mas el
- * "restante" sin subcategorizar, si lo hay) -- de un vistazo dice como se
- * reparte el gasto, algo que la tarjeta no mostraba antes. Solo tiene
- * sentido si el padre ya tiene algo gastado este mes; ver `showBar` en
+/** Stacked bar proportional to each subcategory's expense (plus the
+ * uncategorized "remainder", if any) -- at a glance shows how the expense
+ * is split, something the card didn't show before. Only makes sense if
+ * the parent already has something spent this month; see `showBar` in
  * CategoryCard. */
 function SegmentedSpendBar({ segments }: { segments: { color: string; pct: number }[] }) {
   return (
@@ -326,9 +326,9 @@ function SegmentedSpendBar({ segments }: { segments: { color: string; pct: numbe
   )
 }
 
-/** Conecta cada fila con el tronco vertical del contenedor (ver `pl-4` +
- * spine en CategoryCard) -- el mismo "sale una rama del padre" que antes se
- * insinuaba con un simple border-left, ahora explicito por fila. */
+/** Connects each row to the container's vertical trunk (see `pl-4` + spine
+ * in CategoryCard) -- the same "a branch comes off the parent" that used
+ * to be hinted at with a simple border-left, now explicit per row. */
 function TreeTick() {
   return (
     <span
@@ -423,9 +423,9 @@ function SubcategoryRow({
   )
 }
 
-/** Gasto directo en el padre que no cayo en ninguna subcategoria -- sin esto
- * la barra tendria un tramo gris sin explicacion. Es un calculo, no una
- * categoria real: sin acciones ni dialogo de edicion. */
+/** Direct expense on the parent that didn't land in any subcategory --
+ * without this the bar would have an unexplained gray segment. It's a
+ * calculation, not a real category: no actions or edit dialog. */
 function RemainderRow({ amount, percentage }: { amount: number; percentage: number }) {
   return (
     <div className="relative flex items-center gap-2 py-1.5">
@@ -481,8 +481,8 @@ function CategoryCard({
   total: string | undefined
   subcategories?: Category[]
   subtotals?: Map<string, string>
-  /** La primera tarjeta renderizada sirve de ancla para el recorrido guiado
-   * de Categorías (ver tours.ts) -- no es una prop de negocio. */
+  /** The first card rendered acts as the anchor for the Categories guided
+   * tour (see tours.ts) -- not a business prop. */
   tourTarget?: boolean
 }) {
   const deleteCategory = useDeleteCategory()
@@ -492,17 +492,17 @@ function CategoryCard({
   const [editOpen, setEditOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const Icon = categoryIcon(category.icon)
-  // Un solo nivel de anidamiento: solo las categorias de primer nivel de
-  // gasto pueden tener subcategorias (ver category_service.create_category).
+  // Only one level of nesting: only top-level expense categories can have
+  // subcategories (see category_service.create_category).
   const canHaveSubcategories = category.parent_id === null && category.type === 'expense'
   const subcategoryList = subcategories ?? []
 
-  // El "gastado este mes" del padre (`total`) es SOLO su gasto directo --
-  // a diferencia del desglose por categoria de Reportes, este resumen no
-  // rollea las subcategorias (confirmado en vivo: con $300 directos en el
-  // padre y $670 en una subcategoria, `total` llega en 300, no 970). La
-  // barra necesita su propio 100%: gasto directo del padre + subcategorias,
-  // no el `total` del padre solo -- si no, el porcentaje se pasa de 100.
+  // The parent's "spent this month" (`total`) is ONLY its direct expense --
+  // unlike the per-category breakdown in Reports, this summary doesn't roll
+  // up subcategories (confirmed live: with $300 direct on the parent and
+  // $670 on a subcategory, `total` comes in as 300, not 970). The bar needs
+  // its own 100%: the parent's direct expense + subcategories, not the
+  // parent's `total` alone -- otherwise the percentage goes over 100.
   const parentDirectNum = Number(total ?? '0')
   const subSumNum = subcategoryList.reduce(
     (sum, sub) => sum + Number(subtotals?.get(sub.id) ?? '0'),
@@ -625,10 +625,10 @@ function CategoryCard({
         {formatMoney(total ?? '0')}
       </div>
 
-      {/* La barra va siempre visible cuando hay algo que repartir (no
-          detras del toggle) -- da la senal de "como se reparte esto" de un
-          vistazo, sin tener que desplegar. La lista fila-por-fila si queda
-          detras del toggle, igual que antes. */}
+      {/* The bar is always visible when there's something to split (not
+          behind the toggle) -- gives the "how this is split" signal at a
+          glance, without having to expand. The row-by-row list stays
+          behind the toggle, same as before. */}
       {showBar && (
         <div data-tour={tourTarget ? 'categories:segbar' : undefined}>
           <SegmentedSpendBar segments={segments} />
@@ -650,10 +650,10 @@ function CategoryCard({
 
       {canHaveSubcategories && expanded && (
         <div className="relative pl-4">
-          {/* Tronco del arbol -- cada fila (SubcategoryRow/RemainderRow/
-              AddSubcategoryRow) dibuja su propia rama horizontal (TreeTick)
-              hacia este tronco, en vez de repetir el chrome completo de una
-              tarjeta como antes. */}
+          {/* Tree trunk -- each row (SubcategoryRow/RemainderRow/
+              AddSubcategoryRow) draws its own horizontal branch (TreeTick)
+              toward this trunk, instead of repeating a card's full chrome
+              like before. */}
           <span
             className="absolute w-px"
             style={{ left: 3, top: 0, bottom: 14, background: 'var(--nl-border)' }}

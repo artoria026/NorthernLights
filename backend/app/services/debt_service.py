@@ -48,7 +48,7 @@ def _advance_date(current: date, frequency: str | None) -> date | None:
         return current + relativedelta(weeks=2)
     if frequency == "monthly":
         return current + relativedelta(months=1)
-    return None  # irregular: no se puede proyectar automaticamente
+    return None  # irregular: can't be projected automatically
 
 
 # ---------------------------------------------------------------------------
@@ -116,10 +116,10 @@ async def delete_unplanned_debt(session: AsyncSession, user_id: UUID, id_: UUID)
 async def get_or_create_informal_debt(
     session: AsyncSession, user_id: UUID, direction: str, name: str
 ) -> Debt:
-    """Deuda informal por persona (una por nombre, case-insensitive, no una
-    Cuenta) -- usada por Gasto compartido y por prestamos directos sin plan.
-    Si ya hay una activa con ese nombre/direccion se reutiliza y el caller le
-    suma el monto nuevo; si no, se crea en cero."""
+    """Informal debt per person (one per name, case-insensitive, not an
+    Account) -- used by Shared expense and by direct loans with no plan.
+    If an active one already exists with that name/direction it's reused
+    and the caller adds the new amount to it; otherwise it's created at zero."""
     clean_name = name.strip()
     result = await session.execute(
         select(Debt).where(
@@ -157,11 +157,12 @@ async def _fund_debt(
     date_: date,
     name: str,
 ) -> None:
-    """Registra el movimiento de efectivo real cuando una deuda se origina con
-    dinero de por medio (alguien te presta y aterriza en una cuenta tuya, o tu
-    prestas y sale de una cuenta tuya). La otra pata SIEMPRE es el ledger
-    oculto de deudas informales (una cuenta por usuario por direccion, nunca
-    una por persona) -- ver account_service.get_or_create_debt_ledger_account."""
+    """Records the real cash movement when a debt originates with money
+    actually changing hands (someone lends you money that lands in an
+    account of yours, or you lend and it leaves an account of yours). The
+    other leg is ALWAYS the hidden informal debt ledger (one account per
+    user per direction, never one per person) -- see
+    account_service.get_or_create_debt_ledger_account."""
     ledger = await account_service.get_or_create_debt_ledger_account(session, user_id, direction)
     if direction == "owed_by_me":
         lines = [
@@ -265,7 +266,7 @@ async def get_debt(session: AsyncSession, user_id: UUID, debt_id: UUID) -> Debt:
 async def create_debt(
     session: AsyncSession, user_id: UUID, data: DebtCreate, current_user_role: str
 ) -> Debt:
-    # Deudas compartidas: solo admin puede escribir is_shared/responsible_party.
+    # Shared debts: only admin can write is_shared/responsible_party.
     is_shared = data.is_shared
     responsible_party = data.responsible_party
     if (is_shared or responsible_party) and current_user_role != "admin":
@@ -313,9 +314,9 @@ async def create_debt(
             debt.name,
         )
 
-    # Incondicional aunque funding_account_id ya invalide el cache via
-    # transaction_service.create_transaction: sin el (el caso comun),
-    # create_debt por si sola no tocaba el snapshot cacheado.
+    # Unconditional even though funding_account_id already invalidates the
+    # cache via transaction_service.create_transaction: without it (the
+    # common case), create_debt by itself didn't touch the cached snapshot.
     await cache_service.invalidate_snapshot_for(user_id)
     return debt
 
@@ -341,12 +342,12 @@ async def delete_debt(session: AsyncSession, user_id: UUID, debt_id: UUID) -> No
 
 
 async def _resolve_debt_side_account(session: AsyncSession, user_id: UUID, debt: Debt) -> UUID:
-    """Si la deuda tiene una cuenta real vinculada (el usuario la asigno
-    explicitamente, p.ej. para rastrear de donde sale cada pago) el pago va
-    directo contra ella -- asi su saldo tambien baja de verdad, no solo el
-    numero en Deudas. Sin cuenta vinculada (el caso normal de deudas
-    informales/prestamos) usa el ledger oculto como la otra pata del
-    asiento."""
+    """If the debt has a real linked account (the user assigned it
+    explicitly, e.g. to track where each payment comes from) the payment
+    goes straight against it -- so its balance really goes down too, not
+    just the number in Debts. Without a linked account (the normal case for
+    informal debts/loans) it uses the hidden ledger as the other leg of the
+    entry."""
     if debt.linked_account_id is not None:
         return debt.linked_account_id
     ledger = await account_service.get_or_create_debt_ledger_account(
@@ -359,13 +360,13 @@ def _build_payment_lines(
     debt: Debt, debt_side_account_id: UUID, real_account_id: UUID, amount: Decimal
 ) -> tuple[list[JournalLineIn], str, str]:
     if debt.direction == "owed_by_me":
-        # Pagas tu deuda: sale dinero de tu cuenta real, baja el pasivo.
+        # You pay your debt: money leaves your real account, liability goes down.
         lines = [
             JournalLineIn(account_id=debt_side_account_id, amount=amount, type="debit"),
             JournalLineIn(account_id=real_account_id, amount=amount, type="credit"),
         ]
         return lines, f"Pago {debt.name}", "loan_repayment"
-    # Te cobran/te pagan: entra dinero a tu cuenta real, baja lo que te deben.
+    # You get paid/collect: money enters your real account, what's owed to you goes down.
     lines = [
         JournalLineIn(account_id=real_account_id, amount=amount, type="debit"),
         JournalLineIn(account_id=debt_side_account_id, amount=amount, type="credit"),
@@ -382,11 +383,12 @@ async def _apply_payment(
     date_: date,
     notes: str | None,
 ) -> DebtPayment:
-    """Efecto de un pago YA registrado (transaccion ya creada): baja saldo,
-    sube cuotas pagadas, marca completada si corresponde. NO toca
-    next_payment_date -- eso lo decide cada caller (register_debt_payment lo
-    avanza de inmediato; un borrador generado por process_due_debt_payments
-    ya lo avanzo al generarse, confirmarlo no debe volver a avanzarlo)."""
+    """Effect of a payment ALREADY recorded (transaction already created):
+    lowers balance, raises paid installments, marks completed if
+    applicable. Does NOT touch next_payment_date -- each caller decides that
+    (register_debt_payment advances it immediately; a draft generated by
+    process_due_debt_payments already advanced it when generated, confirming
+    it must not advance it again)."""
     new_balance = debt.current_balance - amount
     payment = DebtPayment(
         debt_id=debt.id,
@@ -451,14 +453,16 @@ async def register_debt_payment(
 
 
 async def apply_confirmed_payment(session: AsyncSession, entry: JournalEntry) -> None:
-    """Llamado por transaction_service.confirm_draft cuando el borrador que se
-    confirma es un pago de deuda generado por process_due_debt_payments. El
-    schedule (next_payment_date) ya avanzo al generarse el borrador -- aqui
-    solo se aplica el efecto de dinero (balance/cuotas/registro de pago)."""
+    """Called by transaction_service.confirm_draft when the draft being
+    confirmed is a debt payment generated by process_due_debt_payments. The
+    schedule (next_payment_date) already advanced when the draft was
+    generated -- here only the money effect (balance/installments/payment
+    record) gets applied."""
     debt = await get_debt(session, entry.user_id, entry.debt_id)
     if debt.status != "active":
-        # Se completo/cancelo entre que se genero el borrador y se confirmo --
-        # la transaccion ya se aplico via _apply_lines, no hay mas que hacer.
+        # It got completed/cancelled between the draft being generated and
+        # confirmed -- the transaction was already applied via
+        # _apply_lines, nothing more to do.
         return
     await _apply_payment(
         session, entry.user_id, debt, entry.id, entry.amount or Decimal("0"), entry.date, None
@@ -483,11 +487,12 @@ async def get_pending(session: AsyncSession, user_id: UUID) -> list[JournalEntry
 async def process_due_debt_payments(
     session: AsyncSession, user_id: UUID, today: date
 ) -> list[JournalEntry]:
-    """Tarea Celery `debts.process_due_payments` (por usuario). Genera un
-    journal_entry `pending` por deuda vencida que tenga cuenta de pago
-    configurada (payment_source_account_id) -- sin eso no hay de donde sacar
-    el dinero, se queda en flujo manual. Dedup igual que recurring: si ya
-    existe un pending para esa deuda, no genera otro, solo avanza la fecha."""
+    """Celery task `debts.process_due_payments` (per user). Generates a
+    `pending` journal_entry for each overdue debt that has a payment
+    account configured (payment_source_account_id) -- without that there's
+    nowhere to pull the money from, it stays in the manual flow. Dedup same
+    as recurring: if a pending already exists for that debt, it doesn't
+    generate another one, just advances the date."""
     result = await session.execute(
         select(Debt).where(
             Debt.user_id == user_id,
@@ -603,8 +608,8 @@ async def get_upcoming(session: AsyncSession, user_id: UUID, days_ahead: int = 3
 
 
 async def simulate(session: AsyncSession, user_id: UUID, data: DebtSimulateRequest) -> dict:
-    # Solo deudas que TU debes comprometen tu presupuesto -- lo que te deben
-    # no es un gasto mensual tuyo.
+    # Only debts YOU owe commit your budget -- what's owed to you isn't a
+    # monthly expense of yours.
     result = await session.execute(
         select(Debt.payment_amount, Debt.payment_frequency).where(
             Debt.user_id == user_id,
@@ -655,7 +660,7 @@ async def get_summary(session: AsyncSession, user_id: UUID) -> dict:
         ),
         Decimal("0"),
     )
-    # Solo lo que TU debes compromete tu presupuesto mensual.
+    # Only what YOU owe commits your monthly budget.
     monthly_committed = sum(
         (
             monthly_equivalent(r.payment_amount, r.payment_frequency)

@@ -15,21 +15,21 @@ function measure(el: Element): Rect {
 }
 
 const TOOLTIP_WIDTH = 264
-// Punto de partida para el primer render de cada step, antes de medir el
-// alto real -- los textos varian bastante en largo (algunos pasos son una
-// linea, otros cuatro), asi que un numero fijo aqui subestima seguido y deja
-// el tooltip cortado fuera del viewport en anclas de la mitad inferior de la
-// pantalla. tooltipHeight (medido con useLayoutEffect mas abajo) es la
-// fuente de verdad real para la matematica de colision.
+// Starting point for the first render of each step, before measuring the
+// real height -- text lengths vary quite a bit (some steps are one line,
+// others four), so a fixed number here often underestimates and leaves the
+// tooltip cut off outside the viewport on anchors in the bottom half of the
+// screen. tooltipHeight (measured with useLayoutEffect further below) is
+// the real source of truth for the collision math.
 const TOOLTIP_HEIGHT_ESTIMATE = 170
 const PAD = 6
 
-/** Motor del recorrido guiado, montado una sola vez en App.tsx. Sin
- * activeModuleKey no renderiza nada (costo cero en reposo). Portado de la
- * clase Tour en recorridos-propuestas.html -- misma mecanica visual (hueco +
- * tooltip animados con box-shadow 0 0 0 9999px), pero contra el viewport real
- * en vez del frame acotado del mockup, y con scrollIntoView + defensa ante
- * selector nulo (el mockup nunca necesito ninguna de las dos). */
+/** Guided tour engine, mounted once in App.tsx. Without activeModuleKey it
+ * renders nothing (zero cost at rest). Ported from the Tour class in
+ * recorridos-propuestas.html -- same visual mechanics (cutout + tooltip
+ * animated with box-shadow 0 0 0 9999px), but against the real viewport
+ * instead of the mockup's bounded frame, and with scrollIntoView + a guard
+ * against a null selector (the mockup never needed either one). */
 export function TourHost() {
   const activeModuleKey = useTourStore((s) => s.activeModuleKey)
   const stepIndex = useTourStore((s) => s.stepIndex)
@@ -43,15 +43,15 @@ export function TourHost() {
 
   const step = visibleSteps[stepIndex]
 
-  // Mide el alto real del tooltip despues de que el texto de este step ya
-  // se renderizo -- useLayoutEffect corre antes del paint del navegador, asi
-  // que si el alto medido difiere del estimado, el reposicionamiento de abajo
-  // ya usa el numero correcto en el mismo frame (sin parpadeo visible).
+  // Measures the tooltip's real height after this step's text has already
+  // rendered -- useLayoutEffect runs before the browser paints, so if the
+  // measured height differs from the estimate, the repositioning below
+  // already uses the correct number in the same frame (no visible flicker).
   useLayoutEffect(() => {
     const measured = tooltipRef.current?.getBoundingClientRect().height
     if (measured && Math.abs(measured - tooltipHeight) > 1) setTooltipHeight(measured)
-    // Solo cuando cambia el contenido del step -- el alto del tooltip no
-    // depende de su propia posicion (top/left), solo del texto.
+    // Only when the step's content changes -- the tooltip's height doesn't
+    // depend on its own position (top/left), only on the text.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
 
@@ -62,9 +62,9 @@ export function TourHost() {
     }
     const target = document.querySelector(step.selector)
     if (!target) {
-      // Selector no encontrado -- el modulo no tiene datos para este paso, o
-      // el usuario navego fuera a medio tour. Termina en silencio en vez de
-      // quedar con un overlay huerfano.
+      // Selector not found -- the module has no data for this step, or the
+      // user navigated away mid-tour. Ends silently instead of leaving an
+      // orphaned overlay.
       stop()
       return
     }
@@ -83,14 +83,14 @@ export function TourHost() {
     }
   }, [step, stop])
 
-  // Foco automatico en "Siguiente"/"Listo" cada vez que se abre un paso --
-  // asi Enter solo (sin tocar el mouse) avanza el recorrido completo, sea
-  // cual sea el elemento que tenia el foco antes (el botón que abrió el
-  // tour, un input de la pantalla de atrás, etc.). Depende de `rect` y no
-  // solo de `step` porque el boton todavia no existe en el DOM en el primer
-  // render de cada paso (el componente completo retorna null hasta que
-  // `rect` se resuelve mas abajo) -- este efecto vuelve a correr en cuanto
-  // `rect` cambia y el boton ya esta montado.
+  // Automatic focus on "Siguiente"/"Listo" every time a step opens -- this
+  // way pressing Enter alone (without touching the mouse) advances the
+  // whole tour, regardless of whatever element had focus before (the
+  // button that opened the tour, an input on the screen behind it, etc.).
+  // Depends on `rect` and not just `step` because the button doesn't exist
+  // in the DOM yet on the first render of each step (the whole component
+  // returns null until `rect` resolves further below) -- this effect runs
+  // again as soon as `rect` changes and the button is already mounted.
   useEffect(() => {
     nextButtonRef.current?.focus()
   }, [step, rect])
@@ -111,18 +111,18 @@ export function TourHost() {
   if (tooltipTop + tooltipHeight > window.innerHeight) {
     tooltipTop = Math.max(10, rect.top - tooltipHeight - 10)
   }
-  // Ni arriba ni abajo del elemento alcanzan en pantallas cortas o anclas
-  // muy cerca de un borde -- este clamp final es el que de verdad garantiza
-  // que los botones Siguiente/Atras queden alcanzables, la rama de arriba es
-  // solo la heuristica de "que lado se ve mejor".
+  // Neither above nor below the element is reachable on short screens or
+  // anchors very close to an edge -- this final clamp is what actually
+  // guarantees the Siguiente/Atras buttons stay reachable, the branch above
+  // is just the "which side looks better" heuristic.
   tooltipTop = Math.min(Math.max(tooltipTop, 10), window.innerHeight - tooltipHeight - 10)
   const tooltipLeft = Math.min(Math.max(rect.left, 10), window.innerWidth - TOOLTIP_WIDTH - 10)
 
   return createPortal(
     <>
-      {/* Captura clicks sobre el resto de la pantalla mientras el recorrido
-          esta activo -- evita cambios de estado accidentales a medio tour;
-          clickear afuera lo termina, igual que Saltar. */}
+      {/* Captures clicks on the rest of the screen while the tour is
+          active -- prevents accidental state changes mid-tour; clicking
+          outside ends it, same as Saltar. */}
       <div className="fixed inset-0 z-[99]" onClick={stop} aria-hidden="true" />
       <div
         className="fixed rounded-[10px] pointer-events-none z-[100] transition-[top,left,width,height] duration-[380ms] ease-[cubic-bezier(0.4,0,0.2,1)]"

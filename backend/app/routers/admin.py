@@ -81,9 +81,9 @@ async def get_stats(
 async def list_feedback(
     status: str | None = Query(default=None, pattern="^(new|read|considered|discarded)$"),
     current_admin: CurrentUser = Depends(require_admin),
-    # get_rls_db (no get_admin_db): la policy rls_feedback ya deja ver todas
-    # las filas a un admin en su propia sesion -- get_admin_db es solo
-    # SELECT y aca tambien necesitamos poder actualizar el status.
+    # get_rls_db (not get_admin_db): the rls_feedback policy already lets an
+    # admin see all rows in their own session -- get_admin_db is SELECT-only
+    # and here we also need to be able to update the status.
     session: AsyncSession = Depends(get_rls_db),
 ) -> SuccessResponse:
     items = await feedback_service.list_feedback(session, status)

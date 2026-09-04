@@ -10,13 +10,13 @@ os.environ.setdefault(
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-use-only-in-ci-suites")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test")
 
-# Candado duro, no solo el fallback de arriba: `setdefault` no protege nada si
-# DATABASE_URL ya viene seteada desde afuera (ej. un `docker compose run`
-# heredando el .env de produccion -- exactamente lo que paso el 15/08/2026 y
-# borro la DB real dos veces, ver postmortem). `apply_migrations` mas abajo
-# corre `alembic downgrade base` al final de la sesion -- dropea las 20 tablas
-# sin preguntar. Si el nombre de la base no contiene "test", abortar ANTES de
-# que cualquier fixture llegue a tocarla, sin importar como se invoco pytest.
+# Hard lock, not just the fallback above: `setdefault` doesn't protect anything if
+# DATABASE_URL is already set from outside (e.g. a `docker compose run`
+# inheriting the production .env -- exactly what happened on 15/08/2026 and
+# wiped the real DB twice, see postmortem). `apply_migrations` below
+# runs `alembic downgrade base` at the end of the session -- it drops the 20 tables
+# without asking. If the DB name doesn't contain "test", abort BEFORE
+# any fixture gets to touch it, no matter how pytest was invoked.
 _db_name = os.environ["DATABASE_URL"].rsplit("/", 1)[-1].split("?", 1)[0]
 if "test" not in _db_name:
     raise RuntimeError(
@@ -55,8 +55,8 @@ def _alembic_config() -> Config:
 
 @pytest.fixture(scope="session", autouse=True)
 def apply_migrations():
-    """Requiere que la base `finanzas_test` ya exista en el Postgres nativo compartido
-    de esta maquina (ver ~/.infra/context/architecture.md); crearla una vez con
+    """Requires the `finanzas_test` database to already exist on the shared native
+    Postgres on this machine (see ~/.infra/context/architecture.md); create it once with
     `createdb -h localhost -p 5432 -U finanzas_user finanzas_test`."""
     cfg = _alembic_config()
     command.upgrade(cfg, "head")
@@ -66,12 +66,12 @@ def apply_migrations():
 
 @pytest_asyncio.fixture(autouse=True)
 async def _reset_redis_pool():
-    """M09: el pool de Redis es un singleton a nivel de modulo (app/core/redis.py)
-    cuyas conexiones quedan atadas al event loop donde se abrieron. pytest-asyncio
-    crea un loop nuevo por test, asi que reusar conexiones de un test anterior
-    revienta con "Event loop is closed" -- mismo problema que ya resuelve
-    `db_connection` para Postgres, pero para Redis. Desconectar el pool al
-    terminar cada test fuerza conexiones frescas en el loop del siguiente."""
+    """M09: the Redis pool is a module-level singleton (app/core/redis.py)
+    whose connections are bound to the event loop where they were opened. pytest-asyncio
+    creates a new loop per test, so reusing connections from a previous test
+    blows up with "Event loop is closed" -- the same problem `db_connection`
+    already solves for Postgres, but for Redis. Disconnecting the pool at
+    the end of each test forces fresh connections on the next test's loop."""
     yield
     from app.core.redis import redis_pool
 
@@ -80,16 +80,16 @@ async def _reset_redis_pool():
 
 @pytest_asyncio.fixture
 async def db_connection():
-    """Conexion + transaccion externa que siempre se revierte: aisla cada test.
+    """Connection + outer transaction that always rolls back: isolates each test.
 
-    Motor dedicado a este test (NullPool, sin compartir el engine global de la
-    app): asyncpg ata sus conexiones al event loop donde se crearon, y
-    pytest-asyncio usa un loop nuevo por test, asi que reusar el engine
-    global entre tests revienta con "another operation is in progress".
+    Engine dedicated to this test (NullPool, not sharing the app's global
+    engine): asyncpg binds its connections to the event loop where they were
+    created, and pytest-asyncio uses a new loop per test, so reusing the
+    global engine across tests blows up with "another operation is in progress".
 
-    Cada dependencia de FastAPI abre ademas su propia AsyncSession (via
-    savepoint) sobre esta misma conexion, en vez de compartir una unica
-    Session mutable entre requests secuenciales.
+    Each FastAPI dependency also opens its own AsyncSession (via
+    savepoint) on this same connection, instead of sharing a single
+    mutable Session across sequential requests.
     """
     test_engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
     async with test_engine.connect() as conn:
@@ -101,9 +101,9 @@ async def db_connection():
 
 @pytest_asyncio.fixture
 async def session_factory(db_connection):
-    """Factory de sesiones ligada a la misma conexion/transaccion externa que
-    `client`, para tests que necesitan invocar servicios directamente (p.ej.
-    las tareas de Celery de M06/M07, que no tienen endpoint HTTP propio)."""
+    """Session factory bound to the same outer connection/transaction as
+    `client`, for tests that need to call services directly (e.g.
+    the M06/M07 Celery tasks, which have no HTTP endpoint of their own)."""
     return async_sessionmaker(
         bind=db_connection, expire_on_commit=False, join_transaction_mode="create_savepoint"
     )
@@ -129,12 +129,12 @@ async def client(session_factory):
         async with session_factory() as session:
             await session.execute(text("SET LOCAL ROLE finanzas_admin"))
             yield session
-            # A diferencia de una transaccion top-level real (donde SET LOCAL
-            # revierte solo al terminar), aqui cada request es una savepoint
-            # sobre la misma conexion/transaccion compartida entre requests de
-            # un mismo test -- sin este RESET explicito antes de liberar la
-            # savepoint, el siguiente request (p.ej. un register/login normal)
-            # seguiria corriendo como finanzas_admin y sus INSERTs fallarian.
+            # Unlike a real top-level transaction (where SET LOCAL
+            # only reverts when it ends), here each request is a savepoint
+            # on the same connection/transaction shared across requests of
+            # the same test -- without this explicit RESET before releasing the
+            # savepoint, the next request (e.g. a normal register/login)
+            # would keep running as finanzas_admin and its INSERTs would fail.
             await session.execute(text("RESET ROLE"))
             await session.commit()
 
@@ -149,9 +149,9 @@ async def client(session_factory):
 
 @asynccontextmanager
 async def rls_session(session_factory, user_id: uuid.UUID):
-    """Sesion RLS directa para tests que invocan servicios de Celery (M06/M07)
-    sin pasar por HTTP: comparte la misma conexion/transaccion que `client`,
-    asi que ve los datos creados via API en el mismo test."""
+    """Direct RLS session for tests that call Celery services (M06/M07)
+    without going through HTTP: shares the same connection/transaction as `client`,
+    so it sees data created via the API in the same test."""
     async with session_factory() as session:
         await session.execute(
             text("SELECT set_config('app.current_user_id', :uid, true)"),

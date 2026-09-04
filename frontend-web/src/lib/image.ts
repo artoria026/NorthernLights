@@ -1,4 +1,4 @@
-const IMAGE_MAX_SOURCE_BYTES = 8 * 1024 * 1024 // 8MB de entrada, antes de normalizar
+const IMAGE_MAX_SOURCE_BYTES = 8 * 1024 * 1024 // 8MB input, before normalizing
 
 function readImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -16,11 +16,11 @@ function readImage(file: File): Promise<HTMLImageElement> {
   })
 }
 
-/** Cualquier PNG/JPG/WebP que suba el usuario se normaliza a un cuadrado de
- * `size`x`size` (contain, fondo transparente) antes de guardarlo -- asi se ve
- * consistente sin importar el tamano/proporcion del original (logo de cuenta,
- * foto de perfil), y el backend no tiene que aceptar imagenes de cualquier
- * tamano. */
+/** Any PNG/JPG/WebP the user uploads is normalized to a `size`x`size`
+ * square (contain, transparent background) before saving -- this way it
+ * looks consistent regardless of the original's size/aspect ratio (account
+ * logo, profile photo), and the backend doesn't have to accept images of
+ * any size. */
 export async function fileToNormalizedDataUrl(file: File, size = 128): Promise<string> {
   const img = await readImage(file)
   const canvas = document.createElement('canvas')
@@ -36,8 +36,8 @@ export async function fileToNormalizedDataUrl(file: File, size = 128): Promise<s
   return canvas.toDataURL('image/png')
 }
 
-/** null si el archivo pasa las validaciones basicas, o el mensaje de error a
- * mostrar si no. */
+/** null if the file passes the basic validations, or the error message to
+ * show if not. */
 export function validateImageFile(file: File): string | null {
   if (!file.type.startsWith('image/')) {
     return 'Selecciona una imagen (PNG, JPG o WebP).'

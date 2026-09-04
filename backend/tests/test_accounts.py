@@ -191,11 +191,11 @@ async def test_reconcile_rejects_non_liquid_account(client: AsyncClient):
 
 
 async def test_reconcile_adjustment_excluded_from_category_budget(client: AsyncClient):
-    """Un ajuste de saldo nunca debe inflar el gasto de una categoria real --
-    ver Notion 'Dev Environment, Stack y Setup Guide' seccion de buenas
-    practicas de conciliacion. budget_service filtra por entry_type ==
-    'expense', asi que un adjustment_out debe quedar afuera sin tocar nada
-    ahi; este test lo deja explicito para no regresarlo por accidente."""
+    """A balance adjustment must never inflate the expense of a real category --
+    see Notion 'Dev Environment, Stack y Setup Guide' reconciliation best
+    practices section. budget_service filters by entry_type ==
+    'expense', so an adjustment_out must stay out of it without touching anything
+    there; this test makes it explicit so it doesn't regress by accident."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -229,7 +229,7 @@ async def test_rls_isolates_accounts_between_users(client: AsyncClient):
     )
     account_id = created.json()["data"]["id"]
 
-    # Usuario B no debe poder ver la cuenta de A
+    # User B must not be able to see A's account
     listing_b = await client.get("/api/v1/accounts", headers={"Authorization": f"Bearer {token_b}"})
     assert listing_b.json()["data"] == []
 
@@ -238,7 +238,7 @@ async def test_rls_isolates_accounts_between_users(client: AsyncClient):
     )
     assert get_b.status_code == 404
 
-    # Usuario A si la ve
+    # User A does see it
     get_a = await client.get(
         f"/api/v1/accounts/{account_id}", headers={"Authorization": f"Bearer {token_a}"}
     )
@@ -246,10 +246,10 @@ async def test_rls_isolates_accounts_between_users(client: AsyncClient):
 
 
 async def test_create_account_invalidates_financial_snapshot_cache(client: AsyncClient):
-    """account_service.create_account no invalidaba el snapshot cacheado
-    (gap preexistente, tambien afectaba a debt_service/recurring_service) --
-    esto confirma que crear una cuenta ya no deja el cache stale hasta que
-    expire su TTL de 5 min."""
+    """account_service.create_account wasn't invalidating the cached snapshot
+    (pre-existing gap, also affected debt_service/recurring_service) --
+    this confirms that creating an account no longer leaves the cache stale until
+    its 5-minute TTL expires."""
     token = await _register_and_login(client)
     me = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     user_id = uuid.UUID(me.json()["data"]["id"])
@@ -271,9 +271,9 @@ async def test_create_account_invalidates_financial_snapshot_cache(client: Async
 async def test_update_initial_balance_recalculates_balance_with_existing_transactions(
     client: AsyncClient,
 ):
-    """Cambiar initial_balance no debe pisar el efecto de las transacciones ya
-    confirmadas -- el balance se desplaza por el mismo delta, preservando el
-    invariante balance = initial_balance + suma de deltas."""
+    """Changing initial_balance must not override the effect of already
+    confirmed transactions -- the balance shifts by the same delta, preserving the
+    invariant balance = initial_balance + sum of deltas."""
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -305,7 +305,7 @@ async def test_update_initial_balance_recalculates_balance_with_existing_transac
     )
     assert updated.status_code == 200
     assert updated.json()["data"]["initial_balance"] == "1500.00"
-    # 800 (con el gasto ya aplicado) + el delta de initial_balance (1500-1000).
+    # 800 (with the expense already applied) + the initial_balance delta (1500-1000).
     assert updated.json()["data"]["balance"] == "1300.00"
 
 

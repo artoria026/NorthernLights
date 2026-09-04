@@ -35,9 +35,9 @@ const FREQUENCY_FACTORS: Record<RecurringFrequency, number> = {
   annual: 1 / 12,
 }
 
-/** Mismo factor que `recurring_service.monthly_equivalent` en el backend --
- * solo para mostrar un estimado en la UI, el backend es la fuente de verdad
- * para cualquier calculo que afecte presupuesto real. */
+/** Same factor as `recurring_service.monthly_equivalent` in the backend --
+ * only to show an estimate in the UI, the backend is the source of truth
+ * for any calculation that affects the real budget. */
 export function monthlyEquivalent(amount: string, frequency: RecurringFrequency): number {
   return Number(amount) * FREQUENCY_FACTORS[frequency]
 }

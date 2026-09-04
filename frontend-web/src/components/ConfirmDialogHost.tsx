@@ -2,14 +2,14 @@ import { Check, Trash2, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useConfirmStore } from '@/stores/confirmStore'
 
-/** Reemplaza window.confirm() en toda la app. Se monta una sola vez en App
- * y cualquier pantalla lo dispara con useConfirmStore((s) => s.ask). */
+/** Replaces window.confirm() across the whole app. Mounted once in App
+ * and any screen triggers it with useConfirmStore((s) => s.ask). */
 export function ConfirmDialogHost() {
   const request = useConfirmStore((s) => s.request)
   const settle = useConfirmStore((s) => s.settle)
-  // Trash2 tiene sentido como default de "danger" (la mayoria de los usos
-  // son borrar algo), pero no toda accion roja borra -- ej. cerrar sesion.
-  // `request.icon` (ver confirmStore.ts) pisa este default cuando aplica.
+  // Trash2 makes sense as the "danger" default (most uses are deleting
+  // something), but not every red action deletes -- e.g. logging out.
+  // `request.icon` (see confirmStore.ts) overrides this default when it applies.
   const ConfirmIcon = request?.icon ?? (request?.variant === 'danger' ? Trash2 : Check)
 
   return (

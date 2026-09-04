@@ -1,20 +1,13 @@
-# Despliegue de produccion en prod-01 (ver ~/infra/context/architecture.md).
+# Production deployment. Named separately from "docker-compose.yml" (that
+# one is the local pgAdmin-only dev compose) so deploy scripts must always
+# pass `-f docker-compose.prod.yml` explicitly, never the default name.
 #
-# Nombre separado de "docker-compose.yml" a propósito: ese nombre está
-# trackeado en git como el compose de herramientas de desarrollo local
-# (pgAdmin, ver ese archivo) — si el de producción usara el mismo nombre,
-# un `git reset --hard origin/master` (paso normal del deploy) lo pisaría
-# de vuelta al de pgAdmin en cada deploy, porque este archivo nunca fue
-# comiteado. Por eso northern-lights.sh siempre lo referencia explícito con
-# `docker compose -f docker-compose.prod.yml`, nunca el nombre por default.
+# Postgres/Redis are native to the host, shared — reached via 172.17.0.1
+# (see .env), not started by this compose.
 #
-# Postgres y Redis son nativos del host, compartidos — este compose NO los
-# levanta, se conecta a ellos via 172.17.0.1 (ver .env).
-#
-# backend, celery-worker y celery-beat comparten la MISMA imagen (un solo
-# build) — cada uno corre un `command:` distinto. Las migraciones
-# (alembic upgrade head) corren solo en el CMD de `backend` (ver Dockerfile)
-# para que los 3 no compitan por migrar al mismo tiempo.
+# backend, celery-worker, and celery-beat share one image, each with a
+# different `command:`. Migrations only run in backend's CMD (see
+# Dockerfile) so the three don't race to migrate at once.
 services:
   backend:
     build:

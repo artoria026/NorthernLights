@@ -25,16 +25,16 @@ def _make_encrypted_pdf(password: str) -> bytes:
 
 
 class FakeAIProvider(AIProvider):
-    """`turns` es una lista de "turnos": cada uno es la lista de chunks que
-    `chat_stream` produce en esa invocacion. Simula el loop real de tool-use
-    de advisor.chat, donde el proveedor se llama de nuevo tras ejecutar tools."""
+    """`turns` is a list of "turns": each one is the list of chunks that
+    `chat_stream` produces on that call. Simulates the real tool-use loop
+    of advisor.chat, where the provider is called again after tools run."""
 
     def __init__(self, turns: list[list[dict]] | None = None, captured_messages: list | None = None):
         self._turns = turns if turns is not None else [[{"type": "text", "text": "Hola."}]]
         self._call_count = 0
-        # Si se pasa una lista, cada llamada le hace append a los `messages`
-        # que recibio -- para poder verificar en el test que un adjunto
-        # (bloque "document") de verdad llego hasta el provider.
+        # If a list is passed, each call appends to it the `messages`
+        # it received -- so the test can verify that an attachment
+        # (a "document" block) actually reached the provider.
         self._captured_messages = captured_messages
 
     async def chat_stream(
@@ -72,11 +72,11 @@ async def _register_and_login(client: AsyncClient) -> tuple[str, str]:
 
 
 def _use_test_session(monkeypatch, session_factory, uid: uuid.UUID) -> None:
-    """`advisor.chat` abre su propia sesion (ver docstring en app/ai/advisor.py)
-    para sobrevivir mas alla del ciclo de vida de la dependencia de FastAPI.
-    En produccion usa el engine real; en tests la reemplazamos por la sesion
-    de prueba (atada a la misma transaccion que se revierte al final del
-    test) para que las escrituras no persistan entre tests."""
+    """`advisor.chat` opens its own session (see docstring in app/ai/advisor.py)
+    to survive beyond the FastAPI dependency's lifecycle.
+    In production it uses the real engine; in tests we replace it with the
+    test session (bound to the same transaction that rolls back at the end
+    of the test) so writes don't persist between tests."""
 
     def _fake_rls_session(user_id):
         assert user_id == uid
@@ -89,10 +89,10 @@ _PASSWORD = "supersecret123"
 
 
 async def _register_and_login_as_admin(client: AsyncClient, session_factory) -> tuple[str, str]:
-    """Registra un usuario normal, lo promueve a admin escribiendo el rol
-    directo (no hay endpoint de auto-promocion, a proposito) y re-loguea: el
-    JWT emitido al registrarse ya trae `role=user` fijo -- mismo patron que
-    `_register_admin` en test_admin.py."""
+    """Registers a normal user, promotes them to admin by writing the role
+    directly (there is no self-promotion endpoint, on purpose) and logs in again: the
+    JWT issued at registration already carries `role=user` fixed -- same pattern as
+    `_register_admin` in test_admin.py."""
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
@@ -133,13 +133,13 @@ async def test_chat_simple_message_streams_text_and_saves_history(
 
     history = await client.get("/api/v1/ai/history", headers=headers)
     assert history.json()["meta"]["total"] == 2
-    # Bug real: ChatMessage.created_at usaba server_default=func.now(), que
-    # devuelve la hora de INICIO de transaccion -- como user+assistant se
-    # guardan en la misma transaccion (advisor.chat), ambos quedaban con el
-    # mismo created_at y el ORDER BY created_at DESC no garantizaba que el
-    # mas reciente (assistant) saliera primero. Ahora created_at es un
-    # default de Python (datetime.now(UTC) por fila), asi que el orden es
-    # determinista: el mas reciente (assistant) va primero.
+    # Real bug: ChatMessage.created_at used server_default=func.now(), which
+    # returns the transaction START time -- since user+assistant are
+    # saved in the same transaction (advisor.chat), both ended up with the
+    # same created_at and ORDER BY created_at DESC didn't guarantee that the
+    # most recent one (assistant) came out first. Now created_at is a
+    # Python default (datetime.now(UTC) per row), so the order is
+    # deterministic: the most recent one (assistant) comes first.
     assert history.json()["data"][0]["role"] == "assistant"
     assert history.json()["data"][1]["role"] == "user"
     roles = [m["role"] for m in history.json()["data"]]
@@ -185,9 +185,9 @@ async def test_chat_tool_use_creates_insight(client: AsyncClient, session_factor
 
 
 async def test_chat_tool_use_gets_problem_debts(client: AsyncClient, session_factory, monkeypatch):
-    """get_problem_debts es el tool que le da al advisor visibilidad sobre
-    deudas sin plan de pago (owed_by_me, pending) -- estas no aparecen en
-    get_debt_schedule porque no tienen calendario."""
+    """get_problem_debts is the tool that gives the advisor visibility into
+    debts without a payment plan (owed_by_me, pending) -- these don't show up in
+    get_debt_schedule because they have no schedule."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}
@@ -251,7 +251,7 @@ async def test_chat_rate_limit_blocks_after_daily_limit(
     assert "Limite diario de consultas AI alcanzado" in second.text
 
     history = await client.get("/api/v1/ai/history", headers=headers)
-    assert history.json()["meta"]["total"] == 2  # el segundo intento no se guarda
+    assert history.json()["meta"]["total"] == 2  # the second attempt isn't saved
 
 
 async def test_ai_usage_reflects_queries_made_today(
@@ -297,7 +297,7 @@ async def test_admin_ai_bypasses_daily_rate_limit(client: AsyncClient, session_f
     first = await client.post("/api/v1/ai/chat", headers=headers, data={"message": "Hola"})
     assert "Hola." in first.text
 
-    # El limite es 1 -- un usuario normal quedaria bloqueado aqui.
+    # The limit is 1 -- a normal user would be blocked here.
     second = await client.post("/api/v1/ai/chat", headers=headers, data={"message": "Otra vez"})
     assert "Limite diario de consultas AI alcanzado" not in second.text
     assert "Hola." in second.text
@@ -321,9 +321,9 @@ async def test_delete_history_clears_messages(client: AsyncClient, session_facto
 async def test_chat_tool_result_with_decimal_values_persists_successfully(
     client: AsyncClient, session_factory, monkeypatch
 ):
-    """`get_financial_summary` retorna el snapshot real (Decimal incluido) --
-    confirma que tool_calls_made pasa por json_safe antes de guardarse en la
-    columna JSONB de chat_messages (bug real: Decimal no es serializable)."""
+    """`get_financial_summary` returns the real snapshot (Decimal included) --
+    confirms that tool_calls_made goes through json_safe before being saved in the
+    JSONB column of chat_messages (real bug: Decimal isn't serializable)."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}
@@ -359,8 +359,8 @@ async def test_chat_tool_result_with_decimal_values_persists_successfully(
 async def test_chat_provider_failure_yields_graceful_error(
     client: AsyncClient, session_factory, monkeypatch
 ):
-    """El stream SSE no debe romperse a medio camino si el proveedor falla
-    (p.ej. API key invalida): debe emitir un evento de error + [DONE]."""
+    """The SSE stream must not break halfway through if the provider fails
+    (e.g. invalid API key): it must emit an error event + [DONE]."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}
@@ -369,7 +369,7 @@ async def test_chat_provider_failure_yields_graceful_error(
     class BoomProvider(FakeAIProvider):
         async def chat_stream(self, messages, tools, system):
             raise RuntimeError("API key is invalid")
-            yield  # pragma: no cover - hace de esto un generador async
+            yield  # pragma: no cover - makes this an async generator
 
     monkeypatch.setattr(advisor, "get_ai_provider", lambda: BoomProvider())
 
@@ -379,7 +379,7 @@ async def test_chat_provider_failure_yields_graceful_error(
     assert "[DONE]" in response.text
 
     history = await client.get("/api/v1/ai/history", headers=headers)
-    assert history.json()["meta"]["total"] == 0  # nada se guarda si la llamada fallo
+    assert history.json()["meta"]["total"] == 0  # nothing is saved if the call fails
 
 
 async def test_chat_creates_unplanned_debt(
@@ -513,9 +513,9 @@ async def test_chat_unknown_account_name_returns_readable_error_not_crash(
 async def test_chat_invalid_enum_returns_readable_error_not_crash(
     client: AsyncClient, session_factory, monkeypatch
 ):
-    """Si el modelo manda un `type` que no existe (alucinacion o ignoro el
-    enum del schema), debe llegar como alerta legible en el tool_result, no
-    tumbar todo el stream con el mensaje generico de error."""
+    """If the model sends a `type` that doesn't exist (hallucination or it ignored
+    the schema's enum), it must arrive as a readable alert in the tool_result, not
+    take down the whole stream with the generic error message."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}
@@ -592,8 +592,8 @@ async def test_chat_negative_amount_returns_readable_error(
 async def test_chat_missing_required_field_returns_readable_error(
     client: AsyncClient, session_factory, monkeypatch
 ):
-    """El modelo olvida un campo requerido (p.ej. next_date) -- debe ser un
-    KeyError capturado, no un 500 ni un crash del stream completo."""
+    """The model forgets a required field (e.g. next_date) -- it must be a
+    caught KeyError, not a 500 or a crash of the whole stream."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}
@@ -620,7 +620,7 @@ async def test_chat_missing_required_field_returns_readable_error(
                             "frequency": "monthly",
                             "account_name": "Banco Santander",
                             "category_name": "Ocio y Entretenimiento",
-                            # next_date faltante a proposito
+                            # next_date missing on purpose
                         },
                     }
                 ],
@@ -642,9 +642,9 @@ async def test_chat_missing_required_field_returns_readable_error(
 async def test_chat_recovers_after_failed_tool_call_in_same_turn(
     client: AsyncClient, session_factory, monkeypatch
 ):
-    """Tras un tool_result de error, la sesion/transaccion RLS debe seguir
-    sana: una segunda tool en el MISMO turno debe poder crear su registro
-    con normalidad (nada se corrompe por el fallo anterior)."""
+    """After an error tool_result, the RLS session/transaction must remain
+    healthy: a second tool in the SAME turn must be able to create its record
+    normally (nothing gets corrupted by the earlier failure)."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}
@@ -809,9 +809,9 @@ async def test_rls_isolates_chat_history_between_users(
 async def test_chat_can_create_account_scoped_to_user(
     client: AsyncClient, session_factory, monkeypatch
 ):
-    """El chat tiene las tools de escritura de app/ai/write_tools.py --
-    create_account queda scopeada al usuario autenticado via la misma sesion
-    RLS que abre chat()."""
+    """Chat has the write tools from app/ai/write_tools.py --
+    create_account is scoped to the authenticated user via the same RLS
+    session that chat() opens."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}
@@ -856,10 +856,10 @@ async def test_chat_can_create_account_scoped_to_user(
 async def test_chat_propose_action_does_not_write_anything(
     client: AsyncClient, session_factory, monkeypatch
 ):
-    """propose_action (ver write_tools.py + advisor.execute()) es solo para
-    que el frontend dibuje la tarjeta de confirmacion -- no debe tocar la
-    base de datos, y sus datos deben llegar intactos a tool_calls para que
-    Advisor.tsx pueda renderizar los campos."""
+    """propose_action (see write_tools.py + advisor.execute()) is only so
+    the frontend can draw the confirmation card -- it must not touch the
+    database, and its data must reach tool_calls intact so
+    Advisor.tsx can render the fields."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}
@@ -919,10 +919,10 @@ async def test_chat_propose_action_does_not_write_anything(
 async def test_chat_write_tool_refreshes_snapshot_within_same_turn(
     client: AsyncClient, session_factory, monkeypatch
 ):
-    """account_service.create_account no invalidaba/refrescaba el snapshot
-    cacheado (gap preexistente). Ahora, si el modelo crea una cuenta y en el
-    mismo turno pide get_financial_summary, debe ver el patrimonio ya
-    actualizado en vez del snapshot viejo capturado al abrir chat()."""
+    """account_service.create_account wasn't invalidating/refreshing the
+    cached snapshot (pre-existing gap). Now, if the model creates an account and in the
+    same turn asks for get_financial_summary, it must see the net worth already
+    updated instead of the old snapshot captured when chat() opened."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}
@@ -989,8 +989,8 @@ async def test_chat_pdf_wrong_password_returns_clean_error(client: AsyncClient):
 async def test_chat_pdf_attachment_reaches_provider_as_document_block(
     client: AsyncClient, session_factory, monkeypatch
 ):
-    """El PDF llega al provider ya sin contrasena, como bloque 'document' en
-    el shape nativo de Anthropic -- ver advisor.chat."""
+    """The PDF reaches the provider already without a password, as a 'document'
+    block in Anthropic's native shape -- see advisor.chat."""
     token, user_id = await _register_and_login(client)
     uid = uuid.UUID(user_id)
     headers = {"Authorization": f"Bearer {token}"}

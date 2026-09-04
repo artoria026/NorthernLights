@@ -45,9 +45,9 @@ function formatMoney(value: string | number | undefined) {
 function periodLabel(report: Report): string {
   const start = new Date(report.period_start)
   if (report.type.startsWith('yearly')) return start.getFullYear().toString()
-  // timeZone: 'UTC' -- `period_start` es "YYYY-MM-DD" (fecha sin hora), que
-  // Date() parsea como medianoche UTC; formatear en la zona local del
-  // navegador puede correr el dia/mes un periodo hacia atras.
+  // timeZone: 'UTC' -- `period_start` is "YYYY-MM-DD" (date with no time),
+  // which Date() parses as midnight UTC; formatting in the browser's local
+  // timezone can shift the day/month a period back.
   return start.toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' })
 }
 
@@ -60,9 +60,10 @@ const FLOW_BADGE: Record<
   general: { label: 'General', severity: 'violet', Icon: Lightbulb },
 }
 
-/** Tasa de ahorro negativa (gastas mas de lo que ganas) es una señal real de
- * alerta -- antes siempre se pintaba verde sin importar el valor. Umbrales
- * de regla de dedo (10% ahorro = saludable), no hay un estandar oficial. */
+/** A negative savings rate (you spend more than you earn) is a real
+ * warning signal -- it used to always render green regardless of the
+ * value. Rule-of-thumb thresholds (10% savings = healthy), there's no
+ * official standard. */
 function savingsRateColor(rate: number | undefined): string {
   const value = rate ?? 0
   if (value < 0) return 'var(--nl-danger-ink)'
@@ -70,9 +71,9 @@ function savingsRateColor(rate: number | undefined): string {
   return 'var(--nl-accent-ink)'
 }
 
-/** DTI (deuda/ingreso) alto es la misma historia -- antes se mostraba en
- * texto plano sin importar que tan alto fuera. >=36% es el umbral clasico de
- * "zona de riesgo" en finanzas personales. */
+/** A high DTI (debt/income) is the same story -- it used to show in plain
+ * text no matter how high it was. >=36% is the classic "risk zone"
+ * threshold in personal finance. */
 function dtiColor(dti: number | undefined): string | undefined {
   const value = dti ?? 0
   if (value >= 0.36) return 'var(--nl-danger-ink)'
@@ -163,16 +164,17 @@ export function Reports() {
   const { data: sideCategories } = useCategories(flow === 'income' ? 'income' : 'expense')
   const [index, setIndex] = useState(0)
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
-  // Entrada desde el sidebar ("Historial de patrimonio", /reports?section=networth)
-  // -- abre la seccion (normalmente colapsada) y hace scroll hasta ella.
-  // Solo se usa como estado inicial: netWorthOpen queda controlado por el
-  // usuario despues, el link no debe re-abrirla en cada render.
+  // Entry point from the sidebar ("Historial de patrimonio",
+  // /reports?section=networth) -- opens the section (normally collapsed)
+  // and scrolls to it. Only used as initial state: netWorthOpen stays
+  // controlled by the user afterward, the link shouldn't reopen it on
+  // every render.
   const [netWorthOpen, setNetWorthOpen] = useState(() => searchParams.get('section') === 'networth')
   const netWorthRef = useRef<HTMLDetailsElement>(null)
-  // Copia del valor inicial de netWorthOpen (useRef solo usa este argumento
-  // en el primer render) -- el efecto de scroll debe correr una sola vez al
-  // entrar por el deep-link, no cada vez que netWorthOpen cambia despues
-  // porque el usuario le dio click al <summary>.
+  // Copy of netWorthOpen's initial value (useRef only uses this argument
+  // on the first render) -- the scroll effect must run only once when
+  // entering via the deep link, not every time netWorthOpen changes
+  // afterward because the user clicked the <summary>.
   const shouldScrollToNetWorth = useRef(netWorthOpen)
 
   useEffect(() => {
@@ -216,11 +218,12 @@ export function Reports() {
   const confirm = useConfirmStore((s) => s.ask)
   const regenerating = generateMonthly.isPending || generateYearly.isPending
 
-  /** Recalcula desde cero el reporte que se esta viendo -- para cuando el
-   * usuario backfillea historial viejo y este periodo ya se habia generado
-   * (casi vacio) antes de cargar esas transacciones. En 'year' cascada:
-   * el backend recalcula primero los 12 meses del año, luego el año (ver
-   * report_service.generate_yearly_report, force=True). */
+  /** Recalculates the report currently being viewed from scratch -- for
+   * when the user backfills old history and this period had already been
+   * generated (nearly empty) before those transactions were loaded. In
+   * 'year' mode it cascades: the backend recalculates the 12 months of
+   * the year first, then the year (see report_service.generate_yearly_report,
+   * force=True). */
   async function regenerateCurrentReport() {
     if (!report || regenerating) return
     const ok = await confirm({
@@ -245,18 +248,18 @@ export function Reports() {
     }
   }
 
-  // 'all' incluye tambien los insights 'general'; filtrado por income/expense
-  // los excluye -- ver pregunta de diseño resuelta con el usuario.
+  // 'all' also includes 'general' insights; filtering by income/expense
+  // excludes them -- see design question resolved with the user.
   const insights = (report?.insights ?? []).filter((i) => flow === 'all' || i.flow_type === flow)
   const categorySide = flow === 'income' ? 'income' : 'expenses'
   const categories = (summary ? summary[categorySide].by_category : [])
     .slice()
     .sort((a, b) => Number(b.amount) - Number(a.amount))
     .slice(0, 8)
-  // by_category solo trae el nombre (es un agregado ya congelado en el JSON
-  // del reporte, no una FK viva a categories) -- se busca el color real por
-  // nombre, mismo enfoque que ya usamos para arreglar el mismo problema en
-  // Categorias/Dashboard/Transacciones/Cuentas.
+  // by_category only carries the name (it's an aggregate already frozen
+  // into the report's JSON, not a live FK to categories) -- the real
+  // color is looked up by name, same approach already used to fix the
+  // same problem in Categorias/Dashboard/Transacciones/Cuentas.
   const categoryColorByName = new Map((sideCategories ?? []).map((c) => [c.name, c.color]))
 
   const netWorthSeries = monthlyReports

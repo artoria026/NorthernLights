@@ -19,9 +19,9 @@ from app.services import account_service, debt_service, recurring_service
 
 __all__ = ["LIQUID_SUBTYPES"]
 
-# Metas de referencia usadas por calculate_health_score: valores de DTI, tasa de
-# ahorro, cobertura de emergencia y utilizacion de credito considerados "sanos" (100
-# puntos), y el peso de cada sub-score en el score compuesto.
+# Reference targets used by calculate_health_score: DTI, savings rate,
+# emergency coverage and credit utilization values considered "healthy"
+# (100 points), and the weight of each sub-score in the composite score.
 HEALTH_SCORE_DTI_TARGET = Decimal("0.80")
 HEALTH_SCORE_SAVINGS_RATE_TARGET = Decimal("0.20")
 HEALTH_SCORE_EMERGENCY_COVERAGE_TARGET_MONTHS = Decimal("6")
@@ -49,21 +49,22 @@ def _liquid_balance(accounts: list[Account]) -> Decimal:
 
 
 async def calculate_net_worth(session: AsyncSession, user_id: UUID) -> dict:
-    """M08 #1. Reusa M02: account_service.get_summary() ya calcula exactamente esto."""
+    """M08 #1. Reuses M02: account_service.get_summary() already computes exactly this."""
     return await account_service.get_summary(session, user_id)
 
 
 async def get_monthly_committed(session: AsyncSession, user_id: UUID) -> Decimal:
-    """Compromisos fijos mensuales: deudas activas (M05) + recurrentes no-ingreso (M06)."""
+    """Fixed monthly commitments: active debts (M05) + non-income recurring items (M06)."""
     debt_summary = await debt_service.get_summary(session, user_id)
     recurring_summary = await recurring_service.get_summary(session, user_id, exclude_income=True)
     return debt_summary["monthly_committed"] + recurring_summary["total_monthly"]
 
 
 async def get_income_estimates(session: AsyncSession, user_id: UUID) -> dict:
-    """M08 #2. Dos metodos: base recurrente declarada vs. promedio historico real de 3
-    meses. Usa el historico solo si hay 3+ meses de datos; si no, cae a la base
-    recurrente. Siempre devuelve ambos numeros para transparencia."""
+    """M08 #2. Two methods: declared recurring base vs. real historical
+    average over 3 months. Uses the historical one only if there are 3+
+    months of data; otherwise falls back to the recurring base. Always
+    returns both numbers for transparency."""
     recurring_summary = await recurring_service.get_summary(session, user_id, income_only=True)
     recurring_monthly = recurring_summary["total_monthly"]
 
@@ -111,8 +112,8 @@ async def _spent_this_month(session: AsyncSession, user_id: UUID) -> Decimal:
 
 
 async def calculate_health_score(session: AsyncSession, user_id: UUID) -> dict:
-    """M08 #3. Score 0-100 compuesto de 4 sub-scores ponderados. Puede bajar a 0
-    legitimamente (informativo, no bloqueante)."""
+    """M08 #3. Score 0-100 composed of 4 weighted sub-scores. Can
+    legitimately drop to 0 (informational, not blocking)."""
     accounts = await _accounts(session, user_id)
     income = await get_income_estimates(session, user_id)
     estimated_income = income["estimated_monthly"]
@@ -126,7 +127,7 @@ async def calculate_health_score(session: AsyncSession, user_id: UUID) -> dict:
     dti_score = max(Decimal("0"), Decimal("100") - (dti / HEALTH_SCORE_DTI_TARGET) * 100)
     dti_score = min(dti_score, Decimal("100"))
 
-    # Tasa de ahorro
+    # Savings rate
     spent_this_month = await _spent_this_month(session, user_id)
     if estimated_income > 0:
         savings_rate = (estimated_income - spent_this_month) / estimated_income
@@ -137,7 +138,7 @@ async def calculate_health_score(session: AsyncSession, user_id: UUID) -> dict:
         max(Decimal("0"), (savings_rate / HEALTH_SCORE_SAVINGS_RATE_TARGET) * 100),
     )
 
-    # Cobertura de emergencia
+    # Emergency coverage
     liquid_assets = _liquid_balance(accounts)
     coverage_months = liquid_assets / committed_monthly if committed_monthly > 0 else Decimal("99")
     emergency_score = min(
@@ -145,7 +146,7 @@ async def calculate_health_score(session: AsyncSession, user_id: UUID) -> dict:
         (coverage_months / HEALTH_SCORE_EMERGENCY_COVERAGE_TARGET_MONTHS) * 100,
     )
 
-    # Utilizacion de credito
+    # Credit utilization
     tdc_accounts = [a for a in accounts if a.type == "liability" and a.subtype == "credit_card"]
     total_balance = sum((a.balance for a in tdc_accounts), Decimal("0"))
     total_limit = sum((a.credit_limit for a in tdc_accounts if a.credit_limit), Decimal("0"))
@@ -230,7 +231,7 @@ async def _income_remaining_this_month(session: AsyncSession, user_id: UUID) -> 
 
 
 async def available_spending(session: AsyncSession, user_id: UUID, period: str) -> dict:
-    """M08 #4. Dinero disponible para today|week|month."""
+    """M08 #4. Money available for today|week|month."""
     accounts = await _accounts(session, user_id)
     liquid = _liquid_balance(accounts)
     today = date.today()
@@ -256,7 +257,7 @@ async def available_spending(session: AsyncSession, user_id: UUID, period: str) 
 
 
 def calculate_runway(liquid_balance: Decimal, monthly_fixed: Decimal) -> dict:
-    """M08 #6. Cuantos dias aguanta el dinero liquido a ritmo de gasto fijo."""
+    """M08 #6. How many days the liquid money lasts at the fixed-expense burn rate."""
     if monthly_fixed <= 0:
         return {"days": 9999, "months": 999.0, "label": "Sin compromisos fijos"}
     daily_burn = monthly_fixed / 30
@@ -266,8 +267,8 @@ def calculate_runway(liquid_balance: Decimal, monthly_fixed: Decimal) -> dict:
 
 
 async def cash_flow_projection(session: AsyncSession, user_id: UUID, days: int = 30) -> list[dict]:
-    """M08 #5. Proyeccion dia a dia usando la unica proxima ocurrencia conocida de
-    cada deuda/recurrente (no proyecta ciclos futuros mas alla de next_date)."""
+    """M08 #5. Day-by-day projection using each debt/recurring item's single
+    known next occurrence (doesn't project future cycles beyond next_date)."""
     today = date.today()
     accounts = await _accounts(session, user_id)
     balance = _liquid_balance(accounts)
@@ -334,8 +335,8 @@ async def get_upcoming_payments(session: AsyncSession, user_id: UUID, days: int 
 
 
 async def build_financial_snapshot(session: AsyncSession, user_id: UUID) -> dict:
-    """M08 #7. El output mas importante del modulo: lo consumen M09 (cache), M10
-    (asesor IA) y M13 (insights)."""
+    """M08 #7. The module's most important output: consumed by M09 (cache),
+    M10 (AI advisor) and M13 (insights)."""
     income = await get_income_estimates(session, user_id)
     committed = await get_monthly_committed(session, user_id)
     net_worth = await calculate_net_worth(session, user_id)
@@ -361,8 +362,8 @@ async def build_financial_snapshot(session: AsyncSession, user_id: UUID) -> dict
 async def simulate_scenario(
     session: AsyncSession, user_id: UUID, scenario: SimulationRequest
 ) -> dict:
-    """M08 #10. Nunca escribe en DB: aplica el cambio hipotetico sobre los numeros
-    ya calculados y devuelve antes/despues/delta."""
+    """M08 #10. Never writes to the DB: applies the hypothetical change on
+    top of already-calculated numbers and returns before/after/delta."""
     committed = await get_monthly_committed(session, user_id)
     income = await get_income_estimates(session, user_id)
     net_worth_before = (await calculate_net_worth(session, user_id))["net_worth"]
@@ -385,8 +386,9 @@ async def simulate_scenario(
     ):
         debt = await session.get(Debt, scenario.debt_id)
         if debt is not None and debt.user_id == user_id:
-            # Un pago extra no cambia el compromiso mensual recurrente; adelanta la
-            # liquidacion, lo cual sube el patrimonio neto al reducir el pasivo.
+            # An extra payment doesn't change the recurring monthly
+            # commitment; it advances the payoff, which raises net worth by
+            # reducing the liability.
             paid_down = min(scenario.amount, debt.current_balance)
             net_worth_after = net_worth_before + paid_down
 
@@ -414,12 +416,12 @@ async def simulate_scenario(
 async def _category_breakdown(
     session: AsyncSession, user_id: UUID, entry_type: str, start: date, end: date
 ) -> tuple[Decimal, list[dict]]:
-    """Por categoria de primer nivel, con el gasto/ingreso de sus
-    subcategorias ya sumado (mismo rollup que budget_service) y el desglose
-    de esas subcategorias disponible aparte para reportes/graficas que
-    quieran mostrarlo (ver Reports.tsx) -- una transaccion categorizada
-    directo en el padre (sin pasar por una subcategoria) cuenta para el
-    total del padre pero no genera una fila de subcategoria."""
+    """By top-level category, with its subcategories' expense/income already
+    summed in (same rollup as budget_service) and the breakdown of those
+    subcategories available separately for reports/charts that want to show
+    it (see Reports.tsx) -- a transaction categorized directly on the
+    parent (without going through a subcategory) counts toward the
+    parent's total but doesn't generate a subcategory row."""
     ParentCategory = aliased(Category)
     effective_id = func.coalesce(Category.parent_id, Category.id)
     result = await session.execute(
@@ -476,10 +478,10 @@ async def _category_breakdown(
 async def _adjustments_breakdown(
     session: AsyncSession, user_id: UUID, start: date, end: date
 ) -> dict:
-    """Ajustes de saldo (conciliacion) del periodo -- sin categoria, asi que
-    a diferencia de _category_breakdown no hay join a Category. Solo
-    totales/conteo: el detalle item por item ya vive en Transacciones,
-    filtrable por tipo (Ajuste de saldo)."""
+    """Balance adjustments (reconciliation) for the period -- no category,
+    so unlike _category_breakdown there's no join to Category. Totals/count
+    only: the item-by-item detail already lives in Transactions, filterable
+    by type (Balance adjustment)."""
     result = await session.execute(
         select(JournalEntry.entry_type, func.sum(JournalEntry.amount))
         .where(
@@ -517,9 +519,9 @@ async def _adjustments_breakdown(
 
 
 async def _net_worth_as_of(session: AsyncSession, user_id: UUID, as_of: date) -> Decimal:
-    """Reconstruye el patrimonio neto a una fecha pasada sumando el efecto de
-    cada journal_line confirmado hasta esa fecha sobre `initial_balance`, en
-    vez de usar `Account.balance` (que siempre refleja el saldo ACTUAL)."""
+    """Rebuilds net worth as of a past date by summing the effect of every
+    confirmed journal_line up to that date onto `initial_balance`, instead
+    of using `Account.balance` (which always reflects the CURRENT balance)."""
     accounts = await _accounts(session, user_id)
     if not accounts:
         return Decimal("0")
@@ -589,13 +591,13 @@ async def compute_period_summary(
     *,
     previous_health_score: float | None = None,
 ) -> dict:
-    """M15. El `health_score` refleja el estado ACTUAL de la cuenta, no una
-    reconstruccion historica punto-en-el-tiempo de sus 4 sub-scores: para el
-    reporte automatico mensual esto es exacto (corre el dia 1, justo despues
-    de que el periodo termino); para reportes manuales de meses lejanos es
-    una aproximacion. `previous_health_score` lo resuelve el llamador (M15
-    report_service) leyendo el reporte anterior -- este modulo no conoce la
-    tabla `reports`."""
+    """M15. The `health_score` reflects the account's CURRENT state, not a
+    point-in-time historical reconstruction of its 4 sub-scores: for the
+    automatic monthly report this is exact (runs on day 1, right after the
+    period ended); for manual reports of distant months it's an
+    approximation. `previous_health_score` is resolved by the caller (M15
+    report_service) reading the previous report -- this module doesn't know
+    about the `reports` table."""
     income_total, income_by_category = await _category_breakdown(
         session, user_id, "income", start, end
     )

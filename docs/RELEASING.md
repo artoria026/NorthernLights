@@ -1,161 +1,163 @@
-# Cómo liberar una versión y redactar su changelog
+# How to release a version and write its changelog
 
-Esta guía es para cuando se va a hacer una liberación (release) de NorthernLights: qué número de
-versión le toca, cómo sacar la lista de cambios de forma confiable (no de memoria), y cómo redactar
-cada línea del changelog que ven los usuarios dentro de la app ("Novedades", el ícono de 📣 en el
+This guide is for when a release of NorthernLights is about to go out: which version number
+it gets, how to pull the list of changes reliably (not from memory), and how to write each
+line of the changelog end users see inside the app ("What's new", the 📣 icon in the
 sidebar).
 
-No es una guía de cómo programar la feature — es la checklist de los pasos de **cierre** de una
-liberación, una vez que el código ya está listo.
+This isn't a guide on how to build the feature — it's the checklist for the **closing**
+steps of a release, once the code is already done.
 
-## 1. Dónde vive todo esto
+## 1. Where all of this lives
 
-- **Versión de la app:** `frontend-web/package.json`, campo `"version"`. Es la que se ve como
-  "NorthernLights vX.X.X" al pie del sidebar (`AppSidebar.tsx`). Una sola versión cubre frontend y
-  backend juntos — no se versionan por separado, porque se liberan juntos.
-- **Changelog:** `frontend-web/src/lib/changelog.ts`, arreglo `CHANGELOG`. Cada entrada:
+- **App version:** `frontend-web/package.json`, the `"version"` field. This is what shows up
+  as "NorthernLights vX.X.X" at the bottom of the sidebar (`AppSidebar.tsx`). A single version
+  covers frontend and backend together — they aren't versioned separately, since they're
+  released together.
+- **Changelog:** `frontend-web/src/lib/changelog.ts`, the `CHANGELOG` array. Each entry:
   ```ts
   {
-    version: '1.0.1',       // DEBE ser igual al version de package.json en esa liberación
-    date: '2026-08-14',     // fecha real de la liberación, formato YYYY-MM-DD
-    title: 'Título corto de la liberación',
-    items: ['Cambio 1 en español llano...', 'Cambio 2...'],
+    version: '1.0.1',       // MUST match package.json's version for that release
+    date: '2026-08-14',     // actual release date, YYYY-MM-DD format
+    title: 'Short release title',
+    items: ['Change 1 in plain language...', 'Change 2...'],
   }
   ```
-- **Cómo se muestra:** `ChangelogButton.tsx` → `ChangelogDialog`. Se auto-abre una vez por usuario
-  cuando `user.last_seen_changelog_version` (guardado en su cuenta) no coincide con
-  `LATEST_CHANGELOG_VERSION` (que es siempre `CHANGELOG[0].version`, la entrada más nueva). La
-  comparación es por **igualdad exacta de string**, no por orden — así que el valor de `version` de
-  cada entrada tiene que ser único y no reutilizarse nunca.
-- **Cuántas se muestran:** el modal solo pinta las últimas `RECENT_CHANGELOG_COUNT` entradas
-  (`getRecentChangelog()`), hoy en 3. `CHANGELOG` completo se queda como el histórico real y sigue
-  creciendo — no hay que borrar entradas viejas, solo dejar que salgan del recorte.
+- **How it's shown:** `ChangelogButton.tsx` → `ChangelogDialog`. It auto-opens once per user
+  when `user.last_seen_changelog_version` (stored on their account) doesn't match
+  `LATEST_CHANGELOG_VERSION` (which is always `CHANGELOG[0].version`, the newest entry). The
+  comparison is **exact string equality**, not ordering — so each entry's `version` value has
+  to be unique and never reused.
+- **How many are shown:** the modal only renders the last `RECENT_CHANGELOG_COUNT` entries
+  (`getRecentChangelog()`), currently 3. The full `CHANGELOG` stays as the real history and
+  keeps growing — there's no need to delete old entries, just let them fall out of the cutoff.
 
-## 2. Sacar los cambios reales, no de memoria
+## 2. Pull the real changes, not from memory
 
-**Antes de escribir una sola línea del changelog, correr un diff contra la última liberación** —
-nunca redactar a partir de lo que uno "recuerda" que se hizo en la conversación/sesión, porque eso
-se olvida cosas o mezcla trabajo que todavía no se libera.
+**Before writing a single line of the changelog, run a diff against the last release** —
+never write it from what you "remember" happened in the conversation/session, since that
+forgets things or mixes in work that hasn't shipped yet.
 
 ```bash
-# Si el commit de la ultima liberacion esta tageado (ver paso 5), lo mas limpio:
+# If the last release's commit is tagged (see step 5), the cleanest way:
 git log v1.0.0..HEAD --oneline
 git diff v1.0.0..HEAD --stat
 
-# Si todavia no hay tags (proyecto nuevo, o se te olvido tagear la ultima vez),
-# el equivalente es diffear contra el commit de esa liberacion a mano:
-git log --oneline                      # ubicar el commit de la liberacion anterior
-git diff <hash_de_esa_liberacion>..HEAD --stat
-git log <hash_de_esa_liberacion>..HEAD --oneline
+# If there are no tags yet (new project, or you forgot to tag last time),
+# the equivalent is diffing against that release's commit by hand:
+git log --oneline                      # find the previous release's commit
+git diff <that_release_hash>..HEAD --stat
+git log <that_release_hash>..HEAD --oneline
 ```
 
-Con esa lista de commits/archivos tocados:
+With that list of commits/files touched:
 
-1. Agrupar por lo que el usuario **percibe**, no por archivo ni por commit — un mismo cambio de UX
-   puede tocar 5 archivos (backend + frontend + tests) y ser una sola línea de changelog.
-2. Descartar todo lo que no es visible para el usuario final (ver la lista de "qué NO entra" abajo).
-3. Para cada cosa que sí queda, escribir una línea siguiendo las reglas de redacción (sección 3).
+1. Group by what the user **perceives**, not by file or commit — a single UX change might
+   touch 5 files (backend + frontend + tests) and be a single changelog line.
+2. Drop anything not visible to the end user (see the "what does NOT go in" list below).
+3. For everything that stays, write a line following the writing rules (section 3).
 
-Si de verdad no hay ningún tag ni referencia de la liberación anterior, la comparación de emergencia
-es contra la entrada más reciente de `CHANGELOG` por fecha (`git log --since=<esa fecha>`), pero es
-menos preciso que un tag/commit exacto — evitarlo si se puede.
+If there's truly no tag or reference for the previous release, the emergency comparison is
+against the most recent `CHANGELOG` entry by date (`git log --since=<that date>`), but it's
+less precise than an exact tag/commit — avoid it if you can.
 
-## 3. Reglas de redacción (el lenguaje)
+## 3. Writing rules (the language)
 
-El changelog lo lee alguien sin ningún contexto técnico. Cada línea tiene que poder entenderse sola.
+The changelog is read by someone with no technical context. Every line has to stand on its
+own.
 
-**Sí:**
-- Español neutro, tratamiento de **tú** (no "vos", aunque haya alguna entrada vieja así -- no
-  perpetuarla).
-- Hablar del beneficio o del comportamiento nuevo, no de la implementación: "ahora te avisa si..."
-  en vez de "se agregó un chequeo de finish_reason".
-- Una oración por punto, corta. Si hace falta más contexto, se puede usar un guion largo `--` para
-  un dato extra, pero no párrafos.
-- Nombrar la pantalla o la acción tal como la ve el usuario ("el modal de Registrar pago", "Asesor
-  IA"), no el nombre del archivo/componente.
-- Si es un bugfix visible, se puede nombrar el síntoma que ya no va a pasar ("ya no se queda
-  bloqueado si...") en vez de explicar la causa técnica.
+**Do:**
+- Neutral Spanish, using **tú** address (not "vos", even if some old entries used it — don't
+  perpetuate that).
+- Talk about the benefit or the new behavior, not the implementation: "it now warns you
+  if..." instead of "added a finish_reason check".
+- One short sentence per bullet. If more context is needed, an em dash `--` can add one extra
+  detail, but not paragraphs.
+- Name the screen or action the way the user sees it ("the Log Payment modal", "AI Advisor"),
+  not the file/component name.
+- For a visible bugfix, it's fine to name the symptom that will no longer happen ("no longer
+  gets stuck when...") instead of explaining the technical cause.
 
-**No:**
-- Nombres de archivos, funciones, variables, tools de IA, endpoints, tablas de la base de datos.
-- Jerga (`linked_account_id`, `tool_calls`, `HTTPException`, `SSE`, `RLS`, `refactor`, `hook`).
-- Cambios puramente internos: tests nuevos, refactors sin cambio de comportamiento, ajustes de
-  compactación/espaciado menores, bumps de dependencias, comentarios de código.
-- Mezclar dos cambios en una sola línea "y además también" — mejor dos líneas cortas.
+**Don't:**
+- File names, functions, variables, AI tools, endpoints, database tables.
+- Jargon (`linked_account_id`, `tool_calls`, `HTTPException`, `SSE`, `RLS`, `refactor`, `hook`).
+- Purely internal changes: new tests, refactors with no behavior change, minor
+  spacing/compaction tweaks, dependency bumps, code comments.
+- Mixing two changes into one line with "and also" — two short lines are better.
 
-**Ejemplos reales (de entradas ya escritas):**
+**Real examples (from entries already written):**
 
-| Mal (no usar así) | Bien (como se escribió) |
+| Bad (don't write it like this) | Good (how it was actually written) |
 |---|---|
 | "Se agregó la tool propose_action que no ejecuta writes" | "Cuando el asesor va a registrar algo por ti, ahora te lo confirma con una tarjeta y dos botones -- ya no hace falta escribirle 'sí'." |
 | "Se corrigió el layout flex del chat (min-height/overflow)" | "El chat del asesor dejó de mover toda la pantalla al hacer scroll." |
 | "create_debt ahora valida linked_account_id para type=credit_card" | "Si registrabas una tarjeta de crédito sin elegir su cuenta correspondiente, ahora te lo pedimos al crearla." |
 
-### Qué SÍ entra al changelog
+### What DOES go in the changelog
 
-- Features nuevas que el usuario puede usar.
-- Cambios de comportamiento visibles (aunque sea sutil, como un color o un mensaje distinto).
-- Bugs corregidos que el usuario podía notar (algo que fallaba, se veía mal, o lo bloqueaba).
-- Pantallas nuevas o eliminadas, o que cambiaron de lugar.
+- New features the user can use.
+- Visible behavior changes (even subtle ones, like a different color or message).
+- Fixed bugs the user could notice (something that failed, looked wrong, or blocked them).
+- Screens added, removed, or moved.
 
-### Qué NO entra
+### What does NOT go in
 
-- Compactaciones/ajustes visuales menores (padding, tamaños de fuente) salvo que sea un rediseño
-  notorio de la pantalla completa.
-- Tests, linting, tooling, CI, dependencias.
-- Refactors internos sin cambio de comportamiento observable.
-- Cambios de config/infra que no afectan lo que el usuario ve o puede hacer.
+- Minor visual tweaks (padding, font sizes) unless it's a notable redesign of the whole
+  screen.
+- Tests, linting, tooling, CI, dependencies.
+- Internal refactors with no observable behavior change.
+- Config/infra changes that don't affect what the user sees or can do.
 
-Ante la duda de si algo es lo bastante visible: si el usuario no tendría forma de notar la
-diferencia usando la app normalmente, no va.
+When in doubt about whether something is visible enough: if the user would have no way to
+notice the difference using the app normally, it doesn't go in.
 
-## 4. El título de la entrada
+## 4. The entry title
 
-Una frase corta (5-10 palabras) que resuma el tema principal de la liberación, no una lista. Si hay
-dos temas grandes, separarlos con coma: `"El asesor confirma con botones, y arreglos en Deudas"`.
+A short phrase (5-10 words) summarizing the release's main theme, not a list. If there are
+two big themes, separate them with a comma: `"The advisor confirms with buttons, and fixes in
+Debts"`.
 
-## 5. Qué versión ponerle
+## 5. Which version to give it
 
-`frontend-web/package.json` sigue semver de forma laxa (no hay una API pública con contrato que
-romper, así que el criterio es sobre todo "qué tan grande se siente el cambio para quien usa la
-app"):
+`frontend-web/package.json` loosely follows semver (there's no public API with a contract to
+break, so the criterion is mostly "how big does this change feel to someone using the app"):
 
-- **Patch (`1.0.1` → `1.0.2`):** bugfixes, ajustes chicos, una feature menor.
-- **Minor (`1.0.x` → `1.1.0`):** una feature nueva de tamaño real (una pantalla nueva, un flujo
-  nuevo), o varios cambios patch acumulados que juntos se sienten como una liberación con contenido.
-- **Major (`x.0.0`):** un rediseño grande o un cambio de fondo en cómo funciona algo central de la
-  app. Poco frecuente.
+- **Patch (`1.0.1` → `1.0.2`):** bugfixes, small tweaks, a minor feature.
+- **Minor (`1.0.x` → `1.1.0`):** a real-sized new feature (a new screen, a new flow), or
+  several accumulated patch changes that together feel like a release with real content.
+- **Major (`x.0.0`):** a big redesign or a fundamental change in how something central to the
+  app works. Infrequent.
 
-Pasos concretos:
+Concrete steps:
 
-1. Decidir el bump (arriba) y actualizar `"version"` en `frontend-web/package.json`.
-2. Usar ESE MISMO número como `version` de la nueva entrada en `CHANGELOG` (ver formato en la
-   sección 1) -- nunca un valor distinto, y nunca una fecha disfrazada de versión.
-3. `date` es la fecha real en la que se libera (no la fecha en que se escribió el código).
-4. La nueva entrada va al **inicio** del arreglo `CHANGELOG` (índice 0) -- así queda como
-   `LATEST_CHANGELOG_VERSION` automáticamente.
+1. Decide the bump (above) and update `"version"` in `frontend-web/package.json`.
+2. Use that SAME number as the `version` of the new entry in `CHANGELOG` (see the format in
+   section 1) -- never a different value, and never a date disguised as a version.
+3. `date` is the actual date the release goes out (not the date the code was written).
+4. The new entry goes at the **start** of the `CHANGELOG` array (index 0) -- so it
+   automatically becomes `LATEST_CHANGELOG_VERSION`.
 
-## 6. Tagear el commit de la liberación
+## 6. Tag the release commit
 
-Para que el próximo release pueda diffear limpio (ver sección 2), tagear el commit donde se sube la
-versión y el changelog:
+So the next release can diff cleanly (see section 2), tag the commit where the version and
+changelog are bumped:
 
 ```bash
 git tag v1.0.1
-git push --tags   # si aplica
+git push --tags   # if applicable
 ```
 
-Si esto no se hizo en liberaciones pasadas, no pasa nada grave -- solo hay que ubicar el commit a
-mano con `git log` la próxima vez. Pero de aquí en adelante, tagear siempre que se libere hace el
-proceso mecánico en vez de depender de memoria.
+If this wasn't done for past releases, it's not a big deal -- you just have to find the
+commit by hand with `git log` next time. But from here on, tagging every release makes the
+process mechanical instead of relying on memory.
 
-## 7. Checklist resumida
+## 7. Quick checklist
 
-1. `git log`/`git diff` contra el tag o commit de la última liberación -- nunca de memoria.
-2. Agrupar por cambio percibido por el usuario, descartar lo interno (sección 3).
-3. Redactar cada línea en español llano, tú, sin jerga, un cambio por línea.
-4. Decidir el bump de versión (patch/minor/major) y actualizarlo en `frontend-web/package.json`.
-5. Agregar la entrada nueva al inicio de `CHANGELOG` en `frontend-web/src/lib/changelog.ts`, con el
-   mismo `version`, la fecha real, título corto, e items.
-6. Correr `tsc --noEmit` (el array es TS, un error de tipeo en la forma del objeto lo agarra ahí).
-7. Tagear el commit (`git tag vX.X.X`).
+1. `git log`/`git diff` against the tag or commit of the last release -- never from memory.
+2. Group by user-perceived change, drop internal-only ones (section 3).
+3. Write each line in plain Spanish, using tú, no jargon, one change per line.
+4. Decide the version bump (patch/minor/major) and update it in `frontend-web/package.json`.
+5. Add the new entry at the start of `CHANGELOG` in `frontend-web/src/lib/changelog.ts`, with
+   the same `version`, the actual date, a short title, and items.
+6. Run `tsc --noEmit` (the array is TS, a typo in the object shape gets caught there).
+7. Tag the commit (`git tag vX.X.X`).

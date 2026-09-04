@@ -120,21 +120,21 @@ def _display_amount(lines: list[JournalLineIn]) -> Decimal:
 async def _resolve_lines(
     session: AsyncSession, user_id: UUID, data: TransactionCreate
 ) -> list[JournalLineIn]:
-    """Si el caller ya mando 'lines' (transfer/prestamos), se usan tal cual.
-    Si no (income/expense simple), el backend resuelve la cuenta contable
-    interna de la categoria y arma el asiento el solo -- el front nunca elige
-    ni ve esa cuenta. La validacion de TransactionCreate ya garantiza que
-    account_id/amount vienen presentes en este caso."""
+    """If the caller already sent 'lines' (transfer/loans), they're used
+    as-is. If not (simple income/expense), the backend resolves the
+    category's internal accounting account and builds the entry on its
+    own -- the frontend never picks or sees that account. TransactionCreate
+    validation already guarantees account_id/amount are present in this case."""
     if data.lines is not None:
         return data.lines
 
     ledger_account = await account_service.get_or_create_category_ledger_account(
         session, user_id, data.entry_type
     )
-    # adjustment_in se comporta como income (aumenta el saldo de la cuenta
-    # real) y adjustment_out como expense (lo disminuye) -- misma mecanica de
-    # debito/credito, solo cambia la cuenta contable interna del otro lado
-    # (ver get_or_create_category_ledger_account).
+    # adjustment_in behaves like income (increases the real account's
+    # balance) and adjustment_out like expense (decreases it) -- same
+    # debit/credit mechanics, only the other side's internal accounting
+    # account changes (see get_or_create_category_ledger_account).
     is_increase = data.entry_type in ("income", "adjustment_in")
     paying = JournalLineIn(
         account_id=data.account_id,  # type: ignore[arg-type]
@@ -152,13 +152,14 @@ async def _resolve_lines(
 async def _validate_line_accounts(
     session: AsyncSession, user_id: UUID, lines: list[JournalLineIn]
 ) -> None:
-    """Sin este chequeo, un account_id de otro usuario (mandado a mano o via
-    linked_account_id/funding_account_id de deudas/recurrentes) pasaria de
-    largo y update_account_balance moveria el saldo real de una cuenta ajena:
-    esa funcion hace session.get(Account, account_id) sin filtrar por
-    user_id, y las policies RLS de Postgres no protegen aqui porque el rol
-    con el que corre la app es OWNER de las tablas (RLS no aplica al owner
-    salvo que la tabla tenga FORCE ROW LEVEL SECURITY)."""
+    """Without this check, another user's account_id (sent by hand or via
+    debts'/recurring items' linked_account_id/funding_account_id) would
+    slip through and update_account_balance would move the real balance of
+    someone else's account: that function does session.get(Account,
+    account_id) without filtering by user_id, and Postgres's RLS policies
+    don't protect here because the role the app runs as is OWNER of the
+    tables (RLS doesn't apply to the owner unless the table has FORCE ROW
+    LEVEL SECURITY)."""
     account_ids = {line.account_id for line in lines}
     result = await session.execute(
         select(func.count())
@@ -181,21 +182,21 @@ async def _validate_installment_account(
 
 
 async def _invalidate_cache(user_id: UUID) -> None:
-    """M09: invalidar snapshot/reportes cacheados en cada transaccion confirmed
-    (creacion, edicion, borrado o confirmacion de un draft/pending)."""
+    """M09: invalidate cached snapshot/reports on every confirmed transaction
+    (creation, editing, deletion, or confirmation of a draft/pending)."""
     redis = await get_redis()
     await cache_service.invalidate_user_current(redis, user_id)
 
 
 async def _on_confirmed(session: AsyncSession, entry: JournalEntry, amount: Decimal) -> None:
-    """Hook exportado para M07: solo transacciones `confirmed` de tipo
-    'expense' con category_id mueven `budget_periods.spent` -- el presupuesto
-    variable es exclusivamente de gasto por categoria. Sin el filtro de
-    entry_type, un ingreso categorizado (income/adjustment_in con categoria)
-    tambien escribia aqui y se colaba en el desglose de presupuesto como si
-    fuera gasto, inflando variable_total_spent y el card "Gastado" -- bug
-    real detectado en produccion local el 2026-08-09 (ver migracion
-    de limpieza de datos correspondiente). Import local para evitar el ciclo
+    """Hook exported for M07: only `confirmed` transactions of type
+    'expense' with category_id move `budget_periods.spent` -- the variable
+    budget is exclusively for expense by category. Without the entry_type
+    filter, a categorized income (income/adjustment_in with a category)
+    also wrote here and snuck into the budget breakdown as if it were an
+    expense, inflating variable_total_spent and the "Spent" card -- real
+    bug detected in local production on 2026-08-09 (see the corresponding
+    data cleanup migration). Local import to avoid the cycle
     transaction_service -> budget_service -> recurring_service -> transaction_service."""
     if entry.category_id is None or entry.entry_type != "expense":
         return
@@ -272,12 +273,12 @@ async def create_transaction(
 async def split_expense(
     session: AsyncSession, user_id: UUID, data: SplitExpenseCreate
 ) -> JournalEntry:
-    """Mi parte real se debita contra la cuenta contable interna de gasto,
-    igual que cualquier gasto simple -- el front nunca elige esa cuenta. La
-    parte de cada deudor sube su saldo 'me deben' en Deudas (direction=
-    owed_to_me), resuelto/creado solo por nombre -- import local de
-    debt_service para evitar el ciclo transaction_service -> debt_service ->
-    transaction_service (misma razon que _on_confirmed con budget_service)."""
+    """My real share gets debited against the internal expense accounting
+    account, same as any simple expense -- the frontend never picks that
+    account. Each debtor's share raises their 'owed to me' balance in Debts
+    (direction=owed_to_me), resolved/created by name only -- local import
+    of debt_service to avoid the cycle transaction_service -> debt_service
+    -> transaction_service (same reason as _on_confirmed with budget_service)."""
     from app.services import debt_service
 
     ledger_account = await account_service.get_or_create_category_ledger_account(
@@ -395,8 +396,8 @@ async def list_transactions(
 async def update_transaction(
     session: AsyncSession, user_id: UUID, entry_id: UUID, data: TransactionUpdate
 ) -> JournalEntry:
-    """No se editan las lines directamente: se revierte y soft-deletea la entrada
-    anterior y se crea una nueva, preservando el historial."""
+    """Lines aren't edited directly: the previous entry is reverted and
+    soft-deleted and a new one is created, preserving history."""
     old_entry = await get_transaction(session, user_id, entry_id)
     if old_entry.status != "confirmed":
         raise HTTPException(
@@ -426,12 +427,13 @@ async def update_transaction(
     if data.lines is not None:
         new_lines = data.lines
     elif data.account_id is not None or data.amount is not None:
-        # Cambio de monto/cuenta en la forma simple (expense/income): se
-        # resuelve igual que en create_transaction (_resolve_lines), asi el
-        # front nunca necesita conocer la cuenta contable interna de la
-        # categoria. Esa cuenta ledger es la misma para todo el entry_type
-        # (no depende de la categoria), asi que basta excluirla de las lines
-        # viejas para recuperar cual era la cuenta "real" antes de este cambio.
+        # Amount/account change in the simple form (expense/income): it's
+        # resolved the same way as in create_transaction (_resolve_lines),
+        # so the frontend never needs to know the category's internal
+        # accounting account. That ledger account is the same for the
+        # whole entry_type (doesn't depend on the category), so it's
+        # enough to exclude it from the old lines to recover which
+        # account was the "real" one before this change.
         if new_entry_type not in ("income", "expense", "adjustment_in", "adjustment_out"):
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
@@ -477,8 +479,8 @@ async def delete_transaction(session: AsyncSession, user_id: UUID, entry_id: UUI
 async def confirm_draft(
     session: AsyncSession, user_id: UUID, entry_id: UUID, edits: TransactionUpdate | None = None
 ) -> JournalEntry:
-    """Confirma un `draft` (creado a mano, M04) o un `pending` (generado por
-    Celery, M06) — mismo endpoint para ambos, per spec de M06."""
+    """Confirms a `draft` (created by hand, M04) or a `pending` (generated
+    by Celery, M06) — same endpoint for both, per M06 spec."""
     entry = await get_transaction(session, user_id, entry_id)
     if entry.status not in ("draft", "pending"):
         raise HTTPException(
@@ -523,8 +525,8 @@ async def confirm_draft(
     await _apply_lines(session, entry.lines)
     await _on_confirmed(session, entry, entry.amount or Decimal("0"))
     if entry.debt_id is not None:
-        # Import local para evitar el ciclo transaction_service ->
-        # debt_service -> transaction_service (misma razon que split_expense).
+        # Local import to avoid the cycle transaction_service ->
+        # debt_service -> transaction_service (same reason as split_expense).
         from app.services import debt_service
 
         await debt_service.apply_confirmed_payment(session, entry)
@@ -550,15 +552,15 @@ async def reconcile_account(
     entry_date: date,
     notes: str | None,
 ) -> dict:
-    """Concilia el saldo registrado de una cuenta liquida (efectivo/debito/
-    ahorro) contra lo que el usuario cuenta/observa fisicamente. La
-    diferencia se registra como adjustment_in/adjustment_out -- nunca como
-    income/expense contra una categoria real, para no distorsionar el
-    historial de gasto/ingreso por categoria ni el presupuesto (que ya
-    filtra por entry_type == 'expense', asi que un adjustment_out queda
-    excluido sin tocar budget_service). Solo aplica a cuentas liquidas: en
-    una TDC "lo que tienes fisicamente" no aplica igual, se concilia contra
-    el estado de cuenta del banco (fuera de alcance por ahora)."""
+    """Reconciles a liquid account's (cash/debit/savings) recorded balance
+    against what the user physically counts/observes. The difference is
+    recorded as adjustment_in/adjustment_out -- never as income/expense
+    against a real category, so it doesn't distort the expense/income
+    history by category or the budget (which already filters by
+    entry_type == 'expense', so an adjustment_out ends up excluded without
+    touching budget_service). Only applies to liquid accounts: on a credit
+    card "what you physically have" doesn't apply the same way, it's
+    reconciled against the bank statement (out of scope for now)."""
     account = await account_service.get_account(session, user_id, account_id)
     if account.type != "asset" or account.subtype not in account_service.LIQUID_SUBTYPES:
         raise HTTPException(

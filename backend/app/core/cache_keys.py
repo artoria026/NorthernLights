@@ -1,6 +1,6 @@
-"""M09: patrones de clave y TTLs de Redis (DB 0 = app cache).
+"""M09: Redis key patterns and TTLs (DB 0 = app cache).
 
-DB 1 y 2 (Celery broker/result backend) se configuran aparte en
+DB 1 and 2 (Celery broker/result backend) are configured separately in
 `app/core/celery.py` via CELERY_BROKER_URL/CELERY_RESULT_BACKEND.
 """
 
@@ -10,22 +10,22 @@ from datetime import date
 from uuid import UUID
 
 CACHE_TTL = {
-    "financial_snapshot": 300,  # 5 min - snapshot para AI
-    "report_monthly_current": 300,  # 5 min - mes en curso
-    "report_budget_current": 300,  # 5 min - presupuesto mes actual
+    "financial_snapshot": 300,  # 5 min - snapshot for AI
+    "report_monthly_current": 300,  # 5 min - current month
+    "report_budget_current": 300,  # 5 min - current month budget
     "health_score": 300,  # 5 min
     "cash_flow_projection": 600,  # 10 min
     "available_spending": 300,  # 5 min
-    "debt_progress": 60,  # 1 min - cambia con pagos
-    "report_monthly_historic": 604800,  # 7 dias - meses pasados no cambian
-    "report_historical_list": 3600,  # 1 hora - lista de reportes (M15)
-    "report_budget_historic": 604800,  # 7 dias
-    "net_worth_historic": 604800,  # 7 dias
-    "subscription_cost": 3600,  # 1 hora
+    "debt_progress": 60,  # 1 min - changes with payments
+    "report_monthly_historic": 604800,  # 7 days - past months don't change
+    "report_historical_list": 3600,  # 1 hour - report list (M15)
+    "report_budget_historic": 604800,  # 7 days
+    "net_worth_historic": 604800,  # 7 days
+    "subscription_cost": 3600,  # 1 hour
     "budget_alert_flag": 86400,  # 24h - anti-spam
     "debt_alert_flag": 86400,  # 24h - anti-spam (M11)
     "ai_rate_limit": 86400,  # 24h - rate limiting
-    "login_attempts": 900,  # 15 min - ventana de intentos fallidos de login
+    "login_attempts": 900,  # 15 min - failed login attempts window
 }
 
 

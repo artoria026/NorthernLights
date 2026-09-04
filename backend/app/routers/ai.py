@@ -14,9 +14,9 @@ from app.services import cache_service, chat_service
 
 router = APIRouter()
 
-# Estados de cuenta en PDF adjuntos a /ai/chat: limites explicitos para no
-# mandar un lote gigante al modelo (costo/abuso) -- suficiente para varios
-# meses de una tarjeta, no para "todo mi historial bancario de golpe".
+# PDF bank statements attached to /ai/chat: explicit limits to avoid
+# sending a giant batch to the model (cost/abuse) -- enough for several
+# months of a credit card, not for "my whole banking history at once".
 MAX_CHAT_ATTACHMENTS = 5
 MAX_CHAT_ATTACHMENT_BYTES = 15 * 1024 * 1024
 
@@ -44,19 +44,19 @@ async def chat(
     attachments: list[UploadFile] = File(default=[]),
     current_user: CurrentUser = Depends(get_current_user),
 ) -> StreamingResponse:
-    """multipart/form-data en vez de JSON: permite adjuntar estados de cuenta
-    en PDF (opcionales) desde el mismo chat del dia a dia -- ver
-    STATEMENT_INSTRUCTIONS en advisor.py. Sin adjuntos, se comporta exacto
-    igual que antes, solo que el body ya no es JSON."""
+    """multipart/form-data instead of JSON: allows attaching (optional) PDF
+    bank statements from the same day-to-day chat -- see
+    STATEMENT_INSTRUCTIONS in advisor.py. Without attachments, it behaves
+    exactly the same as before, just that the body is no longer JSON."""
     if len(attachments) > MAX_CHAT_ATTACHMENTS:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, f"Maximo {MAX_CHAT_ATTACHMENTS} archivos por mensaje"
         )
 
-    # Se desencriptan aqui (no en advisor.chat) para poder devolver un 400
-    # claro sobre la contrasena/tamano antes de abrir la sesion RLS y gastar
-    # una consulta del rate-limit diario en un archivo que ni se pudo leer.
-    # Nunca se persiste el PDF ni la contrasena a disco/logs.
+    # Decrypted here (not in advisor.chat) so we can return a clear 400 about
+    # the password/size before opening the RLS session and spending a
+    # daily rate-limit query on a file that couldn't even be read.
+    # The PDF and password are never persisted to disk/logs.
     pdf_attachments: list[bytes] = []
     for upload in attachments:
         content = await upload.read()

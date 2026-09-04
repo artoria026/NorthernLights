@@ -5,12 +5,12 @@ from app.core.config import settings
 
 
 class AIProviderError(Exception):
-    """Error del proveedor de IA (Claude/Gemini) ya traducido a un mensaje
-    listo para mostrarle al usuario. Cada AIProvider concreto atrapa las
-    excepciones propias de su SDK (google-genai, anthropic) y las relanza
-    como esta -- asi advisor.py nunca necesita conocer los tipos de
-    excepcion concretos de cada SDK (mismo DIP que el resto de esta clase:
-    solo conoce esta interfaz, no un proveedor especifico)."""
+    """AI provider (Claude/Gemini) error already translated into a message
+    ready to show the user. Each concrete AIProvider catches its own
+    SDK's exceptions (google-genai, anthropic) and re-raises them
+    as this one -- so advisor.py never needs to know the concrete
+    exception types of each SDK (same DIP as the rest of this class:
+    it only knows this interface, not a specific provider)."""
 
     def __init__(self, user_message: str, *, retryable: bool = True):
         super().__init__(user_message)
@@ -19,49 +19,49 @@ class AIProviderError(Exception):
 
 
 class AIProvider(ABC):
-    """M10: abstraccion intercambiable (Claude/Gemini) usada por el chat (M10)
-    y por la generacion/revision de insights (M13). Cambiar de proveedor (o
-    agregar uno nuevo) es: una clase que implemente este contrato + una rama
-    en get_ai_provider() -- app/ai/advisor.py nunca conoce el proveedor
-    concreto, solo esta interfaz (DIP)."""
+    """M10: interchangeable abstraction (Claude/Gemini) used by chat (M10)
+    and by insight generation/review (M13). Switching provider (or
+    adding a new one) is: a class implementing this contract + a branch
+    in get_ai_provider() -- app/ai/advisor.py never knows the concrete
+    provider, only this interface (DIP)."""
 
     @abstractmethod
     def chat_stream(
         self, messages: list[dict], tools: list[dict], system: str
     ) -> AsyncGenerator[dict, None]:
-        """Chat conversacional con streaming. Cada item emitido es
+        """Conversational chat with streaming. Each emitted item is
         {'type': 'text', 'text': str}, {'type': 'tool_use', 'name': str,
-        'input': dict, 'id': str, 'provider_state': Any | None}, o
-        {'type': 'truncated'} si el proveedor corto la respuesta por llegar
-        al limite de AI_MAX_TOKENS (finish_reason='MAX_TOKENS' en Gemini,
-        stop_reason='max_tokens' en Claude) -- sin este chequeo, un corte asi
-        no lanza excepcion y el llamador lo trataria como una respuesta
-        completa y exitosa. Al terminar el stream, el llamador debe poder
-        recuperar el mensaje final completo (ver ClaudeProvider).
+        'input': dict, 'id': str, 'provider_state': Any | None}, or
+        {'type': 'truncated'} if the provider cut the response short by hitting
+        the AI_MAX_TOKENS limit (finish_reason='MAX_TOKENS' in Gemini,
+        stop_reason='max_tokens' in Claude) -- without this check, such a cutoff
+        doesn't raise an exception and the caller would treat it as a
+        complete, successful response. When the stream ends, the caller must be able
+        to recover the full final message (see ClaudeProvider).
 
-        `provider_state` es un campo opaco: cada implementacion decide si lo
-        usa y para que (ej. GeminiProvider guarda ahi su "thought signature"
-        para poder re-enviarla en el siguiente turno). El orquestador
-        (advisor.py) solo lo pasa de ida y vuelta sin interpretarlo -- asi
-        ningun detalle especifico de un proveedor concreto se filtra al
-        codigo compartido. ClaudeProvider simplemente no lo llena (None)."""
+        `provider_state` is an opaque field: each implementation decides whether it
+        uses it and for what (e.g. GeminiProvider stores its "thought signature"
+        there so it can resend it on the next turn). The orchestrator
+        (advisor.py) just passes it back and forth without interpreting it -- that way
+        no provider-specific detail leaks into the shared
+        code. ClaudeProvider simply leaves it empty (None)."""
 
     @abstractmethod
     async def generate_insights(self, snapshot: dict) -> list[dict]:
-        """Genera insights financieros desde un snapshot. Cada item:
+        """Generates financial insights from a snapshot. Each item:
         {'title', 'description', 'category', 'priority'}."""
 
     @abstractmethod
     async def review_insight(self, insight: dict, snapshot: dict) -> dict:
-        """Evalua la evolucion de un insight activo. Retorna
+        """Evaluates the evolution of an active insight. Returns
         {'trend': 'improved'|'worsened'|'stable', 'ai_assessment': str}."""
 
     @abstractmethod
     async def generate_report_insights(self, summary: dict, period_label: str) -> list[dict]:
-        """Genera puntos sobre un periodo YA CERRADO (mes o anio) a partir del
-        `summary` de un Report (M15). A diferencia de `generate_insights`, cada
-        item se etiqueta con 'flow_type' para poder filtrar por ingreso/gasto.
-        Cada item: {'title', 'description', 'flow_type', 'category_name'}."""
+        """Generates points about an ALREADY CLOSED period (month or year) from a
+        Report's (M15) `summary`. Unlike `generate_insights`, each
+        item is tagged with 'flow_type' so it can be filtered by income/expense.
+        Each item: {'title', 'description', 'flow_type', 'category_name'}."""
 
 
 def get_ai_provider() -> AIProvider:

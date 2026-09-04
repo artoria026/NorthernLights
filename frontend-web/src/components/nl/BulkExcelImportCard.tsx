@@ -3,10 +3,10 @@ import { type ChangeEvent, useRef, useState } from 'react'
 import { useDownloadTemplate, useUploadBulkImport } from '@/hooks/useBulkImport'
 import { apiErrorMessage } from '@/services/api'
 
-/** Carga masiva vía Excel -- vivía en ImportarDatos.tsx antes de que esa
- * pantalla se consolidara dentro de Asesor IA. A diferencia del chat, esto
- * es upload real (multipart) sin IA de por medio: cada fila válida se
- * registra directo, sin paso de confirmación. */
+/** Bulk import via Excel -- used to live in ImportarDatos.tsx before that
+ * screen was consolidated into Asesor IA. Unlike the chat, this is a real
+ * upload (multipart) with no AI in between: every valid row gets recorded
+ * directly, with no confirmation step. */
 export function BulkExcelImportCard() {
   const downloadTemplate = useDownloadTemplate()
   const uploadFile = useUploadBulkImport()

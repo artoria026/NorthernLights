@@ -18,10 +18,11 @@ def _period_label(report: Report) -> str:
 async def generate_for_report(
     session: AsyncSession, user_id: UUID, report: Report
 ) -> list[ReportInsight]:
-    """Genera los puntos de IA de un periodo ya cerrado (M15). A proposito no
-    se llama desde dentro del try/except de `generate_report`/
-    `generate_yearly_report`: un fallo aqui nunca debe convertir un reporte ya
-    generado exitosamente en 'error' -- solo se loguea y se sigue."""
+    """Generates the AI points for an already-closed period (M15).
+    Deliberately not called from inside `generate_report`'s/
+    `generate_yearly_report`'s try/except: a failure here must never turn a
+    report that already generated successfully into 'error' -- it's just
+    logged and moved past."""
     try:
         provider = get_ai_provider()
         raw_insights = await provider.generate_report_insights(

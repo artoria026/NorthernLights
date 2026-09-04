@@ -1,11 +1,11 @@
-"""Tools de escritura reales (M10 -> M02/M05/M06): crean cuentas, deudas,
-recurrentes y transacciones de verdad, siempre scopeadas al usuario
-autenticado via RLS (mismo patron que la sesion RLS que abre advisor.py).
+"""Real write tools (M10 -> M02/M05/M06): actually create accounts, debts,
+recurring items, and transactions, always scoped to the authenticated
+user via RLS (same pattern as the RLS session that advisor.py opens).
 
-Separado de app/ai/tools.py a proposito (SRP): las tools de tools.py son de
-solo lectura (salvo create_insight). Estas las usa tanto el chat normal
-(`/ai/chat`, con confirmacion explicita del usuario antes de crear -- ver
-SYSTEM_PROMPT en advisor.py) como el modo de importacion (`/ai/import`).
+Separate from app/ai/tools.py on purpose (SRP): tools.py's tools are
+read-only (except create_insight). These are used both by the normal chat
+(`/ai/chat`, with explicit user confirmation before creating -- see
+SYSTEM_PROMPT in advisor.py) and by import mode (`/ai/import`).
 """
 
 from decimal import Decimal, InvalidOperation
@@ -205,11 +205,11 @@ WRITE_TOOLS = [
 ]
 
 
-# No escribe nada -- ver advisor.py, SYSTEM_PROMPT y execute() dentro de
-# chat(). El asesor la llama en vez de solo preguntar "¿confirmas?" en el
-# texto de su respuesta: el frontend la detecta en tool_calls y le muestra al
-# usuario una tarjeta con los datos y botones de Confirmar/Cancelar (Advisor.tsx,
-# ActionCard) en vez de depender de que escriba "si" en texto libre.
+# Writes nothing -- see advisor.py, SYSTEM_PROMPT and execute() inside
+# chat(). The advisor calls it instead of just asking "confirm?" in the
+# text of its response: the frontend detects it in tool_calls and shows the
+# user a card with the data and Confirm/Cancel buttons (Advisor.tsx,
+# ActionCard) instead of depending on them typing "yes" in free text.
 PROPOSE_ACTION_NAME = "propose_action"
 
 PROPOSE_ACTION_TOOL = {
@@ -310,10 +310,10 @@ def _format_validation_error(exc: ValidationError) -> str:
 async def execute_write_tool(
     session: AsyncSession, user_id: UUID, tool_name: str, tool_input: dict, role: str = "user"
 ) -> dict:
-    """Nunca deja escapar una excepcion: cualquier fallo se devuelve como
-    {"error": ...} para que el modelo lo lea y se lo explique al usuario en
-    espanol, en vez de tumbar el stream completo con un error generico (ver
-    SYSTEM_PROMPT/IMPORT_SYSTEM_PROMPT en advisor.py)."""
+    """Never lets an exception escape: any failure is returned as
+    {"error": ...} so the model can read it and explain it to the user in
+    Spanish, instead of taking down the whole stream with a generic error (see
+    SYSTEM_PROMPT/IMPORT_SYSTEM_PROMPT in advisor.py)."""
     try:
         return await _dispatch_write_tool(session, user_id, tool_name, tool_input, role)
     except KeyError as e:

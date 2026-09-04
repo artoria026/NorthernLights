@@ -1,111 +1,107 @@
-# Convenciones de branches y commits
+# Branch and commit conventions
 
-Esta guía documenta cómo nombrar branches y commits en NorthernLights, a partir del
-patrón que ya se viene usando en el repo (`git log`, `git branch -a`). El objetivo es
-que sea consistente sin importar quién (o qué agente de IA) cree la branch o el commit.
+This guide documents how to name branches and commits in NorthernLights, based on the
+pattern already in use in the repo (`git log`, `git branch -a`). The goal is consistency no
+matter who (or which AI agent) creates the branch or the commit.
 
-## 1. Nomenclatura de branches
+## 1. Branch naming
 
-Formato: `<tipo>/<descripcion-corta-en-kebab-case>`
+Format: `<type>/<short-kebab-case-description>`
 
-- `<descripcion-corta-en-kebab-case>` va en inglés, minúsculas, palabras separadas por
-  guion medio, sin ticket/issue number a menos que ya exista uno (ej.
-  `searchable-category-picker`, no `feature/45-searchable-category-picker`).
-- Una branch se puede reutilizar para varios PRs si el trabajo es continuación directa
-  del mismo tema (ya pasó con `feature/ctrl-enter-form-submit`, PRs #9, #10 y #11) --
-  no es obligatorio abrir una branch nueva por cada PR si el alcance no cambió.
+- `<short-kebab-case-description>` is in English, lowercase, words separated by hyphens,
+  without a ticket/issue number unless one already exists (e.g. `searchable-category-picker`,
+  not `feature/45-searchable-category-picker`).
+- A branch can be reused for several PRs if the work is a direct continuation of the same
+  topic (this already happened with `feature/ctrl-enter-form-submit`, PRs #9, #10, and #11) —
+  it's not mandatory to open a new branch per PR if the scope hasn't changed.
 
-### Tipos
+### Types
 
-| Tipo | Cuándo usarlo | Ejemplo real/plausible |
+| Type | When to use it | Real/plausible example |
 |---|---|---|
-| `feature/` | Funcionalidad nueva, mejora de UX/flujo existente | `feature/tdc-ux-polish`, `feature/expand-guided-tours` |
-| `bugfix/` | Corrige un bug encontrado en desarrollo/staging, no en producción | `bugfix/category-picker-grouping` |
-| `hotfix/` | Corrige un bug ya en producción, urgente, sale directo o casi directo a `master` | `hotfix/login-500-google-oauth` |
-| `chore/` | Mantenimiento sin impacto de producto: dependencias, config, tooling, CI | `chore/bump-fastapi` |
-| `refactor/` | Reestructura código interno sin cambiar comportamiento observable | `refactor/split-transaction-service` |
-| `docs/` | Solo documentación (README, docs/, comentarios) | `docs/branching-conventions` |
-| `test/` | Solo agrega/ajusta tests, sin tocar código de producto | `test/rls-enforcement-coverage` |
-| `release/` | Prepara una liberación: bump de versión + changelog (ver [RELEASING.md](RELEASING.md)) | `release/v1.1.0` |
+| `feature/` | New functionality, UX/flow improvement | `feature/tdc-ux-polish`, `feature/expand-guided-tours` |
+| `bugfix/` | Fixes a bug found in development/staging, not in production | `bugfix/category-picker-grouping` |
+| `hotfix/` | Fixes a bug already in production, urgent, goes straight (or nearly straight) to `master` | `hotfix/login-500-google-oauth` |
+| `chore/` | Maintenance with no product impact: dependencies, config, tooling, CI | `chore/bump-fastapi` |
+| `refactor/` | Restructures internal code without changing observable behavior | `refactor/split-transaction-service` |
+| `docs/` | Documentation only (README, docs/, comments) | `docs/branching-conventions` |
+| `test/` | Only adds/adjusts tests, without touching product code | `test/rls-enforcement-coverage` |
+| `release/` | Prepares a release: version bump + changelog (see [RELEASING.md](RELEASING.md)) | `release/v1.1.0` |
 
-Si una descripción no encaja claramente en un tipo (ej. "mejora X e incidentalmente
-arregla Y"), gana el tipo del cambio principal/más grande, no una mezcla.
+If a description doesn't clearly fit one type (e.g. "improves X and incidentally fixes Y"),
+the type of the main/larger change wins, not a mix.
 
-## 2. Nomenclatura de commits (Conventional Commits)
+## 2. Commit naming (Conventional Commits)
 
-Formato: `<tipo>(<scope opcional>): <descripción en imperativo, inglés, minúsculas>`
+Format: `<type>(<optional scope>): <description in imperative mood, English, lowercase>`
 
-Ya es el patrón real usado en el historial del repo. Tipos vistos y su significado:
+This is already the real pattern used in the repo's history. Types seen and their meaning:
 
-| Tipo | Uso |
+| Type | Use |
 |---|---|
-| `feat` | Funcionalidad nueva o cambio de comportamiento visible |
-| `fix` | Corrección de bug |
-| `chore` | Tarea de mantenimiento (deps, config, release) |
-| `test` | Cambios solo en tests |
-| `docs` | Cambios solo en documentación |
-| `refactor` | Cambio interno sin alterar comportamiento |
-| `style` | Formato/estilo puro (sin lógica) |
-| `perf` | Mejora de rendimiento |
-| `build` | Build system, empaquetado |
+| `feat` | New functionality or visible behavior change |
+| `fix` | Bug fix |
+| `chore` | Maintenance task (deps, config, release) |
+| `test` | Test-only changes |
+| `docs` | Documentation-only changes |
+| `refactor` | Internal change with no behavior change |
+| `style` | Pure formatting/style (no logic) |
+| `perf` | Performance improvement |
+| `build` | Build system, packaging |
 | `ci` | Pipelines/CI |
-| `revert` | Revierte un commit anterior |
+| `revert` | Reverts a previous commit |
 
-`scope` = módulo/área que toca el commit, en minúsculas, sin paréntesis anidados
-(ejemplos ya usados: `ui`, `tours`, `transactions`, `mobile`, `auth`, `api`, `ai`,
-`privacy`, `feedback`, `admin`, `accounts`, `release`). Es opcional -- se omite cuando
-el cambio no es claramente de un solo módulo (ej. `feat: redesign category cards/icon
-picker and standardize modal buttons`).
+`scope` = the module/area the commit touches, lowercase, no nested parentheses (examples
+already used: `ui`, `tours`, `transactions`, `mobile`, `auth`, `api`, `ai`, `privacy`,
+`feedback`, `admin`, `accounts`, `release`). It's optional -- omit it when the change isn't
+clearly confined to a single module (e.g. `feat: redesign category cards/icon picker and
+standardize modal buttons`).
 
-La descripción va en imperativo ("add", "fix", "move"), no en pasado ni gerundio
+The description is in imperative mood ("add", "fix", "move"), not past tense or gerund
 ("added", "adding").
 
-Los merge commits de PR (`Merge pull request #N from ...`) los genera GitHub al hacer
-merge -- no hay que redactarlos a mano ni seguir esta convención para ellos.
+PR merge commits (`Merge pull request #N from ...`) are generated by GitHub on merge -- no
+need to write those by hand or follow this convention for them.
 
-**Idioma:** tanto el nombre de la branch (sección 1) como los mensajes de commit son
-siempre en inglés, sin excepción -- aunque el resto de la conversación con el agente
-sea en español.
+**Language:** both the branch name (section 1) and commit messages are always in English, no
+exceptions -- even if the rest of the conversation with the agent is in Spanish.
 
-## 3. Cerrar una branch: rebase + squash contra `master`
+## 3. Closing a branch: rebase + squash against `master`
 
-Cuando el trabajo de una branch ya está listo para entrega (PR o merge), antes de
-abrir/actualizar el PR:
+When a branch's work is ready for delivery (PR or merge), before opening/updating the PR:
 
-1. Traer `master` actualizado y rebasear la branch sobre él:
+1. Fetch updated `master` and rebase the branch onto it:
    `git fetch origin && git rebase origin/master`.
-2. Squashear todos los commits de la branch en **uno solo** -- no importa cuántos
-   commits intermedios haya habido durante el desarrollo (WIP, fixups, "address
-   review comments", etc.), esos no deben sobrevivir al PR. Con `git rebase -i
-   origin/master` (marcar todos menos el primero como `fixup`/`squash`), o con
-   `git reset --soft $(git merge-base origin/master HEAD) && git commit`.
-3. El mensaje del commit final sigue el formato de la sección 2 y debe ser **muy
-   breve**: una sola línea, sin cuerpo ni bullet points salvo que el cambio sea grande
-   y realmente lo amerite. Ejemplo: `feat(ui): polish TDC/MSI visuals and refresh debts
-   page design` -- no una lista de todo lo que se tocó commit por commit.
-4. Push de la branch reescrita con `git push --force-with-lease` (nunca `--force` a
-   secas, y nunca contra `master`).
+2. Squash all of the branch's commits into **one** -- no matter how many intermediate commits
+   there were during development (WIP, fixups, "address review comments", etc.), those
+   shouldn't survive into the PR. Use `git rebase -i origin/master` (mark all but the first as
+   `fixup`/`squash`), or `git reset --soft $(git merge-base origin/master HEAD) && git commit`.
+3. The final commit message follows the format from section 2 and must be **very short**: a
+   single line, no body or bullet points unless the change is large and truly warrants it.
+   Example: `feat(ui): polish TDC/MSI visuals and refresh debts page design` -- not a list of
+   everything touched commit by commit.
+4. Push the rewritten branch with `git push --force-with-lease` (never plain `--force`, and
+   never against `master`).
 
-El resultado es que `master` queda con un commit por feature/fix (más el merge commit
-de GitHub), no con el detalle de cada iteración de desarrollo.
+The result is that `master` ends up with one commit per feature/fix (plus GitHub's merge
+commit), not the detail of every development iteration.
 
-## 4. Para agentes de IA (Claude Code y similares)
+## 4. For AI agents (Claude Code and similar)
 
-Antes de crear una branch nueva en este repo, el agente **debe**:
+Before creating a new branch in this repo, the agent **must**:
 
-1. Preguntar explícitamente qué tipo de branch corresponde (`feature`, `bugfix`,
-   `hotfix`, `chore`, `refactor`, `docs`, `test`, `release`) -- salvo que el usuario ya
-   lo haya dicho explícitamente en su mensaje.
-2. Si el usuario da una descripción del trabajo en vez de decir el tipo directamente,
-   el agente puede **proponer** el tipo que mejor encaje según la tabla de la sección 1
-   y confirmarlo con el usuario antes de crear la branch -- no asumirlo en silencio.
-3. Generar el nombre de la branch en el formato `<tipo>/<descripcion-kebab-case>` de la
-   sección 1, siempre en inglés, y los commits dentro de esa branch en el formato de
-   la sección 2 (inglés, breves).
+1. Explicitly ask which branch type applies (`feature`, `bugfix`, `hotfix`, `chore`,
+   `refactor`, `docs`, `test`, `release`) -- unless the user has already said so explicitly in
+   their message.
+2. If the user describes the work instead of stating the type directly, the agent may
+   **propose** the type that best fits per the table in section 1 and confirm it with the user
+   before creating the branch -- not assume it silently.
+3. Generate the branch name in the `<type>/<description-kebab-case>` format from section 1,
+   always in English, and commits within that branch in the format from section 2 (English,
+   short).
 
-Antes de dar por lista una branch para entrega (PR o merge), el agente **debe** aplicar
-el rebase + squash de la sección 3 -- nunca dejar que un PR se abra o actualice con el
-historial de commits intermedios de desarrollo intacto, salvo que el usuario pida
-explícitamente conservarlo.
+Before considering a branch ready for delivery (PR or merge), the agent **must** apply the
+rebase + squash from section 3 -- never let a PR be opened or updated with the intermediate
+development commit history intact, unless the user explicitly asks to keep it.
 
-Esto aplica tanto a branches creadas localmente como a cualquier PR que el agente abra.
+This applies both to branches created locally and to any PR the agent opens.

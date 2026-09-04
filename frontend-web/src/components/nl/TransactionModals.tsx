@@ -90,8 +90,8 @@ export function TransactionModals() {
     if (!canSubmit) return
     try {
       if (form.type === 'transfer') {
-        // Transferencia: dos cuentas reales del usuario, sin categoria ni
-        // cuenta interna de por medio.
+        // Transfer: two real user accounts, no category or internal
+        // account involved.
         await createTransaction.mutateAsync({
           date: form.date,
           description: form.desc || 'Transferencia',
@@ -104,8 +104,8 @@ export function TransactionModals() {
           ],
         })
       } else {
-        // Gasto/ingreso: el back resuelve solo la cuenta contable interna de
-        // la categoria, el front nunca la ve ni la elige.
+        // Expense/income: the backend resolves the category's internal
+        // ledger account on its own, the frontend never sees or picks it.
         const entryType: EntryType = form.type
         await createTransaction.mutateAsync({
           date: form.date,
@@ -121,7 +121,7 @@ export function TransactionModals() {
       }
       close()
     } catch {
-      // error mostrado abajo
+      // error shown below
     }
   }
 
@@ -255,9 +255,9 @@ function QuickForm({
         </Select>
       </div>
       {isError && <p className="text-xs text-destructive">{apiErrorMessage(error)}</p>}
-      {/* "Detallar" ya ocupa el extremo izquierdo de siempre -- el hint se
-          agrupa junto al boton en el derecho en vez de competir por el mismo
-          espacio que ese link. */}
+      {/* "Detallar" already occupies its usual spot on the far left -- the
+          hint is grouped next to the button on the right instead of
+          competing for the same space as that link. */}
       <div className="flex items-center justify-between pt-1">
         <button type="button" onClick={onSwitchToDetailed} className="text-xs text-muted-foreground hover:text-foreground">
           Detallar →

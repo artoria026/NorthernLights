@@ -19,8 +19,8 @@ export function useBudgetCurrent() {
   })
 }
 
-/** Mismo shape que useBudgetCurrent pero para cualquier year/month -- usado
- * por el navegador de meses de Presupuesto para ver meses pasados. */
+/** Same shape as useBudgetCurrent but for any year/month -- used
+ * by the Budget page's month navigator to view past months. */
 export function useBudgetForMonth(year: number, month: number) {
   return useQuery({
     queryKey: ['budget', 'month', year, month],
@@ -61,9 +61,9 @@ export function useBudgetLimitSuggestions() {
   })
 }
 
-/** Acepta uno o varios limites en la misma llamada -- el backend hace upsert
- * por categoria (on_conflict_do_update), asi que mandar 8 categorias de una
- * sola vez es tan seguro como mandar 1, y evita 8 round-trips separados. */
+/** Accepts one or several limits in the same call -- the backend does an upsert
+ * per category (on_conflict_do_update), so sending 8 categories at
+ * once is as safe as sending 1, and avoids 8 separate round-trips. */
 export function useSetBudgetLimits() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -74,15 +74,15 @@ export function useSetBudgetLimits() {
       return data.data
     },
     onSuccess: (limits) => {
-      // El PUT devuelve el set completo y autoritativo de limites -- lo
-      // escribimos directo, sin esperar un GET de vuelta.
+      // The PUT returns the full, authoritative set of limits -- we
+      // write it directly, without waiting for a GET round-trip.
       queryClient.setQueryData(['budget', 'limits'], limits)
-      // 'suggestions' trae current_limit ademas del promedio -- setQueryData
-      // arriba no lo toca (es una query distinta), asi que se invalida en
-      // vez de reescribir a mano.
+      // 'suggestions' carries current_limit in addition to the average -- the setQueryData
+      // above doesn't touch it (it's a different query), so it's invalidated
+      // instead of rewritten by hand.
       queryClient.invalidateQueries({ queryKey: ['budget', 'limits', 'suggestions'] })
-      // Comprometido/disponible por categoria si dependen del limite -- esos
-      // si son agregados calculados en el servidor.
+      // Committed/available per category do depend on the limit -- those
+      // are aggregates computed on the server.
       queryClient.invalidateQueries({ queryKey: ['budget', 'current'] })
       queryClient.invalidateQueries({ queryKey: ['budget', 'summary'] })
       queryClient.invalidateQueries({ queryKey: ['budget', 'month'] })

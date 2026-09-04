@@ -21,11 +21,11 @@ async def _register_and_login(client: AsyncClient, name: str = "Test") -> tuple[
 
 
 async def _register_admin(client: AsyncClient, session_factory) -> tuple[dict, str]:
-    """Registra un usuario normal, lo promueve a admin escribiendo el rol
-    directo en la misma transaccion que `client` (no hay endpoint de
-    auto-promocion, a proposito), y vuelve a loguearse: el JWT emitido al
-    registrarse ya trae `role=user` fijo, promoverlo no actualiza tokens
-    emitidos antes del cambio."""
+    """Registers a normal user, promotes them to admin by writing the role
+    directly in the same transaction as `client` (there is no
+    self-promotion endpoint, on purpose), and logs in again: the JWT issued at
+    registration already carries `role=user` fixed, promoting the user doesn't update
+    tokens issued before the change."""
     _, user_id, email = await _register_and_login(client, name="Admin")
     async with session_factory() as session:
         await session.execute(
@@ -110,9 +110,9 @@ async def test_admin_stats_reflects_real_counts(client: AsyncClient, session_fac
 
 
 async def test_admin_lists_last_active_from_login(client: AsyncClient, session_factory):
-    """El login de _register_and_login ya crea/actualiza un Device -- alcanza
-    para confirmar que last_active_at no se queda nulo despues de loguearse,
-    sin tener que insertar un Device a mano."""
+    """The login in _register_and_login already creates/updates a Device -- that's
+    enough to confirm that last_active_at doesn't stay null after logging in,
+    without having to insert a Device by hand."""
     admin_headers, _ = await _register_admin(client, session_factory)
     _, other_id, _ = await _register_and_login(client, name="Otro")
 
@@ -125,9 +125,9 @@ async def test_admin_lists_last_active_from_login(client: AsyncClient, session_f
 async def test_admin_lists_health_score_without_leaking_components(
     client: AsyncClient, session_factory
 ):
-    """El score compuesto (0-100) si va en la respuesta -- sus componentes
-    (DTI, tasa de ahorro, etc., que si describen la situacion financiera
-    real) nunca deben aparecer en AdminUserOut."""
+    """The composite score (0-100) does go in the response -- its components
+    (DTI, savings rate, etc., which do describe the user's real
+    financial situation) must never appear in AdminUserOut."""
     admin_headers, _ = await _register_admin(client, session_factory)
     _, other_id, _ = await _register_and_login(client, name="Otro")
 
@@ -180,14 +180,14 @@ async def test_admin_reset_password_allows_login_with_temporary_password(
     temp_password = response.json()["data"]["temporary_password"]
     assert len(temp_password) >= 12
 
-    # La contraseña anterior ya no sirve.
+    # The old password no longer works.
     old_login = await client.post(
         "/api/v1/auth/login", json={"email": other_email, "password": _PASSWORD}
     )
     assert old_login.status_code == 401
 
-    # La temporal si funciona -- confirma que el hash guardado es real y
-    # utilizable, no solo que el endpoint respondio 200.
+    # The temporary one does work -- confirms that the stored hash is real and
+    # usable, not just that the endpoint responded 200.
     new_login = await client.post(
         "/api/v1/auth/login", json={"email": other_email, "password": temp_password}
     )
@@ -195,9 +195,9 @@ async def test_admin_reset_password_allows_login_with_temporary_password(
 
 
 async def test_admin_excludes_soft_deleted_users(client: AsyncClient, session_factory):
-    """Una cuenta borrada (DELETE /auth/me, soft-delete via deleted_at) no
-    debe seguir contando en total_users ni aparecer en la lista -- sin este
-    filtro, "Usuarios totales" solo puede crecer para siempre."""
+    """A deleted account (DELETE /auth/me, soft-delete via deleted_at) must not
+    keep counting in total_users or appear in the list -- without this
+    filter, "Total users" could only ever grow forever."""
     admin_headers, _ = await _register_admin(client, session_factory)
 
     before = await client.get("/api/v1/admin/stats", headers=admin_headers)
@@ -220,9 +220,9 @@ async def test_admin_excludes_soft_deleted_users(client: AsyncClient, session_fa
 async def test_admin_stats_counts_distinct_users_with_accounts(
     client: AsyncClient, session_factory
 ):
-    """Dos cuentas del mismo usuario deben contar como 1 en
-    users_with_accounts, no 2 -- confirma que la query usa
-    count(distinct(...)) y no count() a secas."""
+    """Two accounts belonging to the same user must count as 1 in
+    users_with_accounts, not 2 -- confirms that the query uses
+    count(distinct(...)) and not plain count()."""
     admin_headers, _ = await _register_admin(client, session_factory)
     other_token, _, _ = await _register_and_login(client, name="Otro")
     other_headers = {"Authorization": f"Bearer {other_token}"}
@@ -263,6 +263,6 @@ async def test_admin_stats_signups_last_14_days_includes_today(
     assert response.status_code == 200
     signups = response.json()["data"]["signups_last_14_days"]
     assert len(signups) == 14
-    # El admin recien registrado (y cualquier otro usuario creado en este
-    # test run) debe caer en el dia de hoy, el ultimo de la lista.
+    # The just-registered admin (and any other user created in this
+    # test run) must fall on today, the last item in the list.
     assert signups[-1]["count"] >= 1
