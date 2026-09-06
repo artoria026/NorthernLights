@@ -10,6 +10,7 @@ from app.models.mixins import SoftDeleteMixin, TimestampMixin
 
 PAY_CYCLES = ("weekly", "biweekly", "monthly")
 THEMES = ("dark", "light")
+LOCALES = ("es", "en")
 
 
 class User(Base, TimestampMixin, SoftDeleteMixin):
@@ -44,12 +45,17 @@ class UserPreferences(Base, TimestampMixin):
     __table_args__ = (
         CheckConstraint(f"pay_cycle IN {PAY_CYCLES}", name="ck_user_preferences_pay_cycle"),
         CheckConstraint(f"theme IN {THEMES}", name="ck_user_preferences_theme"),
+        CheckConstraint(f"locale IN {LOCALES}", name="ck_user_preferences_locale"),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     theme: Mapped[str] = mapped_column(String, nullable=False, default="dark")
+    # UI language, independent of `theme` -- read by the frontend on
+    # login/me and applied over whatever was in localStorage (see
+    # AuthBootstrap in App.tsx), then kept in sync via PUT /auth/settings.
+    locale: Mapped[str] = mapped_column(String, nullable=False, default="es")
     pay_cycle: Mapped[str] = mapped_column(String, nullable=False, default="monthly")
     email_notifications: Mapped[bool] = mapped_column(default=True)
     push_notifications: Mapped[bool] = mapped_column(default=True)

@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLogin } from '@/hooks/useAuth'
 import { api, apiErrorMessage } from '@/services/api'
@@ -22,25 +23,28 @@ import { AuthLayout, type AuthValueProp } from './AuthLayout'
 // turn it back on as soon as there's a real project in Google Cloud Console.
 const GOOGLE_LOGIN_ENABLED = false
 
-const VALUE_PROPS: AuthValueProp[] = [
-  {
-    icon: TrendingUp,
-    title: 'Salud financiera en un vistazo',
-    text: 'Ingresos, gastos y tendencias mes a mes, sin hojas de cálculo.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Tus datos, tus reglas',
-    text: 'Cada cuenta y transacción vive aislada por usuario.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Un asesor con contexto real',
-    text: 'La IA conoce tus finanzas y responde con eso en mente.',
-  },
-]
+function buildValueProps(t: (key: string) => string): AuthValueProp[] {
+  return [
+    {
+      icon: TrendingUp,
+      title: t('auth.login.valueProps.health.title'),
+      text: t('auth.login.valueProps.health.text'),
+    },
+    {
+      icon: ShieldCheck,
+      title: t('auth.login.valueProps.privacy.title'),
+      text: t('auth.login.valueProps.privacy.text'),
+    },
+    {
+      icon: Sparkles,
+      title: t('auth.login.valueProps.advisor.title'),
+      text: t('auth.login.valueProps.advisor.text'),
+    },
+  ]
+}
 
 export function Login() {
+  const { t } = useTranslation('pages')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -48,6 +52,7 @@ export function Login() {
   const login = useLogin()
   const [searchParams] = useSearchParams()
   const oauthMessage = searchParams.get('mensaje')
+  const valueProps = buildValueProps(t)
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -76,19 +81,19 @@ export function Login() {
 
   return (
     <AuthLayout
-      heroTitle="Claridad financiera, sin el ruido."
-      heroSubtitle="Cuentas, deudas, presupuesto y un asesor de IA que ya conoce tu historia — todo en un solo lugar."
-      valueProps={VALUE_PROPS}
+      heroTitle={t('auth.login.heroTitle')}
+      heroSubtitle={t('auth.login.heroSubtitle')}
+      valueProps={valueProps}
     >
-      <h2 className="text-[22px] font-semibold tracking-tight mb-1.5">Bienvenido de nuevo</h2>
-      <p className="text-[13px] text-muted-foreground mb-7">
-        Inicia sesión para continuar con tus finanzas.
-      </p>
+      <h2 className="text-[22px] font-semibold tracking-tight mb-1.5">
+        {t('auth.login.welcomeTitle')}
+      </h2>
+      <p className="text-[13px] text-muted-foreground mb-7">{t('auth.login.welcomeSubtitle')}</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="email" className="text-[12px] font-medium text-muted-foreground">
-            Correo electrónico
+            {t('auth.login.emailLabel')}
           </label>
           <div className="relative">
             <Mail
@@ -103,7 +108,7 @@ export function Login() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@correo.com"
+              placeholder={t('auth.login.emailPlaceholder')}
               className="w-full h-11 rounded-lg border border-border pl-9 pr-3 text-[14px] outline-none transition-colors focus:border-[var(--nl-accent)]"
               style={{ background: 'var(--nl-bg-input)' }}
             />
@@ -112,7 +117,7 @@ export function Login() {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="password" className="text-[12px] font-medium text-muted-foreground">
-            Contraseña
+            {t('auth.login.passwordLabel')}
           </label>
           <div className="relative">
             <Lock
@@ -127,7 +132,7 @@ export function Login() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder={t('auth.login.passwordPlaceholder')}
               className="w-full h-11 rounded-lg border border-border pl-9 pr-9 text-[14px] outline-none transition-colors focus:border-[var(--nl-accent)]"
               style={{ background: 'var(--nl-bg-input)' }}
             />
@@ -135,7 +140,7 @@ export function Login() {
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword((v) => !v)}
-              title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              title={showPassword ? t('auth.login.hidePasswordTitle') : t('auth.login.showPasswordTitle')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -166,10 +171,10 @@ export function Login() {
           }}
         >
           {login.isPending ? (
-            'Entrando...'
+            t('auth.login.submitPending')
           ) : (
             <>
-              Entrar
+              {t('auth.login.submitCta')}
               <ArrowRight
                 size={15}
                 strokeWidth={2}
@@ -185,7 +190,7 @@ export function Login() {
           </div>
           <div className="relative flex justify-center text-[11px] text-muted-foreground">
             <span className="px-2" style={{ background: 'var(--nl-bg-page)' }}>
-              o continúa con
+              {t('auth.login.dividerText')}
             </span>
           </div>
         </div>
@@ -193,7 +198,7 @@ export function Login() {
         <button
           type="button"
           disabled={!GOOGLE_LOGIN_ENABLED}
-          title={GOOGLE_LOGIN_ENABLED ? undefined : 'Todavía no disponible'}
+          title={GOOGLE_LOGIN_ENABLED ? undefined : t('auth.login.googleUnavailableTitle')}
           onClick={() => {
             if (!GOOGLE_LOGIN_ENABLED) return
             window.location.href = `${api.defaults.baseURL}/auth/google/login`
@@ -219,9 +224,11 @@ export function Login() {
               d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.3 5.6-6.2 7.1l6.3 5.3C39.9 37.5 44 31.7 44 24c0-1.3-.1-2.7-.4-3.5z"
             />
           </svg>
-          Continuar con Google
+          {t('auth.login.googleContinue')}
           {!GOOGLE_LOGIN_ENABLED && (
-            <span className="text-[11px] text-muted-foreground">(próximamente)</span>
+            <span className="text-[11px] text-muted-foreground">
+              {t('auth.login.googleComingSoon')}
+            </span>
           )}
         </button>
 
@@ -234,19 +241,19 @@ export function Login() {
             className="w-full h-9 rounded-lg border border-dashed text-[12.5px] text-muted-foreground hover:text-foreground disabled:opacity-60 transition-colors"
             style={{ borderColor: 'var(--nl-warning)' }}
           >
-            Usar cuenta de prueba (solo dev)
+            {t('auth.login.devLoginButton')}
           </button>
         )}
 
         <p className="text-[13px] text-center text-muted-foreground mt-2">
-          ¿No tienes cuenta?{' '}
+          {t('auth.login.noAccountText')}{' '}
           <Link
             to="/register"
             viewTransition
             className="font-medium"
             style={{ color: 'var(--nl-accent-ink)' }}
           >
-            Regístrate
+            {t('auth.login.registerLink')}
           </Link>
         </p>
       </form>

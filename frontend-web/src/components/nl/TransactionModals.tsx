@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DialogCancelButton, DialogFooter, DialogPrimaryButton, SubmitShortcutHint } from '@/components/nl/DialogActions'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -59,6 +60,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export function TransactionModals() {
+  const { t } = useTranslation('common')
   const modal = useTransactionModalStore((s) => s.modal)
   const defaultAccountId = useTransactionModalStore((s) => s.defaultAccountId)
   const close = useTransactionModalStore((s) => s.close)
@@ -94,7 +96,7 @@ export function TransactionModals() {
         // account involved.
         await createTransaction.mutateAsync({
           date: form.date,
-          description: form.desc || 'Transferencia',
+          description: form.desc || t('transactionModals.defaultDescription.transfer'),
           notes: form.notes || undefined,
           entry_type: 'transfer',
           category_id: null,
@@ -109,7 +111,11 @@ export function TransactionModals() {
         const entryType: EntryType = form.type
         await createTransaction.mutateAsync({
           date: form.date,
-          description: form.desc || (form.type === 'expense' ? 'Gasto' : 'Ingreso'),
+          description:
+            form.desc ||
+            (form.type === 'expense'
+              ? t('transactionModals.defaultDescription.expense')
+              : t('transactionModals.defaultDescription.income')),
           notes: form.notes || undefined,
           entry_type: entryType,
           category_id: form.categoryId,
@@ -137,7 +143,7 @@ export function TransactionModals() {
       {modal === 'quick' && (
         <DialogContent className="sm:max-w-md p-6" showCloseButton>
           <DialogHeader>
-            <DialogTitle>Agregar rápido</DialogTitle>
+            <DialogTitle>{t('transactionModals.quickAddTitle')}</DialogTitle>
           </DialogHeader>
           <QuickForm
             form={form}
@@ -158,7 +164,7 @@ export function TransactionModals() {
       {modal === 'detailed' && (
         <DialogContent className="sm:max-w-lg p-6" showCloseButton>
           <DialogHeader>
-            <DialogTitle>Nueva transacción</DialogTitle>
+            <DialogTitle>{t('transactionModals.newTransactionTitle')}</DialogTitle>
           </DialogHeader>
           <DetailedForm
             form={form}
@@ -205,6 +211,7 @@ function QuickForm({
   onSubmit,
   onSwitchToDetailed,
 }: SharedFormProps & { onSwitchToDetailed: () => void }) {
+  const { t } = useTranslation('common')
   const simpleType: SimpleType = form.type === 'income' ? 'income' : 'expense'
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3.5">
@@ -212,21 +219,21 @@ function QuickForm({
         value={simpleType}
         onChange={(v: SimpleType) => setType(v)}
         options={[
-          { value: 'expense', label: 'Gasto' },
-          { value: 'income', label: 'Ingreso' },
+          { value: 'expense', label: t('transactionModals.type.expense') },
+          { value: 'income', label: t('transactionModals.type.income') },
         ]}
         className="w-full [&>button]:flex-1"
       />
       <input
         type="number"
         step="0.01"
-        placeholder="$0.00"
+        placeholder={t('transactionModals.amountPlaceholder')}
         value={form.amount}
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
         className="text-[22px] font-light bg-transparent border-b border-border outline-none py-1 focus:border-ring"
       />
       <input
-        placeholder="Descripción"
+        placeholder={t('transactionModals.descriptionPlaceholder')}
         value={form.desc}
         onChange={(e) => setForm({ ...form, desc: e.target.value })}
         className={`${selectClass} h-9`}
@@ -236,12 +243,12 @@ function QuickForm({
           categories={categories}
           value={form.categoryId}
           onValueChange={(v) => setForm({ ...form, categoryId: v })}
-          placeholder="Categoría"
+          placeholder={t('transactionModals.categoryPlaceholder')}
           triggerClassName="flex-1 h-9"
         />
         <Select value={form.accountId || null} onValueChange={(v) => setForm({ ...form, accountId: v ?? '' })}>
           <SelectTrigger className="flex-1 h-9">
-            <SelectValue placeholder="Cuenta">
+            <SelectValue placeholder={t('transactionModals.accountPlaceholder')}>
               {(v: string | null) => payingAccounts.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
@@ -260,12 +267,12 @@ function QuickForm({
           competing for the same space as that link. */}
       <div className="flex items-center justify-between pt-1">
         <button type="button" onClick={onSwitchToDetailed} className="text-xs text-muted-foreground hover:text-foreground">
-          Detallar →
+          {t('transactionModals.switchToDetailed')}
         </button>
         <div className="flex items-center gap-3">
           <SubmitShortcutHint />
           <DialogPrimaryButton pending={isPending} disabled={!canSubmit}>
-            Guardar
+            {t('transactionModals.saveButton')}
           </DialogPrimaryButton>
         </div>
       </div>
@@ -286,6 +293,7 @@ function DetailedForm({
   onSubmit,
   onClose,
 }: SharedFormProps & { onClose: () => void }) {
+  const { t } = useTranslation('common')
   const selectedAccount = payingAccounts.find((a) => a.id === form.accountId)
   const canBeMsi = form.type === 'expense' && selectedAccount?.type === 'liability' && selectedAccount?.subtype === 'credit_card'
 
@@ -295,29 +303,29 @@ function DetailedForm({
         value={form.type}
         onChange={(v: DetailedType) => setType(v)}
         options={[
-          { value: 'expense', label: 'Gasto' },
-          { value: 'income', label: 'Ingreso' },
-          { value: 'transfer', label: 'Transferencia' },
+          { value: 'expense', label: t('transactionModals.type.expense') },
+          { value: 'income', label: t('transactionModals.type.income') },
+          { value: 'transfer', label: t('transactionModals.type.transfer') },
         ]}
         className="w-full [&>button]:flex-1"
       />
       <input
         type="number"
         step="0.01"
-        placeholder="$0.00"
+        placeholder={t('transactionModals.amountPlaceholder')}
         value={form.amount}
         onChange={(e) => setForm({ ...form, amount: e.target.value })}
         className="text-xl font-light bg-transparent border-b border-border outline-none py-1 focus:border-ring"
       />
       <input
-        placeholder="Ej. Cena con amigos"
+        placeholder={t('transactionModals.descriptionPlaceholderExample')}
         value={form.desc}
         onChange={(e) => setForm({ ...form, desc: e.target.value })}
         className={`${selectClass} h-9`}
       />
       <div className="grid grid-cols-2 gap-3">
         {form.type !== 'transfer' ? (
-          <Field label="Categoría">
+          <Field label={t('transactionModals.categoryFieldLabel')}>
             <CategorySelect
               categories={categories}
               value={form.categoryId}
@@ -326,22 +334,22 @@ function DetailedForm({
             />
           </Field>
         ) : (
-          <Field label="Categoría">
+          <Field label={t('transactionModals.categoryFieldLabel')}>
             <div
               className="h-8 flex items-center px-2.5 rounded-md text-sm text-muted-foreground"
               style={{ background: 'var(--nl-bg-track)' }}
             >
-              Transferencia
+              {t('transactionModals.type.transfer')}
             </div>
           </Field>
         )}
-        <Field label="Cuenta">
+        <Field label={t('transactionModals.accountFieldLabel')}>
           <Select
             value={form.accountId || null}
             onValueChange={(v) => setForm({ ...form, accountId: v ?? '', isMsi: false, installmentTotal: '' })}
           >
             <SelectTrigger className="h-9 w-full">
-              <SelectValue placeholder="Selecciona...">
+              <SelectValue placeholder={t('transactionModals.selectPlaceholder')}>
                 {(v: string | null) => payingAccounts.find((a) => a.id === v)?.name}
               </SelectValue>
             </SelectTrigger>
@@ -356,13 +364,13 @@ function DetailedForm({
         </Field>
       </div>
       {form.type === 'transfer' && (
-        <Field label="Cuenta destino">
+        <Field label={t('transactionModals.destinationAccountFieldLabel')}>
           <Select
             value={form.contraAccountId || null}
             onValueChange={(v) => setForm({ ...form, contraAccountId: v ?? '' })}
           >
             <SelectTrigger className="h-9 w-full">
-              <SelectValue placeholder="Selecciona...">
+              <SelectValue placeholder={t('transactionModals.selectPlaceholder')}>
                 {(v: string | null) => payingAccounts.find((a) => a.id === v)?.name}
               </SelectValue>
             </SelectTrigger>
@@ -379,7 +387,7 @@ function DetailedForm({
         </Field>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Fecha">
+        <Field label={t('transactionModals.dateFieldLabel')}>
           <input
             type="date"
             value={form.date}
@@ -387,22 +395,26 @@ function DetailedForm({
             className={`${selectClass} h-9 w-full`}
           />
         </Field>
-        <Field label="Estado">
+        <Field label={t('transactionModals.statusFieldLabel')}>
           <Select
             value={form.status}
             onValueChange={(v) => setForm({ ...form, status: (v as 'confirmed' | 'draft') ?? 'confirmed' })}
           >
             <SelectTrigger className="h-9 w-full">
-              <SelectValue>{(v: 'confirmed' | 'draft') => (v === 'draft' ? 'Pendiente' : 'Completado')}</SelectValue>
+              <SelectValue>
+                {(v: 'confirmed' | 'draft') =>
+                  v === 'draft' ? t('transactionModals.status.draft') : t('transactionModals.status.confirmed')
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="confirmed">Completado</SelectItem>
-              <SelectItem value="draft">Pendiente</SelectItem>
+              <SelectItem value="confirmed">{t('transactionModals.status.confirmed')}</SelectItem>
+              <SelectItem value="draft">{t('transactionModals.status.draft')}</SelectItem>
             </SelectContent>
           </Select>
         </Field>
       </div>
-      <Field label="Notas (opcional)">
+      <Field label={t('transactionModals.notesFieldLabel')}>
         <textarea
           rows={2}
           value={form.notes}
@@ -419,10 +431,10 @@ function DetailedForm({
               checked={form.isMsi}
               onChange={(e) => setForm({ ...form, isMsi: e.target.checked })}
             />
-            ¿A meses sin intereses?
+            {t('transactionModals.msiCheckboxLabel')}
           </label>
           {form.isMsi && (
-            <Field label="¿A cuántos meses?">
+            <Field label={t('transactionModals.installmentsFieldLabel')}>
               <input
                 type="number"
                 min={2}
@@ -437,14 +449,14 @@ function DetailedForm({
       )}
 
       {form.type === 'transfer' && !form.contraAccountId && (
-        <p className="text-xs text-muted-foreground">Ojo: para transferencias, elige la cuenta destino arriba.</p>
+        <p className="text-xs text-muted-foreground">{t('transactionModals.transferDestinationWarning')}</p>
       )}
       {isError && <p className="text-xs text-destructive">{apiErrorMessage(error)}</p>}
 
       <DialogFooter>
-        <DialogCancelButton onClick={onClose}>Cancelar</DialogCancelButton>
-        <DialogPrimaryButton pending={isPending} pendingLabel="Guardando..." disabled={!canSubmit}>
-          Crear transacción
+        <DialogCancelButton onClick={onClose} />
+        <DialogPrimaryButton pending={isPending} disabled={!canSubmit}>
+          {t('transactionModals.createTransactionButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>

@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
@@ -36,19 +37,23 @@ const PRIORITY_SEVERITY: Record<InsightPriority, 'danger' | 'warning' | 'accent'
   low: 'accent',
 }
 
-const PRIORITY_LABELS: Record<InsightPriority, string> = {
-  high: 'Alta',
-  medium: 'Media',
-  low: 'Baja',
+function buildPriorityLabels(t: (key: string) => string): Record<InsightPriority, string> {
+  return {
+    high: t('insights.priority.high'),
+    medium: t('insights.priority.medium'),
+    low: t('insights.priority.low'),
+  }
 }
 
-const CATEGORY_LABELS: Record<InsightCategory, string> = {
-  spending: 'Gasto',
-  debt: 'Deuda',
-  savings: 'Ahorro',
-  income: 'Ingreso',
-  budget: 'Presupuesto',
-  general: 'General',
+function buildCategoryLabels(t: (key: string) => string): Record<InsightCategory, string> {
+  return {
+    spending: t('insights.category.spending'),
+    debt: t('insights.category.debt'),
+    savings: t('insights.category.savings'),
+    income: t('insights.category.income'),
+    budget: t('insights.category.budget'),
+    general: t('insights.category.general'),
+  }
 }
 
 const CATEGORY_ICONS: Record<InsightCategory, LucideIcon> = {
@@ -60,10 +65,12 @@ const CATEGORY_ICONS: Record<InsightCategory, LucideIcon> = {
   general: Lightbulb,
 }
 
-const TREND_LABELS: Record<InsightTrend, string> = {
-  improved: 'Mejoró',
-  worsened: 'Empeoró',
-  stable: 'Estable',
+function buildTrendLabels(t: (key: string) => string): Record<InsightTrend, string> {
+  return {
+    improved: t('insights.trend.improved'),
+    worsened: t('insights.trend.worsened'),
+    stable: t('insights.trend.stable'),
+  }
 }
 
 const TREND_SEVERITY: Record<InsightTrend, 'accent' | 'danger' | 'warning'> = {
@@ -72,10 +79,12 @@ const TREND_SEVERITY: Record<InsightTrend, 'accent' | 'danger' | 'warning'> = {
   stable: 'warning',
 }
 
-const STATUS_LABEL: Record<InsightStatus, string> = {
-  active: 'Activo',
-  dismissed: 'Descartado',
-  resolved: 'Resuelto',
+function buildStatusLabels(t: (key: string) => string): Record<InsightStatus, string> {
+  return {
+    active: t('insights.status.active'),
+    dismissed: t('insights.status.dismissed'),
+    resolved: t('insights.status.resolved'),
+  }
 }
 
 /** The only 3 keys that _extract_key_metrics (insight_service.py) writes
@@ -83,11 +92,20 @@ const STATUS_LABEL: Record<InsightStatus, string> = {
  * fixed shape, no need to handle arbitrary keys. `higherIsBetter` decides
  * the change arrow's color (less monthly committed IS an improvement,
  * that's why it's false). */
-const METRIC_FIELDS: { key: string; label: string; format: 'money' | 'score'; higherIsBetter: boolean }[] = [
-  { key: 'net_worth', label: 'Patrimonio neto', format: 'money', higherIsBetter: true },
-  { key: 'health_score', label: 'Salud financiera', format: 'score', higherIsBetter: true },
-  { key: 'committed_monthly', label: 'Comprometido mensual', format: 'money', higherIsBetter: false },
-]
+function buildMetricFields(
+  t: (key: string) => string,
+): { key: string; label: string; format: 'money' | 'score'; higherIsBetter: boolean }[] {
+  return [
+    { key: 'net_worth', label: t('insights.metrics.netWorth'), format: 'money', higherIsBetter: true },
+    { key: 'health_score', label: t('insights.metrics.healthScore'), format: 'score', higherIsBetter: true },
+    {
+      key: 'committed_monthly',
+      label: t('insights.metrics.committedMonthly'),
+      format: 'money',
+      higherIsBetter: false,
+    },
+  ]
+}
 
 /** net_worth/committed_monthly arrive as a string (Decimal -> str via
  * json_safe, same as any "amount" in the rest of the app) -- health_score
@@ -113,9 +131,11 @@ function MetricsComparison({
   before: Record<string, unknown>
   after: Record<string, unknown>
 }) {
+  const { t } = useTranslation('pages')
+  const metricFields = buildMetricFields(t)
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-      {METRIC_FIELDS.map((field) => {
+      {metricFields.map((field) => {
         const beforeValue = toNumber(before[field.key])
         const afterValue = toNumber(after[field.key])
         const delta = beforeValue !== null && afterValue !== null ? afterValue - beforeValue : null
@@ -142,8 +162,10 @@ function MetricsComparison({
  * open an insight's modal, its reviews are never requested (avoids N
  * fetches all at once when loading the active list). */
 function ReviewsDialog({ insight }: { insight: Insight }) {
+  const { t } = useTranslation('pages')
   const [open, setOpen] = useState(false)
   const { data: reviews, isLoading } = useInsightReviews(open ? insight.id : null)
+  const trendLabels = buildTrendLabels(t)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -153,25 +175,25 @@ function ReviewsDialog({ insight }: { insight: Insight }) {
             type="button"
             className="rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
           >
-            Ver revisiones ({insight.review_count})
+            {t('insights.viewReviewsCount', { count: insight.review_count })}
           </button>
         }
       />
       <DialogContent className="max-h-[75vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Revisiones — {insight.title}</DialogTitle>
+          <DialogTitle>{t('insights.reviewsDialogTitle', { title: insight.title })}</DialogTitle>
         </DialogHeader>
         {insight.metrics_at_last_review && (
           <MetricsComparison before={insight.metrics_at_creation} after={insight.metrics_at_last_review} />
         )}
         <div className="flex flex-col gap-3 mt-4">
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Cargando...</p>
+            <p className="text-sm text-muted-foreground">{t('insights.loading')}</p>
           ) : (
             reviews?.map((review) => (
               <div key={review.id} className="rounded-md border border-border p-3">
                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <SoftBadge severity={TREND_SEVERITY[review.trend]}>{TREND_LABELS[review.trend]}</SoftBadge>
+                  <SoftBadge severity={TREND_SEVERITY[review.trend]}>{trendLabels[review.trend]}</SoftBadge>
                   <span className="text-xs text-muted-foreground">{review.reviewed_at.slice(0, 10)}</span>
                 </div>
                 <p className="text-[13px] text-muted-foreground">{review.ai_assessment}</p>
@@ -185,9 +207,12 @@ function ReviewsDialog({ insight }: { insight: Insight }) {
 }
 
 function InsightCard({ insight, tourTarget }: { insight: Insight; tourTarget?: boolean }) {
+  const { t } = useTranslation('pages')
   const dismiss = useDismissInsight()
   const resolve = useResolveInsight()
   const CategoryIcon = CATEGORY_ICONS[insight.category]
+  const priorityLabels = buildPriorityLabels(t)
+  const categoryLabels = buildCategoryLabels(t)
 
   return (
     <div
@@ -201,15 +226,15 @@ function InsightCard({ insight, tourTarget }: { insight: Insight; tourTarget?: b
         <div className="flex items-center gap-2 flex-wrap">
           <CategoryIcon size={15} className="text-muted-foreground flex-shrink-0" />
           <p className="font-medium text-[13px]">{insight.title}</p>
-          <SoftBadge severity={PRIORITY_SEVERITY[insight.priority]}>{PRIORITY_LABELS[insight.priority]}</SoftBadge>
-          <SoftBadge severity="accent">{CATEGORY_LABELS[insight.category]}</SoftBadge>
+          <SoftBadge severity={PRIORITY_SEVERITY[insight.priority]}>{priorityLabels[insight.priority]}</SoftBadge>
+          <SoftBadge severity="accent">{categoryLabels[insight.category]}</SoftBadge>
         </div>
       </div>
       <p className="text-[13px] text-muted-foreground mb-2">{insight.description}</p>
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
-          Próxima revisión: {insight.next_review_at}
-          {insight.review_count > 0 && ` · revisado ${insight.review_count}x`}
+          {t('insights.nextReview', { date: insight.next_review_at })}
+          {insight.review_count > 0 && ` ${t('insights.reviewedCount', { count: insight.review_count })}`}
         </span>
         <div className="flex gap-2" data-tour={tourTarget ? 'insights:actions' : undefined}>
           {insight.review_count > 0 && <ReviewsDialog insight={insight} />}
@@ -219,7 +244,7 @@ function InsightCard({ insight, tourTarget }: { insight: Insight; tourTarget?: b
             onClick={() => resolve.mutate(insight.id)}
             className="rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
           >
-            Marcar resuelto
+            {t('insights.markResolved')}
           </button>
           <button
             type="button"
@@ -227,7 +252,7 @@ function InsightCard({ insight, tourTarget }: { insight: Insight; tourTarget?: b
             onClick={() => dismiss.mutate(insight.id)}
             className="rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
           >
-            Descartar
+            {t('insights.dismiss')}
           </button>
         </div>
       </div>
@@ -236,49 +261,34 @@ function InsightCard({ insight, tourTarget }: { insight: Insight; tourTarget?: b
 }
 
 function InsightsHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          Observaciones automáticas sobre tus finanzas basadas en tus datos reales (gasto, presupuesto,
-          deudas) — un patrón detectado, una alerta, una sugerencia. Máximo 10 activos a la vez.
-        </p>
+      <HelpSection heading={t('insights.help.whatIsThisScreen.heading')}>
+        <p>{t('insights.help.whatIsThisScreen.body')}</p>
       </HelpSection>
-      <HelpSection heading="Generar insights">
-        <p>
-          Corre el análisis sobre tu situación actual y crea nuevos insights si encuentra algo que valga
-          la pena señalarte. También se crean automáticamente cuando le pides al Asesor IA que guarde un
-          plan.
-        </p>
+      <HelpSection heading={t('insights.help.generateInsights.heading')}>
+        <p>{t('insights.help.generateInsights.body')}</p>
       </HelpSection>
-      <HelpSection heading="Marcar resuelto / Descartar">
-        <p>
-          <strong>Resuelto</strong> es para cuando ya atendiste lo que decía. <strong>Descartar</strong> es
-          para cuando no te interesa ese en particular. Ambos lo sacan de la lista activa y quedan en el
-          historial de abajo.
-        </p>
+      <HelpSection heading={t('insights.help.markResolvedDismiss.heading')}>
+        <p>{t('insights.help.markResolvedDismiss.body')}</p>
       </HelpSection>
-      <HelpSection heading="Ver revisiones">
-        <p>
-          Mientras un insight sigue activo, se vuelve a evaluar solo (con tus datos del momento) en cada
-          fecha de revisión, y la IA dice si tu situación mejoró, empeoró o se mantuvo igual — con una
-          comparación de tus números clave (patrimonio, salud financiera, comprometido mensual) contra
-          los del momento en que se creó.
-        </p>
+      <HelpSection heading={t('insights.help.viewReviews.heading')}>
+        <p>{t('insights.help.viewReviews.body')}</p>
       </HelpSection>
-      <HelpTip>
-        La prioridad (alta/media/baja) refleja qué tan urgente es, no está ligada a ninguna acción
-        automática — es solo para que decidas qué atender primero.
-      </HelpTip>
+      <HelpTip>{t('insights.help.tip')}</HelpTip>
     </>
   )
 }
 
 export function Insights() {
+  const { t } = useTranslation('pages')
   const { data: active, isLoading } = useInsights()
   const [historyPage, setHistoryPage] = useState(1)
   const { data: history } = useInsightHistory(historyPage, HISTORY_PAGE_SIZE)
   const generate = useGenerateInsights()
+  const categoryLabels = buildCategoryLabels(t)
+  const statusLabels = buildStatusLabels(t)
 
   const totalHistoryPages = Math.max(1, Math.ceil((history?.meta?.total ?? 0) / HISTORY_PAGE_SIZE))
 
@@ -286,7 +296,7 @@ export function Insights() {
     <div>
       <ViewHeader
         icon={<TrendingUp />}
-        title="Insights"
+        title={t('insights.title')}
         help={<InsightsHelp />}
         section={HEADER_SECTIONS.inteligencia}
         tourKey="insights"
@@ -300,7 +310,7 @@ export function Insights() {
             style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
           >
             <Sparkles size={14} />
-            {generate.isPending ? 'Generando...' : 'Generar insights'}
+            {generate.isPending ? t('insights.generating') : t('insights.generateInsights')}
           </button>
         }
       />
@@ -309,11 +319,16 @@ export function Insights() {
         <StatCard
           compact
           icon={<ListChecks />}
-          label="Insights activos"
+          label={t('insights.activeInsights')}
           value={`${active?.length ?? 0} / 10`}
           dataTour="insights:active"
         />
-        <StatCard compact icon={<History />} label="Generados en total" value={String(history?.meta?.total ?? 0)} />
+        <StatCard
+          compact
+          icon={<History />}
+          label={t('insights.totalGenerated')}
+          value={String(history?.meta?.total ?? 0)}
+        />
       </div>
 
       {generate.isError && (
@@ -321,7 +336,7 @@ export function Insights() {
       )}
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Cargando...</p>
+        <p className="text-sm text-muted-foreground">{t('insights.loading')}</p>
       ) : active && active.length > 0 ? (
         <div className="flex flex-col gap-2.5 mb-4">
           {active.map((insight, i) => (
@@ -330,16 +345,14 @@ export function Insights() {
         </div>
       ) : (
         <div className="bg-card border border-border rounded-md p-8 text-center mb-4">
-          <p className="text-sm text-muted-foreground">
-            Sin insights activos. Genera nuevos o pídele al Asesor IA que guarde un plan.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('insights.noActiveInsights')}</p>
         </div>
       )}
 
       <div className="bg-card border border-border rounded-md p-4" data-tour="insights:history">
-        <div className="text-[15px] font-medium mb-2">Historial</div>
+        <div className="text-[15px] font-medium mb-2">{t('insights.history')}</div>
         {!history || history.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Aún no hay historial.</p>
+          <p className="text-sm text-muted-foreground">{t('insights.noHistoryYet')}</p>
         ) : (
           <>
             <div className="flex flex-col">
@@ -351,9 +364,9 @@ export function Insights() {
                       <span className="truncate font-medium">{insight.title}</span>
                       <span className="flex items-center gap-1.5">
                         <CategoryIcon size={13} className="text-muted-foreground flex-shrink-0" />
-                        <SoftBadge severity="accent">{CATEGORY_LABELS[insight.category]}</SoftBadge>
+                        <SoftBadge severity="accent">{categoryLabels[insight.category]}</SoftBadge>
                       </span>
-                      <span className="text-muted-foreground">{STATUS_LABEL[insight.status]}</span>
+                      <span className="text-muted-foreground">{statusLabels[insight.status]}</span>
                       <span className="text-muted-foreground">{insight.created_at.slice(0, 10)}</span>
                     </div>
                     <div className="lg:hidden flex flex-col gap-1.5 py-3 border-t border-border first:border-0 text-[13px]">
@@ -361,10 +374,10 @@ export function Insights() {
                       <div className="flex items-center justify-between gap-2">
                         <span className="flex items-center gap-1.5">
                           <CategoryIcon size={13} className="text-muted-foreground flex-shrink-0" />
-                          <SoftBadge severity="accent">{CATEGORY_LABELS[insight.category]}</SoftBadge>
+                          <SoftBadge severity="accent">{categoryLabels[insight.category]}</SoftBadge>
                         </span>
                         <span className="text-muted-foreground text-[12px]">
-                          {STATUS_LABEL[insight.status]} · {insight.created_at.slice(0, 10)}
+                          {statusLabels[insight.status]} · {insight.created_at.slice(0, 10)}
                         </span>
                       </div>
                     </div>
@@ -374,16 +387,14 @@ export function Insights() {
             </div>
             {totalHistoryPages > 1 && (
               <div className="flex justify-between items-center mt-3.5 text-xs text-muted-foreground">
-                <span>
-                  Página {historyPage} de {totalHistoryPages}
-                </span>
+                <span>{t('insights.pageOf', { page: historyPage, total: totalHistoryPages })}</span>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     disabled={historyPage <= 1}
                     onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
                     className="rounded p-1.5 border border-border disabled:opacity-40"
-                    aria-label="Página anterior"
+                    aria-label={t('insights.previousPage')}
                   >
                     <ChevronLeft size={14} />
                   </button>
@@ -392,7 +403,7 @@ export function Insights() {
                     disabled={historyPage >= totalHistoryPages}
                     onClick={() => setHistoryPage((p) => Math.min(totalHistoryPages, p + 1))}
                     className="rounded p-1.5 border border-border disabled:opacity-40"
-                    aria-label="Página siguiente"
+                    aria-label={t('insights.nextPage')}
                   >
                     <ChevronRight size={14} />
                   </button>

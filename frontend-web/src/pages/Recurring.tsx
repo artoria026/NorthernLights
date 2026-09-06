@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
@@ -93,6 +94,7 @@ const STATUS_SEVERITY: Record<RecurringItem['status'], 'accent' | 'warning' | 'd
 type StatusFilter = 'active' | 'paused' | 'cancelled' | 'all'
 
 function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const { data: accounts } = useAccounts()
   const createItem = useCreateRecurringItem()
   const [form, setForm] = useState<CreateRecurringItemInput>({
@@ -124,18 +126,18 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Nombre</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.nameLabel')}</label>
         <input
           required
           autoFocus
-          placeholder="Ej: Seguro del auto, Dentista"
+          placeholder={t('recurring.form.namePlaceholder')}
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           className={`${selectClass} h-9 w-full`}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Tipo</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.typeLabel')}</label>
         <Select
           value={form.item_type}
           onValueChange={(v) =>
@@ -146,21 +148,19 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
             <SelectValue>{ITEM_TYPE_LABELS[form.item_type]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {ITEM_TYPES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {ITEM_TYPE_LABELS[t]}
+            {ITEM_TYPES.map((it) => (
+              <SelectItem key={it} value={it}>
+                {ITEM_TYPE_LABELS[it]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         {form.item_type === 'utility' && (
-          <p className="text-xs text-muted-foreground">
-            Los servicios esenciales alertan a diario desde el primer día sin confirmar.
-          </p>
+          <p className="text-xs text-muted-foreground">{t('recurring.form.utilityHint')}</p>
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Monto</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.amountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -171,7 +171,7 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Frecuencia</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.frequencyLabel')}</label>
         <Select
           value={form.frequency}
           onValueChange={(v) => setForm({ ...form, frequency: (v as RecurringFrequency) ?? 'monthly' })}
@@ -189,22 +189,24 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Categoría</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.categoryLabel')}</label>
         <CategorySelect
           categories={categories}
           value={form.category_id}
           onValueChange={(v) => setForm({ ...form, category_id: v })}
-          placeholder="Selecciona categoría"
+          placeholder={t('recurring.form.categoryPlaceholder')}
           triggerClassName={selectClass}
         />
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
-          Cuenta {form.item_type === 'income' ? 'que recibe' : 'que paga'} (banco/TDC)
+          {form.item_type === 'income'
+            ? t('recurring.form.accountLabelReceiving')
+            : t('recurring.form.accountLabelPaying')}
         </label>
         <Select value={form.account_id || null} onValueChange={(v) => setForm({ ...form, account_id: v ?? '' })}>
           <SelectTrigger className={selectClass}>
-            <SelectValue placeholder="Selecciona cuenta">
+            <SelectValue placeholder={t('recurring.form.accountPlaceholder')}>
               {(v: string | null) => payingAccounts?.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
@@ -218,7 +220,7 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Próximo cobro</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.nextDateLabel')}</label>
         <input
           type="date"
           required
@@ -232,7 +234,7 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
       )}
       <DialogFooter>
         <DialogPrimaryButton icon={Plus} pending={createItem.isPending}>
-          Crear
+          {t('recurring.newItemForm.submitButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -243,6 +245,7 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
  * unlike NewRecurringItemForm, the category is filtered by the entry_type
  * the item ALREADY had (fixed), not by a type selector. */
 function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const { data: accounts } = useAccounts()
   const entryType = item.item_type === 'income' ? 'income' : 'expense'
   const { data: categories } = useCategories(entryType)
@@ -272,7 +275,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Nombre</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.nameLabel')}</label>
         <input
           required
           autoFocus
@@ -282,7 +285,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Monto</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.amountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -293,7 +296,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Frecuencia</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.frequencyLabel')}</label>
         <Select
           value={form.frequency}
           onValueChange={(v) => setForm({ ...form, frequency: (v as RecurringFrequency) ?? 'monthly' })}
@@ -311,22 +314,24 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Categoría</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.categoryLabel')}</label>
         <CategorySelect
           categories={categories}
           value={form.category_id}
           onValueChange={(v) => setForm({ ...form, category_id: v })}
-          placeholder="Selecciona categoría"
+          placeholder={t('recurring.form.categoryPlaceholder')}
           triggerClassName={selectClass}
         />
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
-          Cuenta {item.item_type === 'income' ? 'que recibe' : 'que paga'} (banco/TDC)
+          {item.item_type === 'income'
+            ? t('recurring.form.accountLabelReceiving')
+            : t('recurring.form.accountLabelPaying')}
         </label>
         <Select value={form.account_id || null} onValueChange={(v) => setForm({ ...form, account_id: v ?? '' })}>
           <SelectTrigger className={selectClass}>
-            <SelectValue placeholder="Selecciona cuenta">
+            <SelectValue placeholder={t('recurring.form.accountPlaceholder')}>
               {(v: string | null) => payingAccounts?.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
@@ -340,7 +345,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Urgencia de alerta</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.urgencyLabel')}</label>
         <Select
           value={form.alert_urgency}
           onValueChange={(v) => setForm({ ...form, alert_urgency: (v as AlertUrgency) ?? 'normal' })}
@@ -358,7 +363,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Próximo cobro</label>
+        <label className="text-xs text-muted-foreground">{t('recurring.form.nextDateLabel')}</label>
         <input
           type="date"
           required
@@ -370,7 +375,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
       {updateItem.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateItem.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={updateItem.isPending}>
-          Guardar cambios
+          {t('recurring.editItemForm.submitButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -378,6 +383,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
 }
 
 function PendingRow({ entry }: { entry: Transaction }) {
+  const { t } = useTranslation('pages')
   const confirm = useConfirmTransaction()
   const reject = useRejectTransaction()
   const busy = confirm.isPending || reject.isPending
@@ -388,7 +394,7 @@ function PendingRow({ entry }: { entry: Transaction }) {
         type="button"
         disabled={busy}
         onClick={() => reject.mutate(entry.id)}
-        title="Rechazar"
+        title={t('recurring.pendingRow.rejectTitle')}
         className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 disabled:opacity-40"
       >
         <X size={13} />
@@ -401,7 +407,7 @@ function PendingRow({ entry }: { entry: Transaction }) {
         style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
       >
         <Check size={12} />
-        Confirmar
+        {t('recurring.pendingRow.confirmButton')}
       </button>
     </>
   )
@@ -435,6 +441,7 @@ function PendingRow({ entry }: { entry: Transaction }) {
 }
 
 function RecurringItemRow({ item }: { item: RecurringItem }) {
+  const { t } = useTranslation('pages')
   const pause = usePauseRecurringItem()
   const cancel = useCancelRecurringItem()
   const resume = useResumeRecurringItem()
@@ -459,7 +466,7 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
             <button
               type="button"
               disabled={busy}
-              title="Editar"
+              title={t('recurring.itemActions.editTitle')}
               className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info disabled:opacity-40"
             >
               <Pencil size={13} />
@@ -468,7 +475,7 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
         />
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar — {item.name}</DialogTitle>
+            <DialogTitle>{t('recurring.itemActions.editDialogTitle', { name: item.name })}</DialogTitle>
           </DialogHeader>
           <EditRecurringItemForm item={item} onDone={() => setEditOpen(false)} />
         </DialogContent>
@@ -479,7 +486,7 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
             type="button"
             disabled={busy}
             onClick={() => pause.mutate(item.id)}
-            title="Pausar"
+            title={t('recurring.itemActions.pauseTitle')}
             className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-warning/10 hover:text-warning disabled:opacity-40"
           >
             <Pause size={13} />
@@ -488,7 +495,7 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
             type="button"
             disabled={busy}
             onClick={() => cancel.mutate(item.id)}
-            title="Cancelar"
+            title={t('recurring.itemActions.cancelTitle')}
             className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 disabled:opacity-40"
           >
             <X size={13} />
@@ -503,7 +510,7 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
           style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
         >
           <RotateCcw size={12} />
-          Reactivar
+          {t('recurring.itemActions.resumeButton')}
         </button>
       )}
     </>
@@ -619,6 +626,7 @@ function CreditCardCommitmentRow({
   account: Account
   onTotal: (accountId: string, total: number) => void
 }) {
+  const { t } = useTranslation('pages')
   const { data: cycle } = useTdcCycle(account.id, true)
   const { data: ledger } = useTransactions({ account_id: account.id, per_page: 50 })
 
@@ -651,8 +659,12 @@ function CreditCardCommitmentRow({
         <span className="truncate">{account.name}</span>
       </div>
       <div className="flex items-center gap-3 flex-shrink-0 text-[12px] text-muted-foreground">
-        {installmentTotal > 0 && <span>MSI {formatMoney(String(installmentTotal))}</span>}
-        {cycleSpend > 0 && <span>corte {formatMoney(String(cycleSpend))}</span>}
+        {installmentTotal > 0 && (
+          <span>{t('recurring.creditCardCommitments.msiLabel', { amount: formatMoney(String(installmentTotal)) })}</span>
+        )}
+        {cycleSpend > 0 && (
+          <span>{t('recurring.creditCardCommitments.cycleLabel', { amount: formatMoney(String(cycleSpend)) })}</span>
+        )}
         <span className="text-[13px] font-medium text-foreground">{formatMoney(String(total))}</span>
       </div>
     </div>
@@ -669,6 +681,7 @@ function CreditCardCommitmentRow({
  * credit card stays out of the debt/commitment machinery unless it becomes
  * an overdue debt under negotiation. */
 function CreditCardCommitments({ creditCards }: { creditCards: Account[] }) {
+  const { t } = useTranslation('pages')
   const [totals, setTotals] = useState<Record<string, number>>({})
   const handleTotal = useCallback((accountId: string, total: number) => {
     setTotals((prev) => (prev[accountId] === total ? prev : { ...prev, [accountId]: total }))
@@ -680,7 +693,7 @@ function CreditCardCommitments({ creditCards }: { creditCards: Account[] }) {
       <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 text-[15px] font-medium">
           <CreditCard size={15} />
-          Lo que ya deben tus tarjetas el próximo corte
+          {t('recurring.creditCardCommitments.heading')}
         </div>
         {grandTotal > 0 && (
           <span className="text-[15px] font-medium" style={{ color: 'var(--nl-warning-ink)' }}>
@@ -688,10 +701,7 @@ function CreditCardCommitments({ creditCards }: { creditCards: Account[] }) {
           </span>
         )}
       </div>
-      <p className="text-[11px] text-muted-foreground mb-1">
-        Mensualidades de compras a meses sin intereses + lo que llevas gastado en el corte abierto de cada
-        tarjeta. Informativo -- no está incluido en "Comprometido / mes" de arriba.
-      </p>
+      <p className="text-[11px] text-muted-foreground mb-1">{t('recurring.creditCardCommitments.hint')}</p>
       {creditCards.map((account) => (
         <CreditCardCommitmentRow key={account.id} account={account} onTotal={handleTotal} />
       ))}
@@ -700,57 +710,31 @@ function CreditCardCommitments({ creditCards }: { creditCards: Account[] }) {
 }
 
 function RecurringHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          Gastos e ingresos que se repiten en un ciclo fijo — servicios, utilities (luz, agua, internet) e
-          ingresos recurrentes como una nómina. Las suscripciones (Netflix, Spotify, etc.) tienen su
-          propia página dedicada.
-        </p>
+      <HelpSection heading={t('recurring.help.whatIsThisScreen.heading')}>
+        <p>{t('recurring.help.whatIsThisScreen.body')}</p>
       </HelpSection>
-      <HelpSection heading="Sin confirmar">
-        <p>
-          Cuando se acerca la fecha de un recurrente, el sistema prepara automáticamente el movimiento
-          como borrador — aparece aquí arriba para que lo confirmes (se registra tal cual) o lo rechaces
-          (no pasó, se descarta) antes de que cuente como una transacción real.
-        </p>
+      <HelpSection heading={t('recurring.help.unconfirmed.heading')}>
+        <p>{t('recurring.help.unconfirmed.body')}</p>
       </HelpSection>
-      <HelpSection heading="Editar / Pausar / Cancelar / Reanudar">
-        <p>
-          Editar cambia monto, frecuencia, cuenta, categoría, urgencia o próximo cobro sin perder el
-          historial del item — úsalo cuando te suban la renta o cambie el monto de un servicio. Pausar
-          detiene temporalmente la generación automática sin perder la configuración. Cancelar lo da de
-          baja definitivo. Todos se pueden reanudar después.
-        </p>
+      <HelpSection heading={t('recurring.help.editPauseCancel.heading')}>
+        <p>{t('recurring.help.editPauseCancel.body')}</p>
       </HelpSection>
-      <HelpSection heading="Próximos pagos y desglose por categoría">
-        <p>
-          "Próximos pagos" son los que caen en los siguientes 7 días, para planear tu quincena. El
-          desglose por categoría reparte el "Comprometido / mes" (mismo total, mismo alcance: sin
-          suscripciones ni ingresos) para ver en qué se va ese dinero.
-        </p>
+      <HelpSection heading={t('recurring.help.upcomingAndBreakdown.heading')}>
+        <p>{t('recurring.help.upcomingAndBreakdown.body')}</p>
       </HelpSection>
-      <HelpSection heading="Lo que ya deben tus tarjetas">
-        <p>
-          Solo aparece si tienes al menos una tarjeta de crédito. Suma las mensualidades de tus compras a
-          meses sin intereses activas (fijo, se paga sí o sí) más lo que ya llevas gastado en el corte
-          abierto de cada tarjeta (variable, sigue subiendo hasta que corte). Es solo informativo -- no se
-          suma al "Comprometido / mes" de arriba, porque ese gasto ya se contó en el presupuesto del mes en
-          que lo hiciste; sumarlo aquí también lo contaría dos veces.
-        </p>
+      <HelpSection heading={t('recurring.help.cardDebts.heading')}>
+        <p>{t('recurring.help.cardDebts.body')}</p>
       </HelpSection>
-      <HelpTip>
-        La urgencia de alerta (normal/alta/crítica) controla qué tan insistente es el aviso antes de la
-        fecha de cobro — no afecta el monto ni la fecha en sí. Los "Servicios esenciales" son la
-        excepción: alertan a diario desde el primer día sin confirmar, sin importar la urgencia que les
-        pongas.
-      </HelpTip>
+      <HelpTip>{t('recurring.help.tip')}</HelpTip>
     </>
   )
 }
 
 export function Recurring() {
+  const { t } = useTranslation('pages')
   const { data: pending, isLoading: loadingPending } = usePendingRecurring()
   const { data: items, isLoading: loadingItems } = useRecurringItems()
   const { data: upcoming } = useUpcomingRecurring(7)
@@ -788,7 +772,7 @@ export function Recurring() {
       return {
         value,
         color: category?.color ?? DONUT_COLORS[i % DONUT_COLORS.length],
-        name: category?.name ?? 'Otro',
+        name: category?.name ?? t('recurring.breakdownSection.otherCategory'),
       }
     })
     .sort((a, b) => b.value - a.value)
@@ -801,7 +785,7 @@ export function Recurring() {
     <div>
       <ViewHeader
         icon={<RefreshCw />}
-        title="Gastos Recurrentes"
+        title={t('recurring.title')}
         help={<RecurringHelp />}
         section={HEADER_SECTIONS.compromisos}
         tourKey="recurring"
@@ -816,13 +800,13 @@ export function Recurring() {
                   style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
                 >
                   <Plus size={14} />
-                  Agregar recurrente
+                  {t('recurring.header.addButton')}
                 </button>
               }
             />
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nuevo gasto recurrente</DialogTitle>
+                <DialogTitle>{t('recurring.newItemDialogTitle')}</DialogTitle>
               </DialogHeader>
               <NewRecurringItemForm onDone={() => setOpen(false)} />
             </DialogContent>
@@ -834,41 +818,41 @@ export function Recurring() {
         <StatCard
           compact
           icon={<Lock />}
-          label="Comprometido / mes"
+          label={t('recurring.stats.committedMonthly')}
           value={Number(committedMonthly).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
-          note="Servicios y utilities activos (sin suscripciones ni ingresos)"
+          note={t('recurring.stats.committedMonthlyNote')}
         />
         <StatCard
           compact
           icon={<TrendingUp />}
-          label="Ingreso recurrente / mes"
+          label={t('recurring.stats.recurringIncome')}
           value={Number(incomeMonthly).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
           valueClassName="text-[color:var(--nl-accent-ink)]"
-          note="Nómina y otros ingresos activos"
+          note={t('recurring.stats.recurringIncomeNote')}
         />
         <StatCard
           compact
           icon={<Clock />}
-          label="Sin confirmar"
+          label={t('recurring.stats.pendingLabel')}
           value={String(pendingEntries.length)}
           valueClassName={pendingEntries.length > 0 ? 'text-[color:var(--nl-warning-ink)]' : undefined}
           borderColor={pendingEntries.length > 0 ? 'var(--nl-warning)' : undefined}
-          note={pendingEntries.length > 0 ? 'Confírmalos abajo' : 'Todo al día'}
+          note={pendingEntries.length > 0 ? t('recurring.stats.pendingNoteAction') : t('recurring.stats.pendingNoteOk')}
           dataTour="recurring:pending"
         />
-        <StatCard compact icon={<CheckCircle2 />} label="Items activos" value={String(active.length)} />
+        <StatCard compact icon={<CheckCircle2 />} label={t('recurring.stats.activeItems')} value={String(active.length)} />
       </div>
 
       {creditCards.length > 0 && <CreditCardCommitments creditCards={creditCards} />}
 
       {!loadingPending && pendingEntries.length > 0 && (
         <div className="bg-card border border-border rounded-md p-4 mb-4">
-          <div className="text-[15px] font-medium mb-1">Pagos pendientes de confirmar</div>
+          <div className="text-[15px] font-medium mb-1">{t('recurring.pendingSection.heading')}</div>
           <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_170px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground mt-3">
-            <span>Concepto</span>
-            <span>Fecha</span>
-            <span className="text-right">Monto</span>
-            <span className="text-right">Acción</span>
+            <span>{t('recurring.pendingSection.table.concept')}</span>
+            <span>{t('recurring.pendingSection.table.date')}</span>
+            <span className="text-right">{t('recurring.pendingSection.table.amount')}</span>
+            <span className="text-right">{t('recurring.pendingSection.table.action')}</span>
           </div>
           {pendingEntries.map((entry) => (
             <PendingRow key={entry.id} entry={entry} />
@@ -878,9 +862,9 @@ export function Recurring() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start mb-4">
         <div className="bg-card border border-border rounded-md p-4" data-tour="recurring:upcoming">
-          <div className="text-[15px] font-medium mb-2">Próximos pagos (7 días)</div>
+          <div className="text-[15px] font-medium mb-2">{t('recurring.upcomingSection.heading')}</div>
           {upcomingItems.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nada programado en los próximos 7 días.</p>
+            <p className="text-sm text-muted-foreground">{t('recurring.upcomingSection.empty')}</p>
           ) : (
             upcomingItems.map((item) => {
               const TypeIcon = ITEM_TYPE_ICONS[item.item_type]
@@ -910,7 +894,7 @@ export function Recurring() {
         </div>
 
         <div className="bg-card border border-border rounded-md p-4" data-tour="recurring:breakdown">
-          <div className="text-[15px] font-medium mb-2">Desglose por categoría</div>
+          <div className="text-[15px] font-medium mb-2">{t('recurring.breakdownSection.heading')}</div>
           {categoryBreakdown.length > 0 ? (
             <div className="flex flex-col items-center gap-3">
               <Donut
@@ -920,7 +904,7 @@ export function Recurring() {
                   currency: 'MXN',
                   maximumFractionDigits: 0,
                 })}
-                centerSub="por mes"
+                centerSub={t('recurring.breakdownSection.centerSub')}
               />
               <div className="flex flex-col gap-1.5 w-full">
                 {categoryBreakdown.map((s) => (
@@ -933,42 +917,42 @@ export function Recurring() {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Sin servicios/utilities activos todavía.</p>
+            <p className="text-sm text-muted-foreground">{t('recurring.breakdownSection.empty')}</p>
           )}
         </div>
       </div>
 
       <div className="bg-card border border-border rounded-md p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
-          <div className="text-[15px] font-medium">Servicios e ingresos recurrentes</div>
+          <div className="text-[15px] font-medium">{t('recurring.listSection.heading')}</div>
           <div data-tour="recurring:status-filter">
             <SegmentedControl
               value={status}
               onChange={setStatus}
               options={[
-                { value: 'active', label: 'Activos' },
-                { value: 'paused', label: 'Pausados' },
-                { value: 'cancelled', label: 'Cancelados' },
-                { value: 'all', label: 'Todos' },
+                { value: 'active', label: t('recurring.listSection.filter.active') },
+                { value: 'paused', label: t('recurring.listSection.filter.paused') },
+                { value: 'cancelled', label: t('recurring.listSection.filter.cancelled') },
+                { value: 'all', label: t('recurring.listSection.filter.all') },
               ]}
             />
           </div>
         </div>
 
         {loadingItems ? (
-          <p className="text-sm text-muted-foreground">Cargando...</p>
+          <p className="text-sm text-muted-foreground">{t('recurring.listSection.loading')}</p>
         ) : visible.length === 0 ? (
-          <EmptyState>No hay recurrentes con este estado.</EmptyState>
+          <EmptyState>{t('recurring.listSection.empty')}</EmptyState>
         ) : (
           <>
             <div className="hidden lg:grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr_240px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <span>Nombre</span>
-              <span>Tipo</span>
-              <span className="text-right">Monto</span>
-              <span>Frecuencia</span>
-              <span>Próximo cobro</span>
-              <span>Urgencia</span>
-              <span className="text-right">Estado / Acción</span>
+              <span>{t('recurring.listSection.table.name')}</span>
+              <span>{t('recurring.listSection.table.type')}</span>
+              <span className="text-right">{t('recurring.listSection.table.amount')}</span>
+              <span>{t('recurring.listSection.table.frequency')}</span>
+              <span>{t('recurring.listSection.table.nextDate')}</span>
+              <span>{t('recurring.listSection.table.urgency')}</span>
+              <span className="text-right">{t('recurring.listSection.table.statusAction')}</span>
             </div>
             {visible.map((item) => (
               <RecurringItemRow key={item.id} item={item} />

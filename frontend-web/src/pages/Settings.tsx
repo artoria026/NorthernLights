@@ -1,10 +1,12 @@
 import { Check, FileText, LogOut, Settings as SettingsIcon, ShieldCheck, Trash2, X } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { PasswordInput } from '@/components/ui/password-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DisclaimerContent } from '@/components/DisclaimerContent'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { ToggleSwitch, ViewHeader } from '@/components/nl/primitives'
 import {
@@ -42,6 +44,7 @@ function SettingsCard({
 }
 
 function AvatarField() {
+  const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
   const updateProfile = useUpdateProfile()
   const [error, setError] = useState('')
@@ -58,7 +61,7 @@ function AvatarField() {
       const dataUrl = await fileToNormalizedDataUrl(file)
       await updateProfile.mutateAsync({ name: user.name, avatar_url: dataUrl })
     } catch {
-      setError('No se pudo procesar la imagen.')
+      setError(t('settings.profile.avatar.error'))
     }
   }
 
@@ -82,7 +85,7 @@ function AvatarField() {
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-3">
           <label className="text-[12px] text-muted-foreground hover:text-foreground cursor-pointer underline underline-offset-2">
-            {user?.avatar_url ? 'Cambiar foto' : 'Subir foto'}
+            {user?.avatar_url ? t('settings.profile.avatar.change') : t('settings.profile.avatar.upload')}
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
@@ -99,7 +102,7 @@ function AvatarField() {
               onClick={handleRemove}
               className="text-[12px] text-muted-foreground hover:text-destructive"
             >
-              Quitar
+              {t('settings.profile.avatar.remove')}
             </button>
           )}
         </div>
@@ -110,6 +113,7 @@ function AvatarField() {
 }
 
 function ProfileCard() {
+  const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
   const updateProfile = useUpdateProfile()
   const changePassword = useChangePassword()
@@ -138,11 +142,11 @@ function ProfileCard() {
   }
 
   return (
-    <SettingsCard title="Perfil" dataTour="settings:profile">
+    <SettingsCard title={t('settings.profile.title')} dataTour="settings:profile">
       <AvatarField />
       <form onSubmit={handleSaveName} className="flex flex-col gap-3 max-w-sm">
         <div className="flex flex-col gap-1.5">
-          <label className="text-[11px] text-muted-foreground">Nombre completo</label>
+          <label className="text-[11px] text-muted-foreground">{t('settings.profile.fullName')}</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -150,7 +154,7 @@ function ProfileCard() {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-[11px] text-muted-foreground">Correo electrónico</label>
+          <label className="text-[11px] text-muted-foreground">{t('settings.profile.email')}</label>
           <input value={user?.email ?? ''} disabled className={`${selectClass} h-9 w-full`} />
         </div>
         {updateProfile.isError && (
@@ -163,14 +167,14 @@ function ProfileCard() {
           style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
         >
           <Check size={14} />
-          {updateProfile.isPending ? 'Guardando...' : 'Guardar cambios'}
+          {updateProfile.isPending ? t('settings.profile.saving') : t('settings.profile.saveChanges')}
         </button>
       </form>
 
       <div className="border-t border-border mt-5 pt-4 flex flex-col gap-3 max-w-sm">
         <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] text-muted-foreground">Contraseña actual</label>
+            <label className="text-[11px] text-muted-foreground">{t('settings.profile.currentPassword')}</label>
             <PasswordInput
               required
               value={currentPassword}
@@ -179,7 +183,7 @@ function ProfileCard() {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] text-muted-foreground">Nueva contraseña</label>
+            <label className="text-[11px] text-muted-foreground">{t('settings.profile.newPassword')}</label>
             <PasswordInput
               required
               minLength={8}
@@ -191,14 +195,16 @@ function ProfileCard() {
           {changePassword.isError && (
             <p className="text-xs text-destructive">{apiErrorMessage(changePassword.error)}</p>
           )}
-          {changePassword.isSuccess && <p className="text-xs text-primary">Contraseña actualizada.</p>}
+          {changePassword.isSuccess && (
+            <p className="text-xs text-primary">{t('settings.profile.passwordUpdated')}</p>
+          )}
           <button
             type="submit"
             disabled={changePassword.isPending}
             className="w-fit flex items-center gap-1.5 rounded px-4 py-2 text-[13px] border border-border text-muted-foreground hover:text-foreground"
           >
             <Check size={14} />
-            {changePassword.isPending ? 'Actualizando...' : 'Cambiar contraseña'}
+            {changePassword.isPending ? t('settings.profile.changingPassword') : t('settings.profile.changePassword')}
           </button>
         </form>
       </div>
@@ -207,55 +213,64 @@ function ProfileCard() {
 }
 
 function SecurityCard() {
+  const { t } = useTranslation('pages')
   return (
-    <SettingsCard title="Seguridad">
+    <SettingsCard title={t('settings.security.title')}>
       <div className="flex items-center justify-between py-2">
-        <span className="text-sm">Autenticación de dos factores</span>
+        <span className="text-sm">{t('settings.security.twoFactor')}</span>
         <ToggleSwitch checked={false} onChange={() => {}} disabled />
       </div>
       <p className="text-xs text-muted-foreground border border-dashed border-border rounded-md p-3 mt-2">
-        Próximamente — sesiones activas y 2FA todavía no están implementados.
+        {t('settings.security.comingSoon')}
       </p>
     </SettingsCard>
   )
 }
 
 const PAY_CYCLES: PayCycle[] = ['weekly', 'biweekly', 'monthly']
-const PAY_CYCLE_LABEL: Record<PayCycle, string> = {
-  weekly: 'Semanal',
-  biweekly: 'Quincenal',
-  monthly: 'Mensual',
+
+function payCycleLabel(t: (key: string) => string, cycle: PayCycle): string {
+  return t(`settings.preferences.payCycleOptions.${cycle}`)
 }
 
-const THEME_LABEL: Record<Theme, string> = { dark: 'Oscuro', light: 'Claro' }
+function themeLabel(t: (key: string) => string, theme: Theme): string {
+  return t(`settings.preferences.themeOptions.${theme}`)
+}
 
 function NotificationsAndPreferencesCard() {
+  const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
   const updateSettings = useUpdateSettings()
   const { mode, setTheme, isPending: themePending } = useSyncedTheme()
 
   return (
-    <SettingsCard title="Notificaciones y preferencias" dataTour="settings:preferences">
+    <SettingsCard title={t('settings.preferences.title')} dataTour="settings:preferences">
       <div className="flex flex-col">
         <div className="flex items-center justify-between py-3 border-b border-border">
-          <span className="text-sm">Tema</span>
+          <span className="text-sm">{t('settings.preferences.theme')}</span>
           <Select value={mode} disabled={themePending} onValueChange={(v) => setTheme((v as Theme) ?? 'dark')}>
             <SelectTrigger className="h-8 w-auto">
-              <SelectValue>{(v: Theme) => THEME_LABEL[v]}</SelectValue>
+              <SelectValue>{(v: Theme) => themeLabel(t, v)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {(['dark', 'light'] as Theme[]).map((theme) => (
                 <SelectItem key={theme} value={theme}>
-                  {THEME_LABEL[theme]}
+                  {themeLabel(t, theme)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="flex items-center justify-between py-3 border-b border-border">
+          <span className="text-sm">{t('settings.preferences.language')}</span>
+          <LanguageSwitcher />
+        </div>
+        <div className="flex items-center justify-between py-3 border-b border-border">
           <div>
-            <p className="text-sm">Notificaciones por correo</p>
-            <p className="text-xs text-muted-foreground">Reportes, alertas de deuda y presupuesto.</p>
+            <p className="text-sm">{t('settings.preferences.emailNotifications.label')}</p>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.preferences.emailNotifications.description')}
+            </p>
           </div>
           <ToggleSwitch
             checked={user?.email_notifications ?? true}
@@ -265,8 +280,10 @@ function NotificationsAndPreferencesCard() {
         </div>
         <div className="flex items-center justify-between py-3 border-b border-border">
           <div>
-            <p className="text-sm">Notificaciones push</p>
-            <p className="text-xs text-muted-foreground">Vencimientos de TDC y pagos próximos.</p>
+            <p className="text-sm">{t('settings.preferences.pushNotifications.label')}</p>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.preferences.pushNotifications.description')}
+            </p>
           </div>
           <ToggleSwitch
             checked={user?.push_notifications ?? true}
@@ -275,19 +292,19 @@ function NotificationsAndPreferencesCard() {
           />
         </div>
         <div className="flex items-center justify-between py-3">
-          <span className="text-sm">Ciclo de pago</span>
+          <span className="text-sm">{t('settings.preferences.payCycle')}</span>
           <Select
             value={user?.pay_cycle ?? 'monthly'}
             disabled={updateSettings.isPending}
             onValueChange={(v) => updateSettings.mutate({ pay_cycle: (v as PayCycle) ?? 'monthly' })}
           >
             <SelectTrigger className="h-8 w-auto">
-              <SelectValue>{(v: PayCycle) => PAY_CYCLE_LABEL[v]}</SelectValue>
+              <SelectValue>{(v: PayCycle) => payCycleLabel(t, v)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {PAY_CYCLES.map((cycle) => (
                 <SelectItem key={cycle} value={cycle}>
-                  {PAY_CYCLE_LABEL[cycle]}
+                  {payCycleLabel(t, cycle)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -302,19 +319,16 @@ function NotificationsAndPreferencesCard() {
 }
 
 function DebtTroubleCard() {
+  const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
   const updateSettings = useUpdateSettings()
 
   return (
-    <SettingsCard title="Deudas en problemas" dataTour="settings:debt-trouble">
+    <SettingsCard title={t('settings.debtTrouble.title')} dataTour="settings:debt-trouble">
       <div className="flex items-center justify-between py-1">
         <div className="pr-3">
-          <p className="text-sm">Tengo una deuda con problemas de pago</p>
-          <p className="text-xs text-muted-foreground">
-            Actívalo si tienes un crédito o deuda vencida que no estás pagando. Habilita un registro
-            aparte de esa deuda en Deudas y le pide al asesor de IA que te ayude a analizar cómo
-            pagarla.
-          </p>
+          <p className="text-sm">{t('settings.debtTrouble.label')}</p>
+          <p className="text-xs text-muted-foreground">{t('settings.debtTrouble.description')}</p>
         </div>
         <ToggleSwitch
           checked={user?.debt_trouble_mode ?? false}
@@ -334,16 +348,15 @@ function DebtTroubleCard() {
  * outside the app's normal flow. Only renders for admins; the real guard
  * is still the backend + AdminLayout, this is just the entry point. */
 function AdminAccessCard() {
+  const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
 
   if (user?.role !== 'admin') return null
 
   return (
-    <SettingsCard title="Administración">
-      <p className="text-sm text-muted-foreground mb-3">
-        Tienes permisos de administrador — gestiona usuarios y consulta métricas globales de la app.
-      </p>
+    <SettingsCard title={t('settings.admin.title')}>
+      <p className="text-sm text-muted-foreground mb-3">{t('settings.admin.description')}</p>
       <button
         type="button"
         onClick={() => navigate('/admin')}
@@ -351,19 +364,20 @@ function AdminAccessCard() {
         style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
       >
         <ShieldCheck size={14} />
-        Ir al panel de administración
+        {t('settings.admin.goToPanel')}
       </button>
     </SettingsCard>
   )
 }
 
 function ConnectedAccountsCard() {
+  const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
   const unlinkGoogle = useUnlinkGoogle()
   const isGoogleLinked = user?.auth_provider === 'google'
 
   return (
-    <SettingsCard title="Cuentas conectadas" dataTour="settings:connected-accounts">
+    <SettingsCard title={t('settings.connectedAccounts.title')} dataTour="settings:connected-accounts">
       <div className="flex items-center gap-2.5 py-2.5">
         <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" className="flex-shrink-0">
           <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" />
@@ -371,7 +385,7 @@ function ConnectedAccountsCard() {
           <path fill="#4CAF50" d="M24 44c5.3 0 10.1-2 13.7-5.3l-6.3-5.3C29.4 35.4 26.8 36 24 36c-5.3 0-9.9-3.4-11.3-8.1l-6.5 5C9.6 39.6 16.2 44 24 44z" />
           <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.3 5.6-6.2 7.1l6.3 5.3C39.9 37.5 44 31.7 44 24c0-1.3-.1-2.7-.4-3.5z" />
         </svg>
-        <span className="text-sm flex-1">Google</span>
+        <span className="text-sm flex-1">{t('settings.connectedAccounts.google')}</span>
         {isGoogleLinked ? (
           <button
             type="button"
@@ -379,21 +393,19 @@ function ConnectedAccountsCard() {
             disabled={unlinkGoogle.isPending}
             className="rounded-full px-2.5 py-0.5 text-[11px] border border-border text-muted-foreground hover:text-destructive"
           >
-            Desvincular
+            {t('settings.connectedAccounts.unlink')}
           </button>
         ) : (
           <span
             className="rounded-full px-2.5 py-0.5 text-[10px]"
             style={{ background: 'var(--nl-bg-track)', color: 'var(--nl-text-muted)' }}
           >
-            No vinculada
+            {t('settings.connectedAccounts.notLinked')}
           </span>
         )}
       </div>
       {!isGoogleLinked && (
-        <p className="text-xs text-muted-foreground">
-          Inicia sesión con Google desde la pantalla de login para vincularla a esta cuenta.
-        </p>
+        <p className="text-xs text-muted-foreground">{t('settings.connectedAccounts.linkHint')}</p>
       )}
       {unlinkGoogle.isError && (
         <p className="text-xs text-destructive mt-1">{apiErrorMessage(unlinkGoogle.error)}</p>
@@ -407,22 +419,23 @@ function ConnectedAccountsCard() {
  * there to reread the notice whenever you want, without having to wait
  * for it to change version. */
 function PrivacyCard() {
+  const { t } = useTranslation('pages')
   const [open, setOpen] = useState(false)
   return (
-    <SettingsCard title="Privacidad">
+    <SettingsCard title={t('settings.privacy.title')}>
       <button
         type="button"
         onClick={() => setOpen(true)}
         className="w-full flex items-center justify-center gap-1.5 rounded-md border border-border py-2 text-sm hover:bg-muted"
       >
         <FileText size={14} />
-        Ver Aviso de Privacidad
+        {t('settings.privacy.viewNotice')}
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Aviso de Privacidad</DialogTitle>
+            <DialogTitle>{t('settings.privacy.noticeTitle')}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto pr-1">
             <DisclaimerContent />
@@ -446,20 +459,12 @@ const GRANULAR_CATEGORIES: DataCategory[] = [
   'accounts',
 ]
 
-const CATEGORY_LABEL: Record<DataCategory, string> = {
-  transactions: 'Transacciones',
-  debts: 'Deudas (lo que debes y lo que te deben)',
-  recurring: 'Recurrentes y suscripciones',
-  budgets: 'Presupuestos',
-  insights: 'Insights',
-  reports: 'Reportes generados',
-  notifications: 'Notificaciones',
-  chat: 'Chat del Asesor IA',
-  categories: 'Categorías personalizadas',
-  accounts: 'Cuentas bancarias (también borra transacciones y recurrentes)',
+function categoryLabel(t: (key: string) => string, category: DataCategory): string {
+  return t(`settings.dataManagement.categories.${category}`)
 }
 
 function DataManagementCard() {
+  const { t, i18n } = useTranslation('pages')
   const eraseData = useEraseData()
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
@@ -488,11 +493,8 @@ function DataManagementCard() {
   }
 
   return (
-    <SettingsCard title="Borrar datos" dataTour="settings:data">
-      <p className="text-xs text-muted-foreground mb-3">
-        Borra información de tu cuenta por categorías, sin tener que eliminarla por completo. No se
-        puede deshacer.
-      </p>
+    <SettingsCard title={t('settings.dataManagement.title')} dataTour="settings:data">
+      <p className="text-xs text-muted-foreground mb-3">{t('settings.dataManagement.description')}</p>
       {!open ? (
         <button
           type="button"
@@ -500,13 +502,13 @@ function DataManagementCard() {
           className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] border border-destructive/40 text-destructive hover:bg-destructive/10"
         >
           <Trash2 size={14} />
-          Gestionar borrado de datos
+          {t('settings.dataManagement.manage')}
         </button>
       ) : (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5 max-w-sm">
             <label className="text-[11px] text-muted-foreground">
-              Confirma tu contraseña (si tu cuenta usa Google, deja esto vacío)
+              {t('settings.dataManagement.passwordLabel')}
             </label>
             <PasswordInput
               value={password}
@@ -517,7 +519,7 @@ function DataManagementCard() {
 
           <div className="flex flex-col gap-2">
             <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
-              Opciones rápidas
+              {t('settings.dataManagement.quickOptions')}
             </span>
             <div className="flex gap-2 flex-wrap">
               <button
@@ -527,7 +529,7 @@ function DataManagementCard() {
                 className="flex items-center gap-1.5 rounded px-3.5 py-2 text-[13px] border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
               >
                 <Trash2 size={14} />
-                Borrar todo, excepto cuentas
+                {t('settings.dataManagement.eraseAllExceptAccounts')}
               </button>
               <button
                 type="button"
@@ -537,14 +539,14 @@ function DataManagementCard() {
                 style={{ background: 'var(--nl-danger)', color: '#fff' }}
               >
                 <Trash2 size={14} />
-                Borrar todo, incluidas cuentas
+                {t('settings.dataManagement.eraseAllIncludingAccounts')}
               </button>
             </div>
           </div>
 
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             <span className="text-[11px] text-muted-foreground uppercase tracking-wide">
-              Borrado selectivo
+              {t('settings.dataManagement.selective')}
             </span>
             <div className="flex flex-col gap-1.5">
               {GRANULAR_CATEGORIES.map((category) => (
@@ -554,7 +556,7 @@ function DataManagementCard() {
                     checked={selected.has(category)}
                     onChange={() => toggle(category)}
                   />
-                  {CATEGORY_LABEL[category]}
+                  {categoryLabel(t, category)}
                 </label>
               ))}
             </div>
@@ -565,7 +567,9 @@ function DataManagementCard() {
               className="w-fit flex items-center gap-1.5 rounded px-3.5 py-2 text-[13px] border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-40"
             >
               <Trash2 size={14} />
-              {eraseData.isPending ? 'Borrando...' : `Borrar seleccionado (${selected.size})`}
+              {eraseData.isPending
+                ? t('settings.dataManagement.erasing')
+                : t('settings.dataManagement.eraseSelected', { count: selected.size })}
             </button>
           </div>
 
@@ -574,7 +578,11 @@ function DataManagementCard() {
           )}
           {result && (
             <p className="text-xs" style={{ color: 'var(--nl-accent-ink)' }}>
-              Listo: se borró {result.map((c) => CATEGORY_LABEL[c]).join(', ')}.
+              {t('settings.dataManagement.deleteSummary', {
+                list: new Intl.ListFormat(i18n.language, { style: 'long', type: 'conjunction' }).format(
+                  result.map((c) => categoryLabel(t, c)),
+                ),
+              })}
             </p>
           )}
 
@@ -583,7 +591,7 @@ function DataManagementCard() {
             onClick={() => setOpen(false)}
             className="w-fit text-xs text-muted-foreground hover:text-foreground"
           >
-            Cerrar
+            {t('settings.dataManagement.close')}
           </button>
         </div>
       )}
@@ -592,6 +600,7 @@ function DataManagementCard() {
 }
 
 function DeleteAccountCard() {
+  const { t } = useTranslation('pages')
   const navigate = useNavigate()
   const deleteAccount = useDeleteAccount()
   const [open, setOpen] = useState(false)
@@ -608,10 +617,8 @@ function DeleteAccountCard() {
   }
 
   return (
-    <SettingsCard title="Eliminar cuenta" dataTour="settings:delete-account">
-      <p className="text-xs text-muted-foreground mb-3">
-        Borra el acceso a tu cuenta y cierra todas tus sesiones. No se puede deshacer.
-      </p>
+    <SettingsCard title={t('settings.deleteAccount.title')} dataTour="settings:delete-account">
+      <p className="text-xs text-muted-foreground mb-3">{t('settings.deleteAccount.description')}</p>
       {!open ? (
         <button
           type="button"
@@ -619,13 +626,13 @@ function DeleteAccountCard() {
           className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] border border-destructive/40 text-destructive hover:bg-destructive/10"
         >
           <Trash2 size={14} />
-          Eliminar mi cuenta
+          {t('settings.deleteAccount.trigger')}
         </button>
       ) : (
         <form onSubmit={handleDelete} className="flex flex-col gap-3 max-w-sm">
           <div className="flex flex-col gap-1.5">
             <label className="text-[11px] text-muted-foreground">
-              Confirma tu contraseña (si tu cuenta usa Google, deja esto vacío)
+              {t('settings.deleteAccount.passwordLabel')}
             </label>
             <PasswordInput
               value={password}
@@ -643,7 +650,7 @@ function DeleteAccountCard() {
               className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] border border-border text-muted-foreground hover:text-foreground"
             >
               <X size={14} />
-              Cancelar
+              {t('settings.deleteAccount.cancel')}
             </button>
             <button
               type="submit"
@@ -652,7 +659,7 @@ function DeleteAccountCard() {
               style={{ background: 'var(--nl-danger)', color: '#fff' }}
             >
               <Trash2 size={14} />
-              {deleteAccount.isPending ? 'Eliminando...' : 'Eliminar permanentemente'}
+              {deleteAccount.isPending ? t('settings.deleteAccount.deleting') : t('settings.deleteAccount.confirm')}
             </button>
           </div>
         </form>
@@ -662,15 +669,16 @@ function DeleteAccountCard() {
 }
 
 function SessionCard() {
+  const { t } = useTranslation('pages')
   const navigate = useNavigate()
   const logout = useLogout()
   const confirm = useConfirmStore((s) => s.ask)
 
   async function handleLogout() {
     const ok = await confirm({
-      title: 'Cerrar sesión',
-      message: '¿Seguro que quieres cerrar sesión?',
-      confirmLabel: 'Cerrar sesión',
+      title: t('settings.session.logoutConfirm.title'),
+      message: t('settings.session.logoutConfirm.message'),
+      confirmLabel: t('settings.session.logoutConfirm.confirmLabel'),
       variant: 'danger',
       icon: LogOut,
     })
@@ -680,7 +688,7 @@ function SessionCard() {
   }
 
   return (
-    <SettingsCard title="Sesión">
+    <SettingsCard title={t('settings.session.title')}>
       <button
         type="button"
         disabled={logout.isPending}
@@ -688,68 +696,49 @@ function SessionCard() {
         className="w-full flex items-center justify-center gap-2 rounded-md border border-destructive/40 py-2 text-sm text-destructive hover:bg-destructive/10 disabled:opacity-50"
       >
         <LogOut size={15} strokeWidth={2} />
-        {logout.isPending ? 'Cerrando sesión...' : 'Cerrar sesión'}
+        {logout.isPending ? t('settings.session.loggingOut') : t('settings.session.logout')}
       </button>
     </SettingsCard>
   )
 }
 
 function SettingsHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          Tu perfil y las preferencias de tu cuenta — no configuración de una pantalla en particular, sino
-          de toda la app: cómo te ves, cómo te identificas, y cómo entras.
-        </p>
+      <HelpSection heading={t('settings.help.whatIsThisScreen.heading')}>
+        <p>{t('settings.help.whatIsThisScreen.body')}</p>
       </HelpSection>
-      <HelpSection heading="Foto de perfil">
-        <p>
-          Si entraste con Google, tu foto se importa automáticamente la primera vez. Puedes subir una
-          propia cuando quieras — una vez que subes una manual, un futuro login con Google ya no la
-          reemplaza.
-        </p>
+      <HelpSection heading={t('settings.help.profilePhoto.heading')}>
+        <p>{t('settings.help.profilePhoto.body')}</p>
       </HelpSection>
-      <HelpSection heading="Tema, notificaciones y ciclo de pago">
-        <p>
-          El tema (oscuro/claro) se guarda en tu cuenta, no en este navegador — si entras desde otro
-          dispositivo, se ve igual. El ciclo de pago (semanal/quincenal/mensual) es el que usan Dashboard y
-          Presupuesto para calcular la semana/quincena actual.
-        </p>
+      <HelpSection heading={t('settings.help.themeNotificationsPayCycle.heading')}>
+        <p>{t('settings.help.themeNotificationsPayCycle.body')}</p>
       </HelpSection>
-      <HelpSection heading="Deudas en problemas">
-        <p>
-          Apagado por default a propósito — actívalo solo si de verdad tienes un crédito o deuda vencida
-          que no estás pagando. Habilita una sección aparte en Deudas y le da contexto al Asesor IA para
-          que te ayude a analizar cómo salir de ella.
-        </p>
+      <HelpSection heading={t('settings.help.debtTrouble.heading')}>
+        <p>{t('settings.help.debtTrouble.body')}</p>
       </HelpSection>
-      <HelpSection heading="Cuenta de Google">
-        <p>
-          Si vinculaste Google, aquí puedes desvincularla — pero solo si tu cuenta también tiene
-          contraseña; de lo contrario te quedarías sin forma de entrar.
-        </p>
+      <HelpSection heading={t('settings.help.googleAccount.heading')}>
+        <p>{t('settings.help.googleAccount.body')}</p>
       </HelpSection>
-      <HelpSection heading="Borrar datos">
-        <p>
-          Para empezar de cero sin perder tu cuenta: dos botones rápidos ("todo excepto cuentas" o
-          "absolutamente todo") y una lista para borrar solo categorías específicas — por ejemplo, solo
-          transacciones, o solo el historial del Asesor IA. Borrar cuentas bancarias también borra tus
-          transacciones y recurrentes, porque dependen de que la cuenta exista.
-        </p>
+      <HelpSection heading={t('settings.help.eraseData.heading')}>
+        <p>{t('settings.help.eraseData.body')}</p>
       </HelpSection>
-      <HelpTip>
-        Eliminar tu cuenta es permanente: cierra todas tus sesiones y desactiva el acceso. "Borrar datos"
-        es distinto — tu login se queda intacto, solo se borra lo que elijas.
-      </HelpTip>
+      <HelpTip>{t('settings.help.tip')}</HelpTip>
     </>
   )
 }
 
 export function Settings() {
+  const { t } = useTranslation('pages')
   return (
     <div>
-      <ViewHeader icon={<SettingsIcon />} title="Configuración" help={<SettingsHelp />} tourKey="settings" />
+      <ViewHeader
+        icon={<SettingsIcon />}
+        title={t('settings.title')}
+        help={<SettingsHelp />}
+        tourKey="settings"
+      />
       <div>
         {/* Each column deliberately pairs cards of similar height (Profile
             is the tallest card of all, that's why it goes alone with
@@ -769,7 +758,7 @@ export function Settings() {
 
         <div className="mt-8">
           <div className="text-[11px] tracking-wide text-muted-foreground font-semibold mb-3">
-            FUNCIONES
+            {t('settings.sections.functions')}
           </div>
           <div className="flex flex-col gap-5">
             <DebtTroubleCard />

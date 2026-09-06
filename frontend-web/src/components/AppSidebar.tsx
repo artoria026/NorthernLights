@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { ChangelogButton, ChangelogDialog } from '@/components/ChangelogButton'
 import { useLogout, useSyncedTheme } from '@/hooks/useAuth'
@@ -32,17 +33,19 @@ import pkg from '../../package.json'
 
 // Icon set "A -- Direct/concrete" (see navbar-and-font-proposals.html):
 // prioritizes the most literal metaphor for each action over a generic icon.
+// labelKey (not label) so this stays translatable even though the array
+// itself is built once, outside the component (t() needs a render context).
 const PRINCIPAL_ITEMS = [
-  { to: '/', end: true, icon: Home, label: 'Inicio' },
-  { to: '/accounts', end: false, icon: Building2, label: 'Cuentas' },
-  { to: '/transactions', end: false, icon: ArrowLeftRight, label: 'Transacciones' },
-  { to: '/budget', end: false, icon: PiggyBank, label: 'Presupuesto' },
+  { to: '/', end: true, icon: Home, labelKey: 'appSidebar.nav.home' },
+  { to: '/accounts', end: false, icon: Building2, labelKey: 'appSidebar.nav.accounts' },
+  { to: '/transactions', end: false, icon: ArrowLeftRight, labelKey: 'appSidebar.nav.transactions' },
+  { to: '/budget', end: false, icon: PiggyBank, labelKey: 'appSidebar.nav.budget' },
 ]
 
 const COMPROMISOS_ITEMS = [
-  { to: '/debts', end: false, icon: Coins, label: 'Deudas' },
-  { to: '/recurring', end: false, icon: RefreshCw, label: 'Recurrentes' },
-  { to: '/subscriptions', end: false, icon: Repeat, label: 'Suscripciones' },
+  { to: '/debts', end: false, icon: Coins, labelKey: 'appSidebar.nav.debts' },
+  { to: '/recurring', end: false, icon: RefreshCw, labelKey: 'appSidebar.nav.recurring' },
+  { to: '/subscriptions', end: false, icon: Repeat, labelKey: 'appSidebar.nav.subscriptions' },
 ]
 
 function navItemClass({ isActive }: { isActive: boolean }) {
@@ -103,6 +106,7 @@ function initials(name: string | undefined) {
 }
 
 export function AppSidebar() {
+  const { t } = useTranslation('common')
   const user = useAuthStore((s) => s.user)
   const { mode, setTheme } = useSyncedTheme()
   const { data: unreadCount } = useUnreadCount()
@@ -113,9 +117,9 @@ export function AppSidebar() {
 
   async function handleLogout() {
     const ok = await confirm({
-      title: 'Cerrar sesión',
-      message: '¿Seguro que quieres cerrar sesión?',
-      confirmLabel: 'Cerrar sesión',
+      title: t('appSidebar.logoutConfirm.title'),
+      message: t('appSidebar.logoutConfirm.message'),
+      confirmLabel: t('appSidebar.logoutConfirm.confirmLabel'),
       variant: 'danger',
       icon: LogOut,
     })
@@ -154,7 +158,7 @@ export function AppSidebar() {
           type="button"
           onClick={() => setMobileOpen(true)}
           className="group p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-          aria-label="Abrir menú"
+          aria-label={t('appSidebar.aria.openMenu')}
         >
           <Menu size={20} strokeWidth={1.8} className="transition-transform duration-200 group-hover:scale-110" />
         </button>
@@ -170,7 +174,7 @@ export function AppSidebar() {
             type="button"
             onClick={() => navigate('/notifications')}
             className="group relative p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-            aria-label="Notificaciones"
+            aria-label={t('appSidebar.aria.notifications')}
           >
             <Bell
               size={18}
@@ -213,7 +217,7 @@ export function AppSidebar() {
           <div className="flex items-center gap-0.5">
           <button
             type="button"
-            title={mode === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            title={mode === 'dark' ? t('appSidebar.theme.toLight') : t('appSidebar.theme.toDark')}
             onClick={() => setTheme(mode === 'dark' ? 'light' : 'dark')}
             className="group p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
           >
@@ -226,7 +230,7 @@ export function AppSidebar() {
           <ChangelogButton />
           <button
             type="button"
-            title="Notificaciones"
+            title={t('appSidebar.aria.notifications')}
             onClick={() => navigate('/notifications')}
             className="group relative p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
           >
@@ -248,7 +252,7 @@ export function AppSidebar() {
             type="button"
             onClick={() => setMobileOpen(false)}
             className="group lg:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
-            aria-label="Cerrar menú"
+            aria-label={t('appSidebar.aria.closeMenu')}
           >
             <X size={16} strokeWidth={1.8} className="transition-transform duration-200 group-hover:rotate-90" />
           </button>
@@ -256,21 +260,21 @@ export function AppSidebar() {
       </div>
 
       <nav className="px-2 flex flex-col gap-0.5 mt-3.5">
-        <SectionLabel>Principal</SectionLabel>
+        <SectionLabel>{t('appSidebar.sections.main')}</SectionLabel>
         {/* Inicio first, Asesor IA right after -- it's the app's main
             function, not an extra at the bottom of "Inteligencia" (see
             pulsing dot). */}
         {PRINCIPAL_ITEMS.slice(0, 1).map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className={navItemClass}>
             <item.icon size={17} strokeWidth={2} />
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </NavLink>
         ))}
         <NavLink to="/advisor" className={navItemClass}>
           {({ isActive }) => (
             <>
               <Bot size={17} strokeWidth={2} />
-              <span className="flex-1">Asesor IA</span>
+              <span className="flex-1">{t('appSidebar.nav.advisor')}</span>
               {!isActive && (
                 <span
                   className="w-1.5 h-1.5 rounded-full"
@@ -283,43 +287,43 @@ export function AppSidebar() {
         {PRINCIPAL_ITEMS.slice(1).map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className={navItemClass}>
             <item.icon size={17} strokeWidth={2} />
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </NavLink>
         ))}
 
-        <SectionLabel>Compromisos</SectionLabel>
+        <SectionLabel>{t('appSidebar.sections.commitments')}</SectionLabel>
         {COMPROMISOS_ITEMS.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className={navItemClass}>
             <item.icon size={17} strokeWidth={2} />
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </NavLink>
         ))}
 
-        <SectionLabel>Inteligencia</SectionLabel>
+        <SectionLabel>{t('appSidebar.sections.intelligence')}</SectionLabel>
         <NavLink to="/insights" className={navItemClass}>
           <TrendingUp size={17} strokeWidth={2} />
-          <span>Insights</span>
+          <span>{t('appSidebar.nav.insights')}</span>
         </NavLink>
       </nav>
 
       <div className="px-4 pt-2 flex-1 overflow-y-auto">
-        <CollapsibleGroup label="MÁS" open={moreOpen} onToggle={() => setMoreOpen((v) => !v)}>
+        <CollapsibleGroup label={t('appSidebar.sections.more')} open={moreOpen} onToggle={() => setMoreOpen((v) => !v)}>
           <NavLink to="/categories" className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground py-1.5">
             <Tag size={14} strokeWidth={2} />
-            Categorías
+            {t('appSidebar.nav.categories')}
           </NavLink>
           <NavLink to="/goals" className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground py-1.5">
             <Target size={14} strokeWidth={2} />
-            Metas
+            {t('appSidebar.nav.goals')}
           </NavLink>
         </CollapsibleGroup>
 
-        <CollapsibleGroup label="REPORTES" open={reportsOpen} onToggle={() => setReportsOpen((v) => !v)}>
+        <CollapsibleGroup label={t('appSidebar.sections.reports')} open={reportsOpen} onToggle={() => setReportsOpen((v) => !v)}>
           <NavLink to="/reports?section=networth" className="text-[13px] text-muted-foreground hover:text-foreground py-1.5">
-            Historial de patrimonio
+            {t('appSidebar.reports.netWorthHistory')}
           </NavLink>
           <NavLink to="/reports?flow=expense" className="text-[13px] text-muted-foreground hover:text-foreground py-1.5">
-            Desglose de gastos
+            {t('appSidebar.reports.expenseBreakdown')}
           </NavLink>
         </CollapsibleGroup>
       </div>
@@ -340,14 +344,14 @@ export function AppSidebar() {
               {initials(user?.name)}
             </div>
           )}
-          <span className="text-[13px] flex-1 text-left truncate">{user?.name ?? 'Usuario'}</span>
+          <span className="text-[13px] flex-1 text-left truncate">{user?.name ?? t('appSidebar.fallbackUserName')}</span>
         </NavLink>
-        <NavLink to="/settings" title="Configuración" className="group p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent flex-shrink-0">
+        <NavLink to="/settings" title={t('appSidebar.aria.settings')} className="group p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent flex-shrink-0">
           <Settings size={16} strokeWidth={1.8} className="transition-transform duration-500 group-hover:rotate-90" />
         </NavLink>
         <button
           type="button"
-          title="Cerrar sesión"
+          title={t('appSidebar.aria.logout')}
           onClick={handleLogout}
           className="group p-1.5 rounded-md text-destructive hover:bg-destructive/10 flex-shrink-0"
         >

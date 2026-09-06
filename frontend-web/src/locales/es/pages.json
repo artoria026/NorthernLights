@@ -1,0 +1,1484 @@
+{
+  "auth": {
+    "login": {
+      "valueProps": {
+        "health": {
+          "title": "Salud financiera en un vistazo",
+          "text": "Ingresos, gastos y tendencias mes a mes, sin hojas de cálculo."
+        },
+        "privacy": {
+          "title": "Tus datos, tus reglas",
+          "text": "Cada cuenta y transacción vive aislada por usuario."
+        },
+        "advisor": {
+          "title": "Un asesor con contexto real",
+          "text": "La IA conoce tus finanzas y responde con eso en mente."
+        }
+      },
+      "heroTitle": "Claridad financiera, sin el ruido.",
+      "heroSubtitle": "Cuentas, deudas, presupuesto y un asesor de IA que ya conoce tu historia — todo en un solo lugar.",
+      "welcomeTitle": "Bienvenido de nuevo",
+      "welcomeSubtitle": "Inicia sesión para continuar con tus finanzas.",
+      "emailLabel": "Correo electrónico",
+      "emailPlaceholder": "tu@correo.com",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "••••••••",
+      "showPasswordTitle": "Mostrar contraseña",
+      "hidePasswordTitle": "Ocultar contraseña",
+      "submitPending": "Entrando...",
+      "submitCta": "Entrar",
+      "dividerText": "o continúa con",
+      "googleContinue": "Continuar con Google",
+      "googleComingSoon": "(próximamente)",
+      "googleUnavailableTitle": "Todavía no disponible",
+      "devLoginButton": "Usar cuenta de prueba (solo dev)",
+      "noAccountText": "¿No tienes cuenta?",
+      "registerLink": "Regístrate"
+    },
+    "register": {
+      "valueProps": {
+        "quickStart": {
+          "title": "Arrancá en minutos",
+          "text": "Creá tu cuenta y empezá a cargar movimientos, sin configuración compleja."
+        },
+        "privacy": {
+          "title": "Privado desde el día uno",
+          "text": "Tus cuentas y transacciones quedan aisladas — solo vos accedés a tus datos."
+        },
+        "advisor": {
+          "title": "Un asesor que te acompaña",
+          "text": "Preguntale a la IA por tus gastos apenas cargues tus primeros movimientos."
+        }
+      },
+      "heroTitle": "Tu dinero, por fin ordenado.",
+      "heroSubtitle": "Creá tu cuenta gratis y empezá a ver tus finanzas con claridad desde el primer día.",
+      "title": "Creá tu cuenta",
+      "subtitle": "Empezá a organizar tus finanzas en un solo lugar.",
+      "nameLabel": "Nombre",
+      "namePlaceholder": "Tu nombre",
+      "emailLabel": "Correo electrónico",
+      "emailPlaceholder": "tu@correo.com",
+      "passwordLabel": "Contraseña",
+      "passwordPlaceholder": "••••••••",
+      "showPasswordTitle": "Mostrar contraseña",
+      "hidePasswordTitle": "Ocultar contraseña",
+      "acceptDisclaimerPrefix": "Acepto el",
+      "privacyNotice": "Aviso de Privacidad",
+      "submitPending": "Creando...",
+      "submitCta": "Crear cuenta",
+      "haveAccountText": "¿Ya tienes cuenta?",
+      "loginLink": "Inicia sesión"
+    },
+    "layout": {
+      "featureSlides": {
+        "financialHealth": {
+          "title": "Tu salud financiera, mes a mes",
+          "subtitle": "Ingresos, gastos y patrimonio en una sola vista, siempre actualizada."
+        },
+        "budget": {
+          "title": "Presupuesto por categoría, sin sorpresas",
+          "subtitle": "Compará lo planeado contra lo que gastaste de verdad, categoría por categoría.",
+          "categories": {
+            "food": "Comida",
+            "transport": "Transporte",
+            "leisure": "Ocio",
+            "utilities": "Servicios"
+          }
+        },
+        "debts": {
+          "title": "Tus deudas, bajo control",
+          "subtitle": "Mira cuánto ya pagaste de cada una, de un vistazo.",
+          "paidLabel": "Pagado"
+        }
+      },
+      "slideAriaLabel": "Ver pantalla {{current}} de {{total}}"
+    },
+    "callback": {
+      "errors": {
+        "googleCancelled": "Cancelaste el inicio de sesión con Google.",
+        "invalidState": "La sesión expiró. Intenta de nuevo.",
+        "googleExchangeFailed": "No pudimos conectar con Google. Intenta de nuevo.",
+        "accountDisabled": "Esta cuenta está desactivada.",
+        "serverError": "Ocurrió un error inesperado.",
+        "generic": "Ocurrió un error."
+      },
+      "loadingText": "Iniciando sesión..."
+    }
+  },
+  "dashboard": {
+    "title": "Inicio",
+    "subtitle": "{{greeting}} — aquí tienes el resumen de tus finanzas.",
+    "subtitleWithName": "{{greeting}}, {{name}} — aquí tienes el resumen de tus finanzas.",
+    "greeting": {
+      "morning": "Buenos días",
+      "afternoon": "Buenas tardes",
+      "evening": "Buenas noches"
+    },
+    "upcomingPaymentsCount_one": "{{count}} pago en los próximos 3 días",
+    "upcomingPaymentsCount_other": "{{count}} pagos en los próximos 3 días",
+    "stats": {
+      "liquidity": "Liquidez",
+      "accountsCount_one": "{{count}} cuenta",
+      "accountsCount_other": "{{count}} cuentas",
+      "revolvingDebt": "Deuda revolvente",
+      "avgApr": "TAE promedio {{pct}}%",
+      "noActiveCards": "Sin TDC activas",
+      "monthBudget": "Presupuesto del mes",
+      "weekBudget": "Presupuesto de la semana",
+      "monthIncome": "Ingresos del mes",
+      "monthExpenses": "Gastos del mes"
+    },
+    "recentTransactions": {
+      "heading": "Transacciones recientes",
+      "viewAll": "Ver todas las transacciones →",
+      "columns": {
+        "name": "Nombre",
+        "amount": "Monto",
+        "category": "Categoría",
+        "date": "Fecha"
+      },
+      "empty": "Aún no hay transacciones."
+    },
+    "upcomingPayments": {
+      "heading": "Próximos pagos",
+      "dueDate": "Vence {{date}}",
+      "empty": "No hay pagos próximos."
+    },
+    "accounts": {
+      "heading": "Cuentas",
+      "viewAll": "Ver todas →",
+      "empty": "Sin cuentas."
+    },
+    "activeDebts": {
+      "heading": "Deudas activas",
+      "viewAll": "Ver todas →",
+      "progressOwedToMe": "{{balance}} por cobrar de {{total}}",
+      "progressOwedByMe": "{{balance}} pendiente de {{total}}",
+      "empty": "Sin deudas activas."
+    },
+    "cashflow": {
+      "heading": "Flujo de caja de la semana",
+      "subtitle": "Ingresos vs. gastos, últimos 7 días",
+      "income": "Ingresos",
+      "expenses": "Gastos"
+    },
+    "netWorth": {
+      "heading": "Patrimonio neto",
+      "viewReports": "Ver reportes →",
+      "subtitle": "Al cierre de cada mes con reporte generado",
+      "empty": "Genera reportes de al menos 2 meses (en Reportes) para ver la tendencia aquí."
+    },
+    "monthDelta": {
+      "comparesAtMonthEnd": "Se compara al cerrar el mes",
+      "vsPreviousMonth": "{{pct}}% vs mes anterior"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Un resumen del estado general de tus finanzas: cuánto dinero líquido tienes, cuánto debes en tarjetas, qué tan cerca estás de tu límite de presupuesto y qué pagos se acercan."
+      },
+      "cardsAbove": {
+        "heading": "Las tarjetas de arriba",
+        "body": "<0>Liquidez</0> suma el saldo de tus cuentas tipo efectivo/banco (no tarjetas de crédito). <2>Deuda revolvente</2> es lo que debes en tarjetas de crédito activas, con su TAE promedio. <4>Presupuesto del mes</4> y <6>de la semana</6> muestran qué porcentaje llevas gastado contra lo presupuestado — el color cambia de verde a naranja a rojo según qué tan cerca estás del límite. En cuanto generes el reporte del mes en curso (Reportes → Generar), aparecen dos tarjetas más: <8>Ingresos del mes</8> y <10>Gastos del mes</10>, cada una comparada contra el mes anterior."
+      },
+      "upcomingPayments": {
+        "heading": "Próximos pagos",
+        "body": "Junta tus gastos recurrentes activos (Netflix, renta, etc.) con los pagos de deudas que vencen en los próximos 7 días. Si algo vence en 3 días o menos, aparece como aviso arriba de las tarjetas."
+      },
+      "netWorthAndDebts": {
+        "heading": "Patrimonio neto y deudas activas",
+        "body": "La línea de patrimonio neto usa tus reportes mensuales generados (Reportes → Generar); si un mes no tiene reporte, no aparece un punto para él. El progreso de cada deuda compara el saldo actual contra el monto original — no distingue capital de intereses, es una referencia visual rápida."
+      },
+      "readOnlyTip": "Esta pantalla es de solo lectura — para registrar movimientos usa Transacciones, y para ver el detalle de cada rubro entra a su página específica (los enlaces \"Ver todas →\" te llevan directo)."
+    },
+    "weekdayShort": [
+      "dom",
+      "lun",
+      "mar",
+      "mié",
+      "jue",
+      "vie",
+      "sáb"
+    ]
+  },
+  "accounts": {
+    "title": "Cuentas",
+    "assets": "ACTIVOS",
+    "liabilities": "PASIVOS",
+    "netWorth": "PATRIMONIO NETO",
+    "loading": "Cargando...",
+    "emptyDetail": "Crea una cuenta para ver su historial aquí.",
+    "noTransactionsMatch": "Ninguna transacción coincide con tus filtros.",
+    "showingCount": "Mostrando {{shown}} de {{total}}",
+    "viewAllInTransactions": "Ver todas en Transacciones →",
+    "kinds": {
+      "checking": {
+        "label": "Cuenta bancaria",
+        "sublabel": "de débito"
+      },
+      "savings": {
+        "label": "Cuenta de ahorro",
+        "sublabel": ""
+      },
+      "cash": {
+        "label": "Efectivo",
+        "sublabel": ""
+      },
+      "credit_card": {
+        "label": "Tarjeta de",
+        "sublabel": "crédito"
+      }
+    },
+    "actions": {
+      "edit": "Editar",
+      "delete": "Eliminar"
+    },
+    "newAccount": {
+      "dialogTitle": "Nueva cuenta",
+      "button": "Agregar cuenta"
+    },
+    "editAccount": {
+      "dialogTitle": "Editar cuenta"
+    },
+    "reconcile": {
+      "title": "Conciliar saldo",
+      "currentBalanceIntro": "Cuenta actual: <strong>{{balance}}</strong>. Escribe lo que de verdad tienes (contado o del estado de cuenta) y el resto se ajusta solo.",
+      "realBalanceLabel": "Saldo real",
+      "noteLabel": "Nota (opcional)",
+      "noteTip": "Con el tiempo estas notas te dicen qué es lo que no estás registrando.",
+      "notePlaceholder": "ej. conté mi cartera y tenía menos, seguro fueron los tacos del viernes",
+      "pendingEntry": "Esto va a crear una entrada de ajuste de <strong>{{amount}}</strong>.",
+      "pendingExit": "Esto va a crear una salida de ajuste de <strong>{{amount}}</strong>.",
+      "noAdjustmentNeeded": "Tu saldo ya coincide, no hace falta ajustar.",
+      "pendingLabel": "Conciliando..."
+    },
+    "payCard": {
+      "button": "Pagar tarjeta",
+      "dialogTitle": "Pagar tarjeta — {{name}}"
+    },
+    "newTransaction": {
+      "button": "Nueva transacción"
+    },
+    "search": {
+      "placeholder": "Buscar transacciones"
+    },
+    "segment": {
+      "all": "TODO",
+      "in": "ENTRADA",
+      "out": "SALIDA"
+    },
+    "table": {
+      "date": "Fecha",
+      "description": "Descripción",
+      "category": "Categoría",
+      "charge": "Cargo",
+      "payment": "Abono",
+      "actions": "Acciones"
+    },
+    "installments": {
+      "active_one": "{{count}} compra a meses activa",
+      "active_other": "{{count}} compras a meses activas",
+      "committedThisMonth": "COMPROMETIDO ESTE MES",
+      "perMonth": "{{amount}}/mes"
+    },
+    "msiBadge": "MSI {{paid}}/{{total}}",
+    "tdcCycle": {
+      "billingDay": "DÍA DE CORTE",
+      "paymentLimit": "LÍMITE DE PAGO",
+      "cycleBalance": "SALDO DEL CICLO",
+      "availableCredit": "CRÉDITO DISPONIBLE",
+      "daysUntilDue": "({{days}}d)"
+    },
+    "form": {
+      "accountTypeLabel": "¿Qué tipo de cuenta?",
+      "name": "Nombre",
+      "namePlaceholderCard": "Ej: Stori Mastercard",
+      "namePlaceholderBank": "Ej: BBVA Nómina",
+      "creditLimit": "Límite de crédito",
+      "balanceTodayLabel": "¿Cuánto debes hoy?",
+      "balanceTodayTip": "Lo que debes hoy en esta tarjeta, no el límite. Si no sabes exacto, pon un aproximado.",
+      "balanceTodayLabelSimple": "¿Cuánto tienes hoy?",
+      "interestRateLabel": "Tasa de interés anual (%)",
+      "interestRateTipNew": "El CAT o tasa anual que cobra tu banco. Lo encuentras en tu contrato o app. Ej: 47.5",
+      "interestRateTipEdit": "El CAT o tasa anual que cobra tu banco. Ej: 47.5",
+      "interestRatePlaceholder": "Ej: 47.5",
+      "rateAsPercentSuffix": "= {{rate}}% anual",
+      "rateDecimalWarning": "¿Quisiste decir {{rate}}%?",
+      "billingDayLabel": "¿Qué día te cortan?",
+      "billingDayTip": "El día del mes en que tu banco genera tu estado de cuenta. Ej: si es el 27, escribe 27.",
+      "dueDayLabel": "¿Día límite para pagar?",
+      "dueDayTip": "El día del mes en que vence tu pago para no generar intereses moratorios.",
+      "sameDayWarning": "El día de corte y el día límite de pago son el mismo — revisa que sea correcto.",
+      "balanceNegative": "El saldo no puede ser negativo.",
+      "showMoreDetails": "+ Más detalles (opcional)",
+      "showLessDetails": "− Menos detalles",
+      "last4": "Últimos 4 dígitos",
+      "currency": "Moneda",
+      "color": "Color",
+      "notes": "Notas",
+      "daySelectPlaceholder": "Selecciona...",
+      "submitCreate": "Crear cuenta",
+      "submitSave": "Guardar cambios",
+      "initialBalanceLabelCard": "Saldo inicial (crédito usado)",
+      "initialBalanceLabel": "Saldo inicial",
+      "initialBalanceTipCard": "El crédito que ya tenías usado en esta tarjeta cuando la registraste -- no el límite de crédito. Cambiarlo no toca ninguna transacción, solo desplaza el saldo actual por la misma diferencia.",
+      "initialBalanceTip": "El dinero que ya tenías en esta cuenta cuando la registraste. Cambiarlo no toca ninguna transacción, solo desplaza el saldo actual por la misma diferencia.",
+      "hasTransactionsWarning": "Esta cuenta ya tiene transacciones. Cambiar este valor recalculará el saldo actual (te pediremos confirmar antes de guardar).",
+      "logo": {
+        "label": "Logo (opcional)",
+        "tip": "Es tuyo y bajo tu propio criterio — la app no incluye ni redistribuye logos de bancos.",
+        "change": "Cambiar",
+        "upload": "Subir imagen",
+        "remove": "Quitar",
+        "processError": "No se pudo procesar la imagen."
+      }
+    },
+    "confirmInitialBalance": {
+      "title": "Cambiar saldo inicial",
+      "message": "Esta cuenta ya tiene transacciones registradas. Cambiar el saldo inicial de {{oldBalance}} a {{newBalance}} recalculará el saldo actual de {{currentBalance}} a {{recalculatedBalance}} -- ninguna transacción existente se modifica. ¿Continuar?"
+    },
+    "confirmDeleteAccount": {
+      "title": "Eliminar cuenta",
+      "message": "¿Eliminar la cuenta \"{{name}}\"? Esta acción no se puede deshacer."
+    },
+    "confirmDeleteTransaction": {
+      "title": "Eliminar transacción",
+      "message": "¿Eliminar la transacción \"{{description}}\"? Esta acción no se puede deshacer."
+    },
+    "toast": {
+      "accountAdded": "Cuenta <strong>{{name}}</strong> agregada",
+      "accountUpdated": "Cuenta <strong>{{name}}</strong> actualizada",
+      "adjustmentEntryRegistered": "Entrada de ajuste registrada: {{amount}}",
+      "adjustmentExitRegistered": "Salida de ajuste registrada: {{amount}}"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Tus cuentas reales: bancos, efectivo y tarjetas de crédito. El resumen de arriba (Activos, Pasivos, Patrimonio neto) se calcula sumando el saldo de todas ellas."
+      },
+      "accountTypes": {
+        "heading": "Tipos de cuenta",
+        "body": "Al crear una cuenta eliges entre <strong>bancaria</strong>, <strong>ahorro</strong>, <strong>efectivo</strong> y <strong>tarjeta de crédito</strong>. Las primeras tres son dinero tuyo disponible; la tarjeta es un pasivo (lo que debes) -- no es lo mismo que una Deuda: los préstamos formales o informales viven aparte, en Deudas."
+      },
+      "creditCards": {
+        "heading": "Tarjetas de crédito",
+        "body": "Además del nombre y saldo, una TDC guarda límite de crédito, tasa de interés, día de corte y día límite de pago — esos dos últimos alimentan el ciclo de facturación que ves en el detalle de la cuenta. El botón \"Pagar tarjeta\" (aquí o en Transacciones) registra el pago como una transferencia real desde cualquier otra cuenta tuya. Si compras algo a meses sin intereses, márcalo al registrar el gasto y verás el progreso (\"MSI pagadas/total\") directo en el historial de la tarjeta."
+      },
+      "logo": {
+        "heading": "Logo y personalización",
+        "body": "Puedes subir una foto/logo para identificar la cuenta de un vistazo (se recorta y ajusta sola a un cuadrado) y elegir un color que se usa en gráficas y listas en toda la app."
+      },
+      "transactions": {
+        "heading": "Movimientos de la cuenta",
+        "body": "Al seleccionar una cuenta a la izquierda, ves su historial de movimientos a la derecha, con filtro de Entradas/Salidas y buscador."
+      },
+      "reconcile": {
+        "heading": "Conciliar saldo",
+        "body": "Disponible en cuentas bancarias/de ahorro. Escribes lo que de verdad tienes (contado o del estado de cuenta) y la app registra una transacción de ajuste por la diferencia — a diferencia de editar el \"Saldo inicial\", esto sí queda como un movimiento visible en tu historial."
+      },
+      "tip": "Prestarle dinero a alguien o que te presten no crea una cuenta aquí — vive en Deudas, separado de tus cuentas reales, sin importar cuántas personas involucre."
+    }
+  },
+  "transactions": {
+    "title": "Transacciones",
+    "newTransactionButton": "Nueva transacción",
+    "sharedExpense": "Gasto compartido",
+    "actions": {
+      "edit": "Editar",
+      "delete": "Eliminar"
+    },
+    "confirmDelete": {
+      "title": "Eliminar transacción",
+      "message": "¿Eliminar la transacción \"{{description}}\"? Esta acción no se puede deshacer."
+    },
+    "fields": {
+      "date": "Fecha",
+      "description": "Descripción",
+      "category": "Categoría",
+      "account": "Cuenta",
+      "amount": "Monto",
+      "actions": "Acciones"
+    },
+    "form": {
+      "descriptionPlaceholder": "Cena con amigos",
+      "categoryPlaceholder": "Selecciona una categoría",
+      "payingAccount": "Cuenta que paga el total",
+      "accountPlaceholder": "Selecciona una cuenta",
+      "accountFallback": "la cuenta que paga",
+      "myShare": "Mi parte real",
+      "debtors": "Quién más debe",
+      "debtorNamePlaceholder": "Nombre",
+      "debtorAmountPlaceholder": "Monto",
+      "removeDebtor": "Quitar",
+      "addDebtor": "Agregar deudor",
+      "submit": "Guardar gasto compartido"
+    },
+    "totalCharge": "Cargo total en \"{{account}}\": {{amount}}",
+    "payCard": {
+      "button": "Pagar tarjeta",
+      "title": "Pagar tarjeta",
+      "titleWithName": "Pagar tarjeta — {{name}}",
+      "choose": "Elige la tarjeta a pagar"
+    },
+    "filters": {
+      "search": "Buscar",
+      "allAccounts": "Todas las cuentas",
+      "allTypes": "Todos los tipos",
+      "type": {
+        "all": "TODO",
+        "income": "INGRESO",
+        "expense": "GASTO",
+        "transfer": "TRANSFER"
+      }
+    },
+    "states": {
+      "loading": "Cargando...",
+      "error": "No se pudieron cargar las transacciones.",
+      "empty": "Ninguna transacción coincide con tus filtros."
+    },
+    "pagination": "Mostrando {{from}}–{{to}} de {{total}}",
+    "paginationPrev": "Anterior",
+    "paginationNext": "Siguiente",
+    "help": {
+      "overview": {
+        "heading": "Qué es esta pantalla",
+        "body": "El historial completo de tus movimientos: ingresos, gastos, transferencias y préstamos. Puedes filtrar por cuenta, tipo, fecha o texto, y ver los mismos datos como calendario a la derecha — click en un día filtra la lista automáticamente."
+      },
+      "newTransaction": {
+        "heading": "+ Nueva transacción",
+        "body": "Registra un ingreso, gasto o transferencia entre dos de tus cuentas. Para ingreso/gasto solo eliges cuenta, categoría y monto — la app resuelve sola la contraparte contable, nunca tienes que elegirla. Si el gasto es con una tarjeta de crédito, puedes marcarlo \"¿A meses sin intereses?\" — eso no crea una deuda aparte, solo etiqueta esa compra para ver su progreso en Cuentas."
+      },
+      "payCard": {
+        "heading": "Pagar tarjeta",
+        "body": "Solo aparece si tienes al menos una tarjeta de crédito registrada. Registra una transferencia real desde cualquier otra cuenta tuya hacia la tarjeta — es el mismo botón que hay en el detalle de la cuenta, disponible aquí para no tener que ir a Cuentas primero."
+      },
+      "sharedExpense": {
+        "heading": "Gasto compartido",
+        "body1": "Para cuando pagaste algo que solo parcialmente es tu gasto (ej. una cena grupal). Registras el cargo completo a tu cuenta/tarjeta, cuánto es realmente tuyo, y cuánto le corresponde a cada quien — su parte queda como saldo a favor tuyo en Deudas (\"Me deben\"), no como tu gasto.",
+        "demo": {
+          "creditCard": "TDC",
+          "myExpense": "Mi gasto",
+          "owedToMe": "Me deben"
+        },
+        "body2": "Por tener más de dos movimientos internos, un gasto compartido ya no se puede editar después de creado (solo eliminar) — revisa los montos antes de guardarlo."
+      },
+      "tip": "Prestar dinero directo (sin compra de por medio) o que te presten a ti ya no vive aquí — está en <1>Deudas</1>, junto con todo lo demás que involucra deber dinero en cualquier dirección."
+    }
+  },
+  "settings": {
+    "title": "Configuración",
+    "sections": {
+      "functions": "FUNCIONES"
+    },
+    "profile": {
+      "title": "Perfil",
+      "avatar": {
+        "change": "Cambiar foto",
+        "upload": "Subir foto",
+        "remove": "Quitar",
+        "error": "No se pudo procesar la imagen."
+      },
+      "fullName": "Nombre completo",
+      "email": "Correo electrónico",
+      "saveChanges": "Guardar cambios",
+      "saving": "Guardando...",
+      "currentPassword": "Contraseña actual",
+      "newPassword": "Nueva contraseña",
+      "changePassword": "Cambiar contraseña",
+      "changingPassword": "Actualizando...",
+      "passwordUpdated": "Contraseña actualizada."
+    },
+    "security": {
+      "title": "Seguridad",
+      "twoFactor": "Autenticación de dos factores",
+      "comingSoon": "Próximamente — sesiones activas y 2FA todavía no están implementados."
+    },
+    "preferences": {
+      "title": "Notificaciones y preferencias",
+      "theme": "Tema",
+      "themeOptions": {
+        "dark": "Oscuro",
+        "light": "Claro"
+      },
+      "emailNotifications": {
+        "label": "Notificaciones por correo",
+        "description": "Reportes, alertas de deuda y presupuesto."
+      },
+      "pushNotifications": {
+        "label": "Notificaciones push",
+        "description": "Vencimientos de TDC y pagos próximos."
+      },
+      "payCycle": "Ciclo de pago",
+      "payCycleOptions": {
+        "weekly": "Semanal",
+        "biweekly": "Quincenal",
+        "monthly": "Mensual"
+      },
+      "language": "Idioma"
+    },
+    "debtTrouble": {
+      "title": "Deudas en problemas",
+      "label": "Tengo una deuda con problemas de pago",
+      "description": "Actívalo si tienes un crédito o deuda vencida que no estás pagando. Habilita un registro aparte de esa deuda en Deudas y le pide al asesor de IA que te ayude a analizar cómo pagarla."
+    },
+    "admin": {
+      "title": "Administración",
+      "description": "Tienes permisos de administrador — gestiona usuarios y consulta métricas globales de la app.",
+      "goToPanel": "Ir al panel de administración"
+    },
+    "connectedAccounts": {
+      "title": "Cuentas conectadas",
+      "google": "Google",
+      "unlink": "Desvincular",
+      "notLinked": "No vinculada",
+      "linkHint": "Inicia sesión con Google desde la pantalla de login para vincularla a esta cuenta."
+    },
+    "privacy": {
+      "title": "Privacidad",
+      "viewNotice": "Ver Aviso de Privacidad",
+      "noticeTitle": "Aviso de Privacidad"
+    },
+    "dataManagement": {
+      "title": "Borrar datos",
+      "description": "Borra información de tu cuenta por categorías, sin tener que eliminarla por completo. No se puede deshacer.",
+      "manage": "Gestionar borrado de datos",
+      "passwordLabel": "Confirma tu contraseña (si tu cuenta usa Google, deja esto vacío)",
+      "quickOptions": "Opciones rápidas",
+      "eraseAllExceptAccounts": "Borrar todo, excepto cuentas",
+      "eraseAllIncludingAccounts": "Borrar todo, incluidas cuentas",
+      "selective": "Borrado selectivo",
+      "erasing": "Borrando...",
+      "eraseSelected": "Borrar seleccionado ({{count}})",
+      "close": "Cerrar",
+      "deleteSummary": "Listo: se borró {{list}}.",
+      "categories": {
+        "transactions": "Transacciones",
+        "debts": "Deudas (lo que debes y lo que te deben)",
+        "recurring": "Recurrentes y suscripciones",
+        "budgets": "Presupuestos",
+        "insights": "Insights",
+        "reports": "Reportes generados",
+        "notifications": "Notificaciones",
+        "chat": "Chat del Asesor IA",
+        "categories": "Categorías personalizadas",
+        "accounts": "Cuentas bancarias (también borra transacciones y recurrentes)"
+      }
+    },
+    "deleteAccount": {
+      "title": "Eliminar cuenta",
+      "description": "Borra el acceso a tu cuenta y cierra todas tus sesiones. No se puede deshacer.",
+      "trigger": "Eliminar mi cuenta",
+      "passwordLabel": "Confirma tu contraseña (si tu cuenta usa Google, deja esto vacío)",
+      "cancel": "Cancelar",
+      "deleting": "Eliminando...",
+      "confirm": "Eliminar permanentemente"
+    },
+    "session": {
+      "title": "Sesión",
+      "logoutConfirm": {
+        "title": "Cerrar sesión",
+        "message": "¿Seguro que quieres cerrar sesión?",
+        "confirmLabel": "Cerrar sesión"
+      },
+      "loggingOut": "Cerrando sesión...",
+      "logout": "Cerrar sesión"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Tu perfil y las preferencias de tu cuenta — no configuración de una pantalla en particular, sino de toda la app: cómo te ves, cómo te identificas, y cómo entras."
+      },
+      "profilePhoto": {
+        "heading": "Foto de perfil",
+        "body": "Si entraste con Google, tu foto se importa automáticamente la primera vez. Puedes subir una propia cuando quieras — una vez que subes una manual, un futuro login con Google ya no la reemplaza."
+      },
+      "themeNotificationsPayCycle": {
+        "heading": "Tema, idioma, notificaciones y ciclo de pago",
+        "body": "El tema (oscuro/claro) y el idioma se guardan en tu cuenta, no en este navegador -- si entras desde otro dispositivo, se ven igual. El ciclo de pago (semanal/quincenal/mensual) es el que usan Dashboard y Presupuesto para calcular la semana/quincena actual."
+      },
+      "debtTrouble": {
+        "heading": "Deudas en problemas",
+        "body": "Apagado por default a propósito — actívalo solo si de verdad tienes un crédito o deuda vencida que no estás pagando. Habilita una sección aparte en Deudas y le da contexto al Asesor IA para que te ayude a analizar cómo salir de ella."
+      },
+      "googleAccount": {
+        "heading": "Cuenta de Google",
+        "body": "Si vinculaste Google, aquí puedes desvincularla — pero solo si tu cuenta también tiene contraseña; de lo contrario te quedarías sin forma de entrar."
+      },
+      "eraseData": {
+        "heading": "Borrar datos",
+        "body": "Para empezar de cero sin perder tu cuenta: dos botones rápidos (\"todo excepto cuentas\" o \"absolutamente todo\") y una lista para borrar solo categorías específicas — por ejemplo, solo transacciones, o solo el historial del Asesor IA. Borrar cuentas bancarias también borra tus transacciones y recurrentes, porque dependen de que la cuenta exista."
+      },
+      "tip": "Eliminar tu cuenta es permanente: cierra todas tus sesiones y desactiva el acceso. \"Borrar datos\" es distinto — tu login se queda intacto, solo se borra lo que elijas."
+    }
+  },
+  "debts": {
+    "title": "Deudas",
+    "directions": {
+      "owedByMe": "Yo debo",
+      "owedToMe": "Me deben"
+    },
+    "header": {
+      "unplannedButton": "Deuda sin plan",
+      "unplannedDialogTitle": "Registrar deuda sin plan",
+      "newDebtButton": "Agregar deuda",
+      "newDebtDialogTitle": "Nueva deuda"
+    },
+    "stats": {
+      "totalOwedToMe": "Me deben en total",
+      "unplanned": "Sin plan",
+      "totalOwedByMe": "Debo en total",
+      "monthlyCommitment": "Compromiso / mes"
+    },
+    "troubleModeCta": "¿Tienes una deuda vencida o con problemas de pago? Actívalo en Ajustes.",
+    "unplannedSection": {
+      "heading": "Sin plan de pago",
+      "nameHeader": "Nombre",
+      "creditorHeader": "Acreedor",
+      "amountHeader": "Monto",
+      "actionHeader": "Acción"
+    },
+    "activeSection": {
+      "heading": "Con plan activo",
+      "loading": "Cargando...",
+      "emptyReceivable": "Nadie te debe dinero con un plan activo.",
+      "emptyPayable": "No tienes deudas con plan de pago activo."
+    },
+    "newUnplannedForm": {
+      "whoOwesYouLabel": "¿Quién te debe?",
+      "whoLentLabel": "¿Quién te prestó?",
+      "creditorLabel": "Acreedor (opcional)",
+      "amountLabel": "Monto estimado",
+      "submitButton": "Registrar"
+    },
+    "activateForm": {
+      "originalAmountNote": "Monto original: {{amount}}. Deja \"monto acordado\" vacío si no hubo quita.",
+      "agreedAmountLabel": "Monto acordado (si hubo quita)",
+      "paymentAmountLabel": "Cuota",
+      "frequencyLabel": "Frecuencia",
+      "fundingAccountFromLabel": "¿De cuál cuenta salió el dinero? (opcional)",
+      "fundingAccountToLabel": "¿A cuál cuenta entró el dinero? (opcional)",
+      "fundingAccountPlaceholder": "Ninguna, ya lo traía antes de usar la app",
+      "noneOption": "Ninguna",
+      "startDateLabel": "Fecha de inicio",
+      "pendingLabel": "Activando...",
+      "submitButton": "Activar deuda"
+    },
+    "newDebtForm": {
+      "nameLabelReceivable": "¿A quién le prestas?",
+      "nameLabel": "Nombre",
+      "typeLabel": "Tipo",
+      "totalAmountLabel": "Monto total",
+      "paymentAmountLabel": "Cuota (opcional)",
+      "frequencyLabel": "Frecuencia",
+      "fundingAccountFromLabel": "¿De cuál cuenta sale el dinero? (opcional)",
+      "fundingAccountToLabel": "¿A cuál cuenta entró el dinero? (opcional)",
+      "fundingAccountPlaceholder": "Ninguna, ya lo traía antes de usar la app",
+      "noneOption": "Ninguna",
+      "submitButton": "Crear deuda"
+    },
+    "registerPaymentForm": {
+      "oweYouNote": "Te debe: {{amount}}",
+      "currentBalanceNote": "Saldo actual: {{amount}}",
+      "accountToLabel": "Cuenta a la que entra el dinero",
+      "accountFromLabel": "Cuenta que paga",
+      "accountPlaceholder": "Selecciona una cuenta",
+      "amountLabel": "Monto",
+      "dateLabel": "Fecha",
+      "registerCollectionButton": "Registrar cobro",
+      "registerPaymentButton": "Registrar pago"
+    },
+    "correctBalanceForm": {
+      "oweYouNote": "Te debe: {{amount}}",
+      "currentBalanceNote": "Saldo actual: {{amount}}",
+      "balanceLabel": "Saldo correcto",
+      "submitButton": "Guardar",
+      "confirmTitle": "Corregir saldo",
+      "confirmLabel": "Corregir saldo",
+      "confirmMessage": "Vas a cambiar el saldo de \"{{name}}\" de {{from}} a {{to}} directamente -- no registra ningún pago ni modifica los que ya existen, solo ajusta el número. ¿Continuar?"
+    },
+    "toast": {
+      "balanceUpdated": "Saldo de <0>{{name}}</0> actualizado"
+    },
+    "card": {
+      "receivableBadge": "te debe",
+      "collectedLabel": "Cobrado",
+      "aprLabel": "TAE",
+      "oweYouLabel": "Te debe",
+      "balanceLabel": "Saldo",
+      "completed": "Liquidada",
+      "nextPayment": "Próximo: {{date}}",
+      "correctButton": "Corregir",
+      "correctDialogTitle": "Corregir saldo — {{name}}",
+      "collectButton": "Cobrar",
+      "payButton": "Pagar",
+      "collectionDialogTitle": "Cobro — {{name}}",
+      "paymentDialogTitle": "Pago — {{name}}"
+    },
+    "unplannedRow": {
+      "activateButton": "Activar",
+      "activateDialogTitle": "Activar — {{name}}"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Todo lo que involucra deber dinero, en cualquier dirección: préstamos personales, nómina, crédito de tienda, o algo tan informal como que le prestaste $100 a un amigo o tu abuelo te prestó $100,000. Las tarjetas de crédito no viven aquí -- se pagan y se ve el progreso de tus compras a meses desde Cuentas. La pestaña de arriba cambia entre <0>Yo debo</0> y <1>Me deben</1> — mismo modelo, misma pantalla, solo cambia quién le debe a quién."
+      },
+      "addDebt": {
+        "heading": "Agregar deuda",
+        "body": "Registra una deuda con su plan completo: monto, frecuencia de pago y, opcionalmente, de/a qué cuenta se movió el efectivo cuando se originó. En \"Yo debo\" también eliges el tipo (préstamo personal, informal, etc.) — en \"Me deben\" siempre es un préstamo informal."
+      },
+      "unplannedDebt": {
+        "heading": "Deuda sin plan",
+        "body1": "Para cuando todavía no tienes el detalle claro — solo nombre y monto. Nunca mueve dinero de ninguna cuenta. Cuando ya sepas cómo se va a pagar, la \"activas\" con un plan (y ahí sí puedes decir de qué cuenta salió/entró el efectivo, si aplica).",
+        "body2": "Esta sección está apagada por default — solo aparece si activas \"Tengo una deuda con problemas de pago\" en Ajustes. Al activarla, el asesor de IA también puede ver estas deudas y ayudarte a analizar cómo pagarlas.",
+        "steps": [
+          "Deuda sin plan: guarda el nombre y el monto, sin más detalle.",
+          "Cuando decidas cómo pagarla, la activas con monto/frecuencia/cuenta.",
+          "A partir de ahí se comporta como cualquier otra deuda."
+        ]
+      },
+      "registerPayment": {
+        "heading": "Registrar pago / cobro",
+        "body": "Baja el saldo pendiente y mueve dinero real de/hacia la cuenta que elijas — es una transacción real, no solo un número que cambia. En \"Me deben\" se llama \"Registrar cobro\" (te están pagando), en \"Yo debo\" es \"Registrar pago\"."
+      },
+      "correctBalance": {
+        "heading": "Corregir saldo",
+        "body": "Ajusta el saldo pendiente directamente a lo que de verdad es hoy, sin registrar pago por pago — pensado para cuando estás cargando historial viejo y solo necesitas dejar el número correcto al final. A diferencia de \"Registrar pago\", no mueve dinero de ninguna cuenta ni afecta pagos ya registrados."
+      },
+      "tip": "Prestar o que te presten no es un gasto ni un ingreso — tu patrimonio total no cambia, solo se mueve de una cuenta a otra (o a esta lista, si todavía no tiene cuenta asociada)."
+    }
+  },
+  "budget": {
+    "title": "Presupuesto",
+    "defineLimit": "Definir límite",
+    "limitsDialogTitle": "Límites mensuales por categoría",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "backToToday": "Volver a hoy",
+    "viewFullMonthReport": "Ver reporte completo del mes →",
+    "stats": {
+      "budgeted": "Presupuestado",
+      "spent": "Gastado",
+      "spentPctNote": "{{pct}}% de lo presupuestado",
+      "available": "Disponible",
+      "estimatedIncomeLabel": "Ingreso estimado: ",
+      "committedFixed": "Comprometido fijo",
+      "debtsAndRecurringNote": "Deudas y recurrentes activos"
+    },
+    "categoriesWithLimit_one": "{{count}} categoría con límite",
+    "categoriesWithLimit_other": "{{count}} categorías con límite",
+    "daysLeft_one": "Quedan {{count}} día",
+    "daysLeft_other": "Quedan {{count}} días",
+    "categoriesNearOrOverLimit_one": "{{count}} categoría cerca o por encima del límite",
+    "categoriesNearOrOverLimit_other": "{{count}} categorías cerca o por encima del límite",
+    "breakdownByCategory": "Desglose por categoría",
+    "loading": "Cargando...",
+    "noCategoriesYet": "Define límites por categoría para ver tu progreso aquí.",
+    "expenseDistribution": "Distribución de gasto",
+    "thisMonth": "este mes",
+    "noExpensesThisMonth": "Sin gastos este mes todavía.",
+    "noExpensesThatMonth": "Sin gastos registrados ese mes.",
+    "recurringPayments": "Pagos recurrentes",
+    "noActiveRecurring": "Sin recurrentes activos.",
+    "weeklyView": "Vista semanal",
+    "weekShortLabel": "S{{week}}",
+    "weekRange": "Semana {{week}} · {{from}} — {{to}}",
+    "weeklyViewCurrentMonthOnly": "La vista semanal solo aplica al mes en curso.",
+    "backToTodayToSee": "Volver a hoy para verla",
+    "trendHeading": "Tendencia · % del presupuesto usado por mes",
+    "setLimits": {
+      "description": "Ponle límite mensual a las categorías que quieras controlar. Deja vacías las que no te interesa limitar.",
+      "pastMonthNote": "Esto afecta el mes en curso, no el mes pasado que estás viendo.",
+      "noLimitPlaceholder": "Sin límite",
+      "average3MonthsLabel": "Promedio 3 meses:",
+      "noExpenseCategories": "Sin categorías de gasto.",
+      "saveChanges": "Guardar cambios"
+    },
+    "categoryRow": {
+      "vsLastMonth": "{{pct}}% vs mes anterior",
+      "average3MonthsLabel": "Promedio últimos 3 meses:",
+      "aboveLimit": " (por arriba de tu límite)",
+      "belowLimit": " (por debajo de tu límite)",
+      "useThisAmount": "Usar este monto"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Cuánto planeas gastar por categoría de gasto variable (comida, transporte, etc.) cada mes, contra lo que realmente llevas gastado — separado de tus gastos fijos comprometidos (deudas, recurrentes)."
+      },
+      "settingLimit": {
+        "heading": "Definir límite",
+        "body": "Le pones un tope mensual a una categoría. Si no le has puesto límite a ninguna, no aparece nada en el desglose — es opcional, categoría por categoría."
+      },
+      "limitSuggestion": {
+        "heading": "Sugerencia de límite",
+        "body": "Cuando tu gasto promedio de los últimos 3 meses en una categoría difiere de su límite actual, te lo señala y te deja aplicarlo con un click — sin tener que calcularlo tú."
+      },
+      "available": {
+        "heading": "Disponible",
+        "body": "Ingreso estimado menos comprometido fijo menos gastado. Si se pone en rojo (negativo), ya te pasaste de lo que puedes gastar este mes."
+      },
+      "navigatingPastMonths": {
+        "heading": "Navegar meses pasados",
+        "body": "Usa las flechas junto al mes para revisar cómo te fue en meses anteriores. La vista semanal y la alerta de límite solo aplican al mes en curso — un mes cerrado ya no tiene \"semana actual\"."
+      },
+      "categoryArrow": {
+        "heading": "Flecha por categoría",
+        "body": "Compara el gasto de esta categoría contra el mes anterior. Roja hacia arriba si gastaste más de un 5%, verde hacia abajo si gastaste menos — sin flecha si es prácticamente igual."
+      },
+      "fixedCommittedTip": "\"Comprometido fijo\" son tus deudas y recurrentes activos — dinero que ya sabes que vas a gastar, por eso no compite con el presupuesto variable de arriba."
+    }
+  },
+  "categories": {
+    "title": "Categorías",
+    "newButton": "Nueva categoría",
+    "newIncomeTitle": "Nueva categoría de ingreso",
+    "newExpenseTitle": "Nueva categoría de gasto",
+    "newSubcategoryTitle": "Nueva subcategoría de {{parent}}",
+    "editCategoryTitle": "Editar categoría",
+    "editSubcategoryTitle": "Editar subcategoría",
+    "deleteCategoryTitle": "Eliminar categoría",
+    "deleteSubcategoryTitle": "Eliminar subcategoría",
+    "deactivateCategoryTitle": "Desactivar categoría",
+    "deleteConfirmMessage": "¿Eliminar \"{{name}}\"? Las transacciones que la usan se quedan sin categoría. Esta acción no se puede deshacer.",
+    "deactivateConfirmMessage": "¿Desactivar \"{{name}}\" para ti? Dejará de aparecer en tu lista y tus transacciones que la usan se quedan sin categoría -- podés reactivarla cuando quieras, solo te afecta a ti.",
+    "deleteButton": "Eliminar",
+    "deactivateButton": "Desactivar",
+    "nameLabel": "Nombre",
+    "namePlaceholderIncome": "Ej: Freelance",
+    "namePlaceholderExpense": "Ej: Mascotas",
+    "colorLabel": "Color",
+    "colorSwatchAriaLabel": "Color {{color}}",
+    "customColorTitle": "Elegir cualquier color",
+    "customColorAriaLabel": "Color personalizado",
+    "iconLabel": "Ícono",
+    "iconSearchPlaceholder": "Buscar en las 8 categorías… ej. gasolina, café",
+    "recentlyUsed": "Usados recientemente",
+    "iconCount_one": "{{count}} ícono",
+    "iconCount_other": "{{count}} íconos",
+    "noResults": " — sin resultados",
+    "createSubcategoryButton": "Crear subcategoría",
+    "createIncomeCategoryButton": "Crear categoría de ingreso",
+    "createExpenseCategoryButton": "Crear categoría de gasto",
+    "saveChangesButton": "Guardar cambios",
+    "systemLabel": "Sistema",
+    "deactivateTooltip": "Desactivar para mí",
+    "receivedThisMonth": "Recibido este mes",
+    "spentThisMonth": "Gastado este mes",
+    "subcategoriesButton": "Subcategorías",
+    "subcategoryCount_one": "{{count}} subcategoría",
+    "subcategoryCount_other": "{{count}} subcategorías",
+    "addSubcategoryButton": "Subcategoría",
+    "noSubcategory": "Sin subcategoría",
+    "hiddenSectionTitle": "Categorías desactivadas (solo para ti)",
+    "reactivateButton": "Reactivar",
+    "incomeOption": "Ingresos",
+    "expenseOption": "Gastos",
+    "loading": "Cargando...",
+    "emptyState": "Sin categorías todavía.",
+    "help": {
+      "whatIsThisHeading": "Qué es esta pantalla",
+      "whatIsThisBody": "Las categorías con las que clasificas tus ingresos y gastos. Cada tarjeta muestra cuánto llevas recibido o gastado en esa categoría durante el mes actual.",
+      "systemVsYoursHeading": "Sistema vs. tuyas",
+      "systemVsYoursBody": "Las categorías marcadas <strong>Sistema</strong> vienen predefinidas y no se pueden editar ni eliminar (garantizan que siempre haya dónde clasificar un movimiento), pero sí las podés <strong>desactivar</strong> para ti con el ícono del ojo tachado si no las usas — dejan de aparecer en tu lista y podés reactivarlas cuando quieras desde la sección de abajo; a los demás usuarios no les afecta. Las que tú creas sí se pueden renombrar, cambiar de color/ícono, o eliminar con la \"×\".",
+      "subcategoriesHeading": "Subcategorías",
+      "subcategoriesBody": "Las categorías de gasto de primer nivel pueden tener subcategorías (ej. \"Restaurantes\" y \"Supermercado\" dentro de \"Comida y Bebidas\") — desplegá la categoría para verlas o agregar una nueva. Solo se permite un nivel: una subcategoría no puede tener subcategorías propias. El presupuesto mensual siempre se define en la categoría padre; lo que gastes en sus subcategorías suma ahí automáticamente. La barra debajo del monto de cada tarjeta compara ese gasto directo contra el de sus subcategorías, cada una con su propio color.",
+      "transactionsHeading": "Qué pasa con las transacciones",
+      "transactionsBody": "Al desactivar una categoría de sistema o eliminar una propia (ícono de basura), las transacciones que la tenían asignada se quedan sin categoría (no se borran ni se bloquea la acción) — podés volver a categorizarlas después si hace falta.",
+      "tip": "Nunca eliges una cuenta contable al usar una categoría en una transacción — el sistema la resuelve sola por dentro. Aquí solo administras el catálogo de nombres."
+    }
+  },
+  "recurring": {
+    "title": "Gastos Recurrentes",
+    "header": {
+      "addButton": "Agregar recurrente"
+    },
+    "newItemDialogTitle": "Nuevo gasto recurrente",
+    "form": {
+      "nameLabel": "Nombre",
+      "namePlaceholder": "Ej: Seguro del auto, Dentista",
+      "typeLabel": "Tipo",
+      "utilityHint": "Los servicios esenciales alertan a diario desde el primer día sin confirmar.",
+      "amountLabel": "Monto",
+      "frequencyLabel": "Frecuencia",
+      "categoryLabel": "Categoría",
+      "categoryPlaceholder": "Selecciona categoría",
+      "accountLabelPaying": "Cuenta que paga (banco/TDC)",
+      "accountLabelReceiving": "Cuenta que recibe (banco/TDC)",
+      "accountPlaceholder": "Selecciona cuenta",
+      "nextDateLabel": "Próximo cobro",
+      "urgencyLabel": "Urgencia de alerta"
+    },
+    "newItemForm": {
+      "submitButton": "Crear"
+    },
+    "editItemForm": {
+      "submitButton": "Guardar cambios"
+    },
+    "pendingRow": {
+      "rejectTitle": "Rechazar",
+      "confirmButton": "Confirmar"
+    },
+    "itemActions": {
+      "editTitle": "Editar",
+      "editDialogTitle": "Editar — {{name}}",
+      "pauseTitle": "Pausar",
+      "cancelTitle": "Cancelar",
+      "resumeButton": "Reactivar"
+    },
+    "creditCardCommitments": {
+      "heading": "Lo que ya deben tus tarjetas el próximo corte",
+      "hint": "Mensualidades de compras a meses sin intereses + lo que llevas gastado en el corte abierto de cada tarjeta. Informativo -- no está incluido en \"Comprometido / mes\" de arriba.",
+      "msiLabel": "MSI {{amount}}",
+      "cycleLabel": "corte {{amount}}"
+    },
+    "stats": {
+      "committedMonthly": "Comprometido / mes",
+      "committedMonthlyNote": "Servicios y utilities activos (sin suscripciones ni ingresos)",
+      "recurringIncome": "Ingreso recurrente / mes",
+      "recurringIncomeNote": "Nómina y otros ingresos activos",
+      "pendingLabel": "Sin confirmar",
+      "pendingNoteAction": "Confírmalos abajo",
+      "pendingNoteOk": "Todo al día",
+      "activeItems": "Items activos"
+    },
+    "pendingSection": {
+      "heading": "Pagos pendientes de confirmar",
+      "table": {
+        "concept": "Concepto",
+        "date": "Fecha",
+        "amount": "Monto",
+        "action": "Acción"
+      }
+    },
+    "upcomingSection": {
+      "heading": "Próximos pagos (7 días)",
+      "empty": "Nada programado en los próximos 7 días."
+    },
+    "breakdownSection": {
+      "heading": "Desglose por categoría",
+      "centerSub": "por mes",
+      "otherCategory": "Otro",
+      "empty": "Sin servicios/utilities activos todavía."
+    },
+    "listSection": {
+      "heading": "Servicios e ingresos recurrentes",
+      "filter": {
+        "active": "Activos",
+        "paused": "Pausados",
+        "cancelled": "Cancelados",
+        "all": "Todos"
+      },
+      "loading": "Cargando...",
+      "empty": "No hay recurrentes con este estado.",
+      "table": {
+        "name": "Nombre",
+        "type": "Tipo",
+        "amount": "Monto",
+        "frequency": "Frecuencia",
+        "nextDate": "Próximo cobro",
+        "urgency": "Urgencia",
+        "statusAction": "Estado / Acción"
+      }
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Gastos e ingresos que se repiten en un ciclo fijo — servicios, utilities (luz, agua, internet) e ingresos recurrentes como una nómina. Las suscripciones (Netflix, Spotify, etc.) tienen su propia página dedicada."
+      },
+      "unconfirmed": {
+        "heading": "Sin confirmar",
+        "body": "Cuando se acerca la fecha de un recurrente, el sistema prepara automáticamente el movimiento como borrador — aparece aquí arriba para que lo confirmes (se registra tal cual) o lo rechaces (no pasó, se descarta) antes de que cuente como una transacción real."
+      },
+      "editPauseCancel": {
+        "heading": "Editar / Pausar / Cancelar / Reanudar",
+        "body": "Editar cambia monto, frecuencia, cuenta, categoría, urgencia o próximo cobro sin perder el historial del item — úsalo cuando te suban la renta o cambie el monto de un servicio. Pausar detiene temporalmente la generación automática sin perder la configuración. Cancelar lo da de baja definitivo. Todos se pueden reanudar después."
+      },
+      "upcomingAndBreakdown": {
+        "heading": "Próximos pagos y desglose por categoría",
+        "body": "\"Próximos pagos\" son los que caen en los siguientes 7 días, para planear tu quincena. El desglose por categoría reparte el \"Comprometido / mes\" (mismo total, mismo alcance: sin suscripciones ni ingresos) para ver en qué se va ese dinero."
+      },
+      "cardDebts": {
+        "heading": "Lo que ya deben tus tarjetas",
+        "body": "Solo aparece si tienes al menos una tarjeta de crédito. Suma las mensualidades de tus compras a meses sin intereses activas (fijo, se paga sí o sí) más lo que ya llevas gastado en el corte abierto de cada tarjeta (variable, sigue subiendo hasta que corte). Es solo informativo -- no se suma al \"Comprometido / mes\" de arriba, porque ese gasto ya se contó en el presupuesto del mes en que lo hiciste; sumarlo aquí también lo contaría dos veces."
+      },
+      "tip": "La urgencia de alerta (normal/alta/crítica) controla qué tan insistente es el aviso antes de la fecha de cobro — no afecta el monto ni la fecha en sí. Los \"Servicios esenciales\" son la excepción: alertan a diario desde el primer día sin confirmar, sin importar la urgencia que les pongas."
+    }
+  },
+  "subscriptions": {
+    "title": "Suscripciones",
+    "header": {
+      "addButton": "Nueva suscripción"
+    },
+    "newItemDialogTitle": "Nueva suscripción",
+    "activeSinceThisMonth": "Activa este mes",
+    "activeSince_one": "Activa desde hace {{count}} mes",
+    "activeSince_other": "Activa desde hace {{count}} meses",
+    "stillUsingSuffix": " — ¿la sigues usando?",
+    "form": {
+      "nameLabel": "Nombre",
+      "namePlaceholder": "Ej: Spotify, Netflix, Claude Pro",
+      "amountLabel": "Monto",
+      "frequencyLabel": "Frecuencia de cobro",
+      "monthlyEquivalentNote": "≈ {{amount}} / mes",
+      "categoryLabel": "Categoría",
+      "categoryPlaceholder": "Selecciona categoría",
+      "accountLabel": "Cuenta que paga (banco/TDC)",
+      "accountPlaceholder": "Selecciona cuenta",
+      "nextDateLabel": "Próximo cobro"
+    },
+    "newItemForm": {
+      "submitButton": "Crear suscripción"
+    },
+    "editItemForm": {
+      "submitButton": "Guardar cambios"
+    },
+    "itemActions": {
+      "editTitle": "Editar",
+      "editDialogTitle": "Editar — {{name}}",
+      "pauseTitle": "Pausar",
+      "cancelTitle": "Cancelar",
+      "resumeButton": "Reactivar"
+    },
+    "monthlyEquivalentSuffix": "≈ {{amount}}/mes",
+    "fallbackCategoryName": "Sin categoría",
+    "stats": {
+      "committedMonthly": "Comprometido en suscripciones / mes",
+      "committedMonthlyNote": "≈ {{amount}} / año",
+      "active": "Activas",
+      "paused": "Pausadas",
+      "cancelled": "Canceladas"
+    },
+    "renewalsSection": {
+      "heading": "Próximas renovaciones (7 días)",
+      "empty": "Nada por renovarse en los próximos 7 días."
+    },
+    "listSection": {
+      "heading": "Todas tus suscripciones",
+      "filter": {
+        "active": "Activas",
+        "paused": "Pausadas",
+        "cancelled": "Canceladas",
+        "all": "Todas"
+      },
+      "loading": "Cargando...",
+      "emptyActive": "No tienes suscripciones activas.",
+      "emptyPaused": "No tienes suscripciones pausadas.",
+      "emptyCancelled": "No tienes suscripciones canceladas.",
+      "emptyAll": "No tienes suscripciones.",
+      "table": {
+        "name": "Nombre",
+        "charge": "Cobro",
+        "monthlyEquivalent": "Equivalente mensual",
+        "nextDate": "Próximo cobro",
+        "statusAction": "Estado / Acción"
+      }
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Tus suscripciones (streaming, software, membresías) por separado de otros recurrentes — así puedes ver de un vistazo cuánto te cuestan al mes en total, sin mezclarlas con renta o servicios."
+      },
+      "monthlyCommitment": {
+        "heading": "Comprometido mensual",
+        "body": "Como no todas cobran cada mes (algunas son anuales o quincenales), el total convierte cada frecuencia a su equivalente mensual para que la suma tenga sentido."
+      },
+      "editPauseCancel": {
+        "heading": "Editar / Pausar / Cancelar / Reanudar",
+        "body": "Editar cambia monto, frecuencia, cuenta, categoría o próximo cobro sin perder el historial — úsalo cuando te suban el precio (pasa seguido con streaming y software). Pausar detiene el cobro automático sin perder la configuración. Cancelar es definitivo. Ambas se pueden revertir."
+      },
+      "activeSince": {
+        "heading": "Activa desde hace N meses",
+        "body": "Un recordatorio pasivo de cuánto tiempo lleva una suscripción activa — a partir de 12 meses te lo señala, para que de vez en cuando te preguntes si de verdad la sigues usando."
+      },
+      "upcomingRenewals": {
+        "heading": "Próximas renovaciones",
+        "body": "Las que se cobran en los siguientes 7 días, para que ningún cargo te agarre desprevenido."
+      },
+      "tip": "El monto se registra automáticamente en Transacciones cuando llega la fecha de cobro — te aparece primero como pendiente de confirmar en Recurrentes."
+    }
+  },
+  "insights": {
+    "title": "Insights",
+    "generateInsights": "Generar insights",
+    "generating": "Generando...",
+    "activeInsights": "Insights activos",
+    "totalGenerated": "Generados en total",
+    "loading": "Cargando...",
+    "noActiveInsights": "Sin insights activos. Genera nuevos o pídele al Asesor IA que guarde un plan.",
+    "history": "Historial",
+    "noHistoryYet": "Aún no hay historial.",
+    "pageOf": "Página {{page}} de {{total}}",
+    "previousPage": "Página anterior",
+    "nextPage": "Página siguiente",
+    "nextReview": "Próxima revisión: {{date}}",
+    "reviewedCount": "· revisado {{count}}x",
+    "viewReviewsCount": "Ver revisiones ({{count}})",
+    "markResolved": "Marcar resuelto",
+    "dismiss": "Descartar",
+    "reviewsDialogTitle": "Revisiones — {{title}}",
+    "priority": {
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Baja"
+    },
+    "category": {
+      "spending": "Gasto",
+      "debt": "Deuda",
+      "savings": "Ahorro",
+      "income": "Ingreso",
+      "budget": "Presupuesto",
+      "general": "General"
+    },
+    "trend": {
+      "improved": "Mejoró",
+      "worsened": "Empeoró",
+      "stable": "Estable"
+    },
+    "status": {
+      "active": "Activo",
+      "dismissed": "Descartado",
+      "resolved": "Resuelto"
+    },
+    "metrics": {
+      "netWorth": "Patrimonio neto",
+      "healthScore": "Salud financiera",
+      "committedMonthly": "Comprometido mensual"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Observaciones automáticas sobre tus finanzas basadas en tus datos reales (gasto, presupuesto, deudas) — un patrón detectado, una alerta, una sugerencia. Máximo 10 activos a la vez."
+      },
+      "generateInsights": {
+        "heading": "Generar insights",
+        "body": "Corre el análisis sobre tu situación actual y crea nuevos insights si encuentra algo que valga la pena señalarte. También se crean automáticamente cuando le pides al Asesor IA que guarde un plan."
+      },
+      "markResolvedDismiss": {
+        "heading": "Marcar resuelto / Descartar",
+        "body": "Resuelto es para cuando ya atendiste lo que decía. Descartar es para cuando no te interesa ese en particular. Ambos lo sacan de la lista activa y quedan en el historial de abajo."
+      },
+      "viewReviews": {
+        "heading": "Ver revisiones",
+        "body": "Mientras un insight sigue activo, se vuelve a evaluar solo (con tus datos del momento) en cada fecha de revisión, y la IA dice si tu situación mejoró, empeoró o se mantuvo igual — con una comparación de tus números clave (patrimonio, salud financiera, comprometido mensual) contra los del momento en que se creó."
+      },
+      "tip": "La prioridad (alta/media/baja) refleja qué tan urgente es, no está ligada a ninguna acción automática — es solo para que decidas qué atender primero."
+    }
+  },
+  "reports": {
+    "title": "Reportes",
+    "generating": "Generando...",
+    "generatePreviousMonth": "Generar mes anterior",
+    "generatePreviousYear": "Generar año anterior",
+    "regenerateTooltip": "Regenerar este reporte desde cero",
+    "period": {
+      "month": "Mensual",
+      "year": "Anual"
+    },
+    "flow": {
+      "all": "Todos",
+      "income": "Ingresos",
+      "expense": "Egresos"
+    },
+    "flowBadge": {
+      "income": "Ingreso",
+      "expense": "Gasto",
+      "general": "General"
+    },
+    "stats": {
+      "income": "Ingresos",
+      "expenses": "Gastos",
+      "savingsRate": "Tasa de ahorro",
+      "dti": "DTI",
+      "healthScore": "Salud financiera"
+    },
+    "trendNote": {
+      "improved": "↑ mejoró vs anterior",
+      "worsened": "↓ empeoró vs anterior",
+      "stable": "→ estable"
+    },
+    "confirmRegenerate": {
+      "title": "Regenerar reporte",
+      "confirmLabel": "Regenerar",
+      "monthlyMessage": "Esto va a recalcular el reporte de {{period}} desde cero con las transacciones actuales, incluyendo los puntos de IA. ¿Continuar?",
+      "yearlyMessage": "Esto va a recalcular el reporte de {{period}} desde cero con las transacciones actuales, incluyendo los puntos de IA. También recalcula los 12 meses de ese año. ¿Continuar?"
+    },
+    "emptyState": {
+      "month": "Todavía no hay reportes mensuales generados. Usa el botón \"Generar mes anterior\".",
+      "year": "Todavía no hay reportes anuales. Genera primero los reportes mensuales del año, luego usa \"Generar año anterior\"."
+    },
+    "adjustmentsNote_one": "<strong>{{count}}</strong> ajuste de saldo este período — entradas {{in}}, salidas {{out}}, neto <net>{{net}}</net>.",
+    "adjustmentsNote_other": "<strong>{{count}}</strong> ajustes de saldo este período — entradas {{in}}, salidas {{out}}, neto <net>{{net}}</net>.",
+    "viewInTransactions": "Ver en Transacciones →",
+    "incomeCategoriesHeading": "Categorías de ingreso",
+    "expenseCategoriesHeading": "Categorías de gasto",
+    "noCategoryMovements": "Sin movimientos en esta categoría.",
+    "periodPointsHeading": "Puntos de este periodo",
+    "periodPointsSubtitle": "Generados por IA a partir del resumen ya cerrado.",
+    "noPointsForFilter": "Sin puntos para este filtro.",
+    "netWorthHeading": "Patrimonio neto — histórico",
+    "netWorthEmpty": "Genera reportes de meses anteriores para ver el histórico de patrimonio neto aquí.",
+    "currentMonthNote": "Mes en curso (sin cerrar): ingresos {{income}}, gastos {{expenses}}.",
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Reportes de periodos ya cerrados (mes o año anterior) — a diferencia de Presupuesto/Dashboard, que son en tiempo real, un reporte es una \"foto\" congelada de un periodo que ya terminó, con análisis generado sobre esos números."
+      },
+      "generateMonthYear": {
+        "heading": "Generar mes/año anterior",
+        "body": "Los reportes no se crean solos — los generas cuando quieras verlos. Un reporte anual necesita que ya existan los reportes mensuales de ese año."
+      },
+      "regenerateReport": {
+        "heading": "Regenerar un reporte",
+        "body": "El ícono junto al selector de periodo recalcula desde cero el reporte que estás viendo, con tus transacciones actuales — útil si generaste un reporte antes de cargar historial viejo y quedó casi vacío. En un reporte anual, también recalcula los 12 meses de ese año."
+      },
+      "incomeExpenseAll": {
+        "heading": "Ingresos / Egresos / Todos",
+        "body": "Filtra tanto la categoría destacada como los \"Puntos de este periodo\" (observaciones generadas por IA sobre ese reporte específico)."
+      },
+      "netWorthHistory": {
+        "heading": "Patrimonio neto — histórico",
+        "body": "Junta todos tus reportes mensuales generados para dibujar la línea de tu patrimonio a lo largo del tiempo — entre más meses generes, más completa se ve."
+      },
+      "savingsRateDtiColors": {
+        "heading": "Colores de Tasa de ahorro y DTI",
+        "body": "Tasa de ahorro: rojo si es negativa (gastaste más de lo que ganaste), naranja por debajo del 10%, verde de ahí en adelante. DTI (deuda/ingreso): naranja desde 20%, rojo desde 36% — el umbral clásico de zona de riesgo en finanzas personales."
+      },
+      "tip": "Tasa de ahorro y DTI son indicadores del reporte cerrado, no del mes en curso — para eso usa la nota \"Mes en curso\" al final de la página."
+    }
+  },
+  "advisor": {
+    "title": "Asesor IA",
+    "typingLabel": "El asesor está escribiendo",
+    "header": {
+      "connected": "Conectado",
+      "unlimited": "Ilimitado",
+      "unlimitedTitle": "Cuenta admin: sin limite diario de consultas",
+      "usageTitle": "{{used}} de {{limit}} consultas usadas hoy",
+      "usageToday": "{{remaining}}/{{limit}} hoy",
+      "clearHistoryTitle": "Limpiar historial"
+    },
+    "actionCard": {
+      "confirmTitle": "Confirmar acción",
+      "doneTitle": "Acción registrada",
+      "confirmButton": "Confirmar",
+      "cancelButton": "Cancelar",
+      "inactiveNotice": "Esta propuesta ya no está activa."
+    },
+    "suggestions": {
+      "budget": "¿Cómo va mi presupuesto?",
+      "debtPriority": "¿Qué deuda debería pagar primero?",
+      "savings": "¿Estoy ahorrando lo suficiente?",
+      "summary": "Resume mis finanzas",
+      "logExpense": "Registra un gasto de $200 en comida hoy"
+    },
+    "emptyState": "Pregúntame sobre tu situación financiera, si puedes pagar algo, o pídeme que te arme un plan de ahorro. También puedo registrar cuentas, deudas y movimientos por ti si me los dictas.",
+    "newMessageButton": "Nuevo mensaje",
+    "retryButton": "Reintentar",
+    "insightSaved": "Insight guardado: {{title}}",
+    "viewIt": "Verlo →",
+    "removeAttachment": "Quitar {{name}}",
+    "pdfPasswordPlaceholder": "Contraseña de los PDF (si tienen, misma para todos)",
+    "attachTitle": "Adjuntar estados de cuenta en PDF",
+    "moreOptionsTitle": "Más formas de traer datos (Excel, prompt para otra IA)",
+    "inputPlaceholderWithAttachment": "Algo de contexto (ej. \"son 3 meses de mi TDC Platino\")...",
+    "inputPlaceholder": "Escribe tu pregunta...",
+    "sidebar": {
+      "financialSummary": "RESUMEN FINANCIERO",
+      "netWorth": "Patrimonio neto",
+      "financialHealth": "Salud financiera",
+      "committedMonthly": "Comprometido / mes",
+      "availableThisWeek": "Disponible esta semana",
+      "runway": "Runway",
+      "recentTransactions": "TRANSACCIONES RECIENTES",
+      "viewAll": "Ver todas →",
+      "disclaimer": "El asesor usa este mismo snapshot financiero y varias herramientas para responder con tus datos reales, y puede crear cuentas, deudas, recurrentes o transacciones si le pides que los registre (siempre te va a confirmar antes de guardar algo)."
+    },
+    "dialog": {
+      "title": "Más formas de traer datos",
+      "bulkExcelHeading": "Carga masiva desde Excel",
+      "promptHeading": "Prompt para tu otro chat",
+      "promptDescription": "Cópialo y pégalo en la conversación donde llevabas el registro de tus finanzas (ChatGPT, Gemini, etc.). Esa IA te devolverá un resumen que puedes pegar aquí en el chat.",
+      "copyButton": "Copiar prompt",
+      "copiedButton": "Copiado"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Un chat con IA que ve tu situación financiera real (cuentas, deudas, presupuesto, transacciones recientes) y responde con eso como contexto — no son respuestas genéricas."
+      },
+      "suggestions": {
+        "heading": "Sugerencias",
+        "body": "Los botones de preguntas comunes son solo un punto de partida — puedes preguntar lo que quieras en el cuadro de texto de abajo."
+      },
+      "clearHistory": {
+        "heading": "Limpiar historial",
+        "body": "El ícono de basura borra la conversación guardada — útil para empezar de cero, no afecta tus datos financieros, solo el chat."
+      },
+      "remainingQueriesToday": {
+        "heading": "Consultas restantes hoy",
+        "body": "Hay un límite diario de preguntas para controlar el costo de la IA. El número junto a \"Conectado\" te dice cuántas te quedan — se reinicia cada día."
+      },
+      "historicalData": {
+        "heading": "Traer datos históricos",
+        "body": "El 📎 junto al mensaje adjunta estados de cuenta en PDF (funciona aunque tengan contraseña, escríbela una sola vez para todo el lote) — el asistente registra los cargos normales y las compras a meses (MSI) por su monto total una sola vez, sin duplicar cuando esa misma mensualidad reaparece en los estados siguientes. Marcar una compra como MSI para ver su progreso en Cuentas es un paso aparte que haces tú al revisar la transacción, el asistente no lo hace solo. El \"+\" tiene dos formas más: cargar un Excel prellenado, o copiar un prompt para pegarlo en otra IA (ChatGPT, Gemini) y traer de vuelta un resumen ya estructurado."
+      },
+      "tip": "Si le pides que guarde un plan o recomendación, lo crea como un Insight que puedes ver después en esa sección (te avisamos ahí mismo en el chat cuando pasa). También puede crear cuentas, deudas, recurrentes o registrar transacciones si le dictas los datos o le adjuntas un PDF — siempre te resume qué va a guardar y espera tu confirmación antes de hacerlo. No puede editar ni borrar nada ya existente."
+    }
+  },
+  "admin": {
+    "title": "Administración",
+    "loading": "Cargando...",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "stats": {
+      "totalUsers": "Usuarios totales",
+      "active": "Activos",
+      "newLast7Days": "Nuevos últimos 7 días",
+      "withGoogle": "Con Google",
+      "inactive30d": "Inactivos 30+ días",
+      "accountsCreated": "Cuentas creadas",
+      "transactions": "Transacciones",
+      "debts": "Deudas registradas",
+      "aiQueriesToday": "Consultas IA hoy"
+    },
+    "adoption": {
+      "title": "Adopción de funciones",
+      "withAccount": "Con al menos 1 cuenta",
+      "withDebt": "Con al menos 1 deuda",
+      "withRecurring": "Con al menos 1 recurrente"
+    },
+    "signups": {
+      "title": "Altas de usuarios (14 días)",
+      "empty": "Sin altas nuevas en los últimos 14 días."
+    },
+    "users": {
+      "title": "Usuarios",
+      "searchPlaceholder": "Buscar por nombre o correo...",
+      "emptySearch": "Sin resultados para tu búsqueda.",
+      "empty": "Sin usuarios.",
+      "self": "(tú)",
+      "never": "Nunca",
+      "accountsCount_one": "{{count}} cuenta",
+      "accountsCount_other": "{{count}} cuentas",
+      "mobileSummary": "Desde {{date}} · {{accounts}} · {{txCount}} transacc. · Última conexión: {{lastActive}}",
+      "showingRange": "Mostrando {{start}}–{{end}} de {{total}}",
+      "prev": "Anterior",
+      "next": "Siguiente",
+      "table": {
+        "user": "Usuario",
+        "registered": "Registrado",
+        "lastActive": "Última conexión",
+        "accounts": "Cuentas",
+        "transactions": "Transac.",
+        "health": "Salud",
+        "role": "Rol",
+        "status": "Estado",
+        "action": "Acción"
+      }
+    },
+    "role": {
+      "admin": "Admin",
+      "user": "Usuario"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "actions": {
+      "makeAdmin": "Hacer admin",
+      "removeAdmin": "Quitar admin",
+      "deactivate": "Desactivar",
+      "reactivate": "Reactivar",
+      "cantDeactivateSelf": "No puedes desactivar tu propia cuenta",
+      "resetPassword": "Restablecer contraseña"
+    },
+    "confirmGenerateTempPassword": {
+      "title": "Restablecer contraseña",
+      "message": "¿Generar una contraseña temporal para \"{{name}}\" ({{email}})? Su contraseña actual deja de funcionar de inmediato.",
+      "confirmLabel": "Generar"
+    },
+    "confirmDeactivateUser": {
+      "title": "Desactivar usuario",
+      "message": "¿Desactivar a \"{{name}}\" ({{email}})? No podrá iniciar sesión hasta que lo reactives.",
+      "confirmLabel": "Desactivar"
+    },
+    "confirmGrantAdmin": {
+      "title": "Hacer admin",
+      "message": "¿Dar permisos de admin a \"{{name}}\"?"
+    },
+    "confirmRevokeAdmin": {
+      "title": "Quitar admin",
+      "message": "¿Quitarle permisos de admin a \"{{name}}\"?"
+    },
+    "tempPasswordDialog": {
+      "title": "Contraseña temporal — {{name}}",
+      "description": "Pásasela al usuario ahora por fuera de la app — no se puede volver a ver.",
+      "copy": "Copiar",
+      "copiedToast": "Contraseña copiada",
+      "copyFailedToast": "No se pudo copiar -- selecciónala manualmente"
+    },
+    "feedback": {
+      "title": "Feedback",
+      "newBadge_one": "{{count}} nuevo",
+      "newBadge_other": "{{count}} nuevos",
+      "allStatuses": "Todos los estados",
+      "empty": "Sin feedback todavía.",
+      "note": "Nota: {{note}}",
+      "table": {
+        "type": "Tipo",
+        "user": "Usuario",
+        "message": "Mensaje",
+        "date": "Fecha",
+        "status": "Estado"
+      },
+      "type": {
+        "bug": "Bug",
+        "suggestion": "Sugerencia"
+      },
+      "status": {
+        "new": "Nuevo",
+        "read": "Leído",
+        "considered": "Considerado",
+        "discarded": "Descartado"
+      },
+      "dialog": {
+        "markConsideredTitle": "Marcar como considerado",
+        "markDiscardedTitle": "Marcar como descartado",
+        "notifyMessage": "{{name}} recibirá una notificación de este cambio. Puedes agregar una nota explicando el porqué -- es opcional, pero ayuda a que la respuesta no se sienta seca.",
+        "notePlaceholder": "Ej. Lo agregamos al roadmap de Q4, o: no encaja con el enfoque actual de la app."
+      }
+    }
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "markAllRead": "Marcar todo como leído",
+    "loading": "Cargando...",
+    "empty": "Sin notificaciones.",
+    "totalBadge": "{{total}} en total",
+    "timeAgo": {
+      "now": "ahora",
+      "minutes_one": "hace {{count}} min",
+      "minutes_other": "hace {{count}} min",
+      "hours_one": "hace {{count}} h",
+      "hours_other": "hace {{count}} h",
+      "days_one": "hace {{count}} d",
+      "days_other": "hace {{count}} d"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "Qué es esta pantalla",
+        "body": "Todos los avisos que te ha generado la app: reportes listos, insights nuevos, alertas de presupuesto o deuda, tarjetas por vencer y recordatorios de pagos pendientes."
+      },
+      "readingNotifications": {
+        "heading": "Leer notificaciones",
+        "body": "Un punto de color marca lo que no has leído. Click en una notificación la marca como leída; \"Marcar todo como leído\" lo hace de una vez para todas."
+      },
+      "tip": "El icono y el color de cada notificación indican su tipo (deuda, presupuesto, reporte, insight) — no hace falta abrirla para saber de qué se trata."
+    }
+  },
+  "goals": {
+    "title": "Metas",
+    "comingSoon": "Próximamente — las metas de ahorro (por ejemplo, un enganche o un fondo de emergencia) todavía no son un módulo del backend. Cuando se construya, aquí podrás definir un monto objetivo, una aportación mensual, y ver la proyección de cuándo la alcanzas."
+  }
+}

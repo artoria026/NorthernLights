@@ -1,5 +1,6 @@
 import { CornerDownLeft, Loader2 } from 'lucide-react'
 import type { ButtonHTMLAttributes, ComponentType, ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type IconComp = ComponentType<{ size?: number; className?: string }>
 
@@ -12,6 +13,7 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPod|iPad/.test(n
  * ("Propuesta 2 -- misma fila, extremo opuesto" from
  * atajo-guardar-propuestas.html). */
 export function SubmitShortcutHint() {
+  const { t } = useTranslation('common')
   return (
     <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
       <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 py-[1px] font-sans leading-none">
@@ -21,7 +23,7 @@ export function SubmitShortcutHint() {
       <kbd className="inline-flex items-center rounded border border-border bg-muted px-1 py-[1px] leading-none">
         <CornerDownLeft size={9} />
       </kbd>
-      <span>para guardar</span>
+      <span>{t('dialogActions.submitHint')}</span>
     </p>
   )
 }
@@ -67,6 +69,7 @@ export function DialogPrimaryButton({
   pendingLabel?: string
   children: ReactNode
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
+  const { t } = useTranslation('common')
   return (
     <button
       type={type}
@@ -79,24 +82,25 @@ export function DialogPrimaryButton({
       ) : Icon ? (
         <Icon size={14} />
       ) : null}
-      {pending ? (pendingLabel ?? 'Guardando...') : children}
+      {pending ? (pendingLabel ?? t('dialogActions.savingPending')) : children}
     </button>
   )
 }
 
 export function DialogCancelButton({
-  children = 'Cancelar',
+  children,
   className = '',
   type = 'button',
   ...rest
 }: { children?: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>) {
+  const { t } = useTranslation('common')
   return (
     <button
       type={type}
       className={`inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground ${className}`}
       {...rest}
     >
-      {children}
+      {children ?? t('dialogActions.cancel')}
     </button>
   )
 }

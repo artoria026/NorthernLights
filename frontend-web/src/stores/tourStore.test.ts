@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { TOUR_CONTENT } from '@/lib/tours'
+import { getTourContent } from '@/lib/tours'
 import { useTourStore } from './tourStore'
 
 // start() only activates the tour if at least one selector from
-// TOUR_CONTENT['categories'].steps exists in the DOM -- see comment in
+// getTourContent('categories').steps exists in the DOM -- see comment in
 // tourStore.ts. jsdom starts empty, so every test that needs a
 // "startable" tour first mounts a real element for the first step.
 function mountFirstCategoriesStepTarget() {
-  const selector = TOUR_CONTENT.categories!.steps[0].selector
+  const selector = getTourContent('categories')!.steps[0].selector
   const attr = selector.match(/data-tour="([^"]+)"/)![1]
   const el = document.createElement('div')
   el.setAttribute('data-tour', attr)

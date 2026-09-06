@@ -1,10 +1,10 @@
 import { create } from 'zustand'
-import { TOUR_CONTENT, type ModuleKey, type TourStepContent } from '@/lib/tours'
+import { getTourContent, type ModuleKey, type TourStepContent } from '@/lib/tours'
 
 interface TourState {
   activeModuleKey: ModuleKey | null
   stepIndex: number
-  /** Subset of TOUR_CONTENT[moduleKey].steps whose selector existed in the
+  /** Subset of getTourContent(moduleKey).steps whose selector existed in the
    * DOM at the moment the tour started -- several steps are conditional
    * (banners, charts that only appear with data, etc.), so they're filtered
    * once here instead of TourHost silently aborting the entire tour
@@ -20,7 +20,7 @@ export const useTourStore = create<TourState>((set) => ({
   stepIndex: 0,
   visibleSteps: [],
   start: (moduleKey) => {
-    const steps = TOUR_CONTENT[moduleKey]?.steps ?? []
+    const steps = getTourContent(moduleKey)?.steps ?? []
     const visibleSteps = steps.filter((step) => document.querySelector(step.selector))
     if (visibleSteps.length === 0) return
     set({ activeModuleKey: moduleKey, stepIndex: 0, visibleSteps })

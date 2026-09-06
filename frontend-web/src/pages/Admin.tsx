@@ -20,11 +20,12 @@ import {
   UserX,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { EmptyState, ProgressBar, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { SimpleBars } from '@/lib/charts'
-import { formatShortDate, selectClass } from '@/lib/utils'
+import { activeDateLocale, formatShortDate, selectClass } from '@/lib/utils'
 import {
   type AdminUser,
   useAdminStats,
@@ -45,7 +46,7 @@ import { useConfirmStore } from '@/stores/confirmStore'
 import { useUiStore } from '@/stores/uiStore'
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(value).toLocaleDateString(activeDateLocale(), { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 /** Same thresholds already used by health_score in Advisor.tsx: 70+ is
@@ -103,6 +104,7 @@ function AdoptionRow({ label, count, total }: { label: string; count: number; to
 }
 
 function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
+  const { t } = useTranslation('pages')
   const setActive = useSetUserActive()
   const setRole = useSetUserRole()
   const resetPassword = useResetUserPassword()
@@ -113,9 +115,9 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
 
   async function handleResetPassword() {
     const ok = await confirm({
-      title: 'Restablecer contraseña',
-      message: `¿Generar una contraseña temporal para "${user.name}" (${user.email})? Su contraseña actual deja de funcionar de inmediato.`,
-      confirmLabel: 'Generar',
+      title: t('admin.confirmGenerateTempPassword.title'),
+      message: t('admin.confirmGenerateTempPassword.message', { name: user.name, email: user.email }),
+      confirmLabel: t('admin.confirmGenerateTempPassword.confirmLabel'),
     })
     if (!ok) return
     try {
@@ -130,18 +132,18 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
     if (!tempPassword) return
     try {
       await navigator.clipboard.writeText(tempPassword)
-      pushToast('Contraseña copiada', 'success')
+      pushToast(t('admin.tempPasswordDialog.copiedToast'), 'success')
     } catch {
-      pushToast('No se pudo copiar -- selecciónala manualmente', 'error')
+      pushToast(t('admin.tempPasswordDialog.copyFailedToast'), 'error')
     }
   }
 
   async function toggleActive() {
     if (user.is_active) {
       const ok = await confirm({
-        title: 'Desactivar usuario',
-        message: `¿Desactivar a "${user.name}" (${user.email})? No podrá iniciar sesión hasta que lo reactives.`,
-        confirmLabel: 'Desactivar',
+        title: t('admin.confirmDeactivateUser.title'),
+        message: t('admin.confirmDeactivateUser.message', { name: user.name, email: user.email }),
+        confirmLabel: t('admin.confirmDeactivateUser.confirmLabel'),
         variant: 'danger',
       })
       if (!ok) return
@@ -156,12 +158,12 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
   async function toggleRole() {
     const nextRole = user.role === 'admin' ? 'user' : 'admin'
     const ok = await confirm({
-      title: nextRole === 'admin' ? 'Hacer admin' : 'Quitar admin',
+      title: nextRole === 'admin' ? t('admin.confirmGrantAdmin.title') : t('admin.confirmRevokeAdmin.title'),
       message:
         nextRole === 'admin'
-          ? `¿Dar permisos de admin a "${user.name}"?`
-          : `¿Quitarle permisos de admin a "${user.name}"?`,
-      confirmLabel: 'Confirmar',
+          ? t('admin.confirmGrantAdmin.message', { name: user.name })
+          : t('admin.confirmRevokeAdmin.message', { name: user.name }),
+      confirmLabel: t('admin.confirm'),
       variant: nextRole === 'admin' ? 'default' : 'danger',
     })
     if (!ok) return
@@ -174,12 +176,12 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
 
   const roleBadge = (
     <SoftBadge severity={user.role === 'admin' ? 'violet' : 'blue'}>
-      {user.role === 'admin' ? 'Admin' : 'Usuario'}
+      {user.role === 'admin' ? t('admin.role.admin') : t('admin.role.user')}
     </SoftBadge>
   )
   const statusBadge = (
     <SoftBadge severity={user.is_active ? 'accent' : 'danger'}>
-      {user.is_active ? 'Activo' : 'Inactivo'}
+      {user.is_active ? t('admin.status.active') : t('admin.status.inactive')}
     </SoftBadge>
   )
   const actionButtons = (
@@ -189,7 +191,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
           type="button"
           disabled={busy}
           onClick={toggleRole}
-          title={user.role === 'admin' ? 'Quitar admin' : 'Hacer admin'}
+          title={user.role === 'admin' ? t('admin.actions.removeAdmin') : t('admin.actions.makeAdmin')}
           className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info disabled:opacity-40"
         >
           {user.role === 'admin' ? <ShieldOff size={13} /> : <ShieldCheck size={13} />}
@@ -198,7 +200,13 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
       <button
         type="button"
         disabled={busy || isSelf}
-        title={isSelf ? 'No puedes desactivar tu propia cuenta' : user.is_active ? 'Desactivar' : 'Reactivar'}
+        title={
+          isSelf
+            ? t('admin.actions.cantDeactivateSelf')
+            : user.is_active
+              ? t('admin.actions.deactivate')
+              : t('admin.actions.reactivate')
+        }
         onClick={toggleActive}
         className={`w-7 h-7 rounded-full flex items-center justify-center disabled:opacity-40 ${
           user.is_active
@@ -211,7 +219,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
       <button
         type="button"
         disabled={resetPassword.isPending}
-        title="Restablecer contraseña"
+        title={t('admin.actions.resetPassword')}
         onClick={handleResetPassword}
         className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-warning/10 hover:text-warning disabled:opacity-40"
       >
@@ -226,13 +234,13 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
       <div className="hidden lg:grid grid-cols-[1.1fr_75px_85px_60px_70px_65px_85px_75px_75px] gap-2 items-center py-3 border-t border-border first:border-0 text-[13px]">
         <div className="min-w-0">
           <div className="font-medium truncate">
-            {user.name} {isSelf && <span className="text-muted-foreground">(tú)</span>}
+            {user.name} {isSelf && <span className="text-muted-foreground">{t('admin.users.self')}</span>}
           </div>
           <div className="text-muted-foreground text-[12px] truncate">{user.email}</div>
         </div>
         <span className="text-muted-foreground">{formatDate(user.created_at)}</span>
         <span className="text-muted-foreground">
-          {user.last_active_at ? formatShortDate(user.last_active_at) : 'Nunca'}
+          {user.last_active_at ? formatShortDate(user.last_active_at) : t('admin.users.never')}
         </span>
         <span className="text-right text-muted-foreground">{user.accounts_count}</span>
         <span className="text-right text-muted-foreground">{user.transactions_count}</span>
@@ -248,7 +256,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
       <div className="lg:hidden flex flex-col gap-2 py-3 border-t border-border first:border-0 text-[13px]">
         <div className="min-w-0">
           <div className="font-medium truncate">
-            {user.name} {isSelf && <span className="text-muted-foreground">(tú)</span>}
+            {user.name} {isSelf && <span className="text-muted-foreground">{t('admin.users.self')}</span>}
           </div>
           <div className="text-muted-foreground text-[12px] truncate">{user.email}</div>
         </div>
@@ -258,9 +266,12 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
           <HealthScoreBadge score={user.health_score} />
         </div>
         <div className="text-[12px] text-muted-foreground">
-          Desde {formatDate(user.created_at)} · {user.accounts_count} cuenta
-          {user.accounts_count === 1 ? '' : 's'} · {user.transactions_count} transacc. · Última
-          conexión: {user.last_active_at ? formatShortDate(user.last_active_at) : 'Nunca'}
+          {t('admin.users.mobileSummary', {
+            date: formatDate(user.created_at),
+            accounts: t('admin.users.accountsCount', { count: user.accounts_count }),
+            txCount: user.transactions_count,
+            lastActive: user.last_active_at ? formatShortDate(user.last_active_at) : t('admin.users.never'),
+          })}
         </div>
         <div className="flex items-center gap-1.5 flex-wrap">{actionButtons}</div>
       </div>
@@ -270,11 +281,9 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
       <Dialog open={tempPassword !== null} onOpenChange={(next) => !next && setTempPassword(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Contraseña temporal — {user.name}</DialogTitle>
+            <DialogTitle>{t('admin.tempPasswordDialog.title', { name: user.name })}</DialogTitle>
           </DialogHeader>
-          <p className="text-[12.5px] text-muted-foreground">
-            Pásasela al usuario ahora por fuera de la app — no se puede volver a ver.
-          </p>
+          <p className="text-[12.5px] text-muted-foreground">{t('admin.tempPasswordDialog.description')}</p>
           <div className="flex items-center gap-2">
             <code className="flex-1 rounded-md border border-border px-3 py-2 text-[13px] font-mono select-all">
               {tempPassword}
@@ -284,7 +293,7 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
               onClick={copyTempPassword}
               className="rounded-md border border-border px-3 py-2 text-[12.5px] text-muted-foreground hover:text-foreground"
             >
-              Copiar
+              {t('admin.tempPasswordDialog.copy')}
             </button>
           </div>
         </DialogContent>
@@ -293,11 +302,10 @@ function UserRow({ user, isSelf }: { user: AdminUser; isSelf: boolean }) {
   )
 }
 
-const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
-  new: 'Nuevo',
-  read: 'Leído',
-  considered: 'Considerado',
-  discarded: 'Descartado',
+const FEEDBACK_STATUSES: FeedbackStatus[] = ['new', 'read', 'considered', 'discarded']
+
+function feedbackStatusLabel(t: (key: string) => string, status: FeedbackStatus): string {
+  return t(`admin.feedback.status.${status}`)
 }
 
 const FEEDBACK_STATUS_SEVERITY: Record<FeedbackStatus, 'blue' | 'warning' | 'accent' | 'danger'> = {
@@ -314,6 +322,7 @@ const FEEDBACK_STATUS_SEVERITY: Record<FeedbackStatus, 'blue' | 'warning' | 'acc
 const _NOTIFYING_STATUSES: FeedbackStatus[] = ['considered', 'discarded']
 
 function FeedbackRow({ item }: { item: AdminFeedback }) {
+  const { t } = useTranslation('pages')
   const updateStatus = useUpdateFeedbackStatus()
   const pushToast = useUiStore((s) => s.pushToast)
   const TypeIcon = item.type === 'bug' ? Bug : Lightbulb
@@ -343,7 +352,7 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
     <SoftBadge severity={item.type === 'bug' ? 'danger' : 'violet'}>
       <span className="flex items-center gap-1">
         <TypeIcon size={11} />
-        {item.type === 'bug' ? 'Bug' : 'Sugerencia'}
+        {item.type === 'bug' ? t('admin.feedback.type.bug') : t('admin.feedback.type.suggestion')}
       </span>
     </SoftBadge>
   )
@@ -354,12 +363,12 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
       onValueChange={(v) => handleStatusChange((v as FeedbackStatus) ?? item.status)}
     >
       <SelectTrigger className="h-7 text-[12px] w-[140px]">
-        <SelectValue>{(v: FeedbackStatus) => FEEDBACK_STATUS_LABELS[v]}</SelectValue>
+        <SelectValue>{(v: FeedbackStatus) => feedbackStatusLabel(t, v)}</SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {(Object.keys(FEEDBACK_STATUS_LABELS) as FeedbackStatus[]).map((status) => (
+        {FEEDBACK_STATUSES.map((status) => (
           <SelectItem key={status} value={status}>
-            {FEEDBACK_STATUS_LABELS[status]}
+            {feedbackStatusLabel(t, status)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -367,7 +376,7 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
   )
   const noteText = item.admin_note ? (
     <p className="text-[12px] text-muted-foreground italic truncate" title={item.admin_note}>
-      Nota: {item.admin_note}
+      {t('admin.feedback.note', { note: item.admin_note })}
     </p>
   ) : null
 
@@ -395,7 +404,7 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
         <div className="flex items-center gap-1.5 flex-wrap">
           {typeBadge}
           <SoftBadge severity={FEEDBACK_STATUS_SEVERITY[item.status]}>
-            {FEEDBACK_STATUS_LABELS[item.status]}
+            {feedbackStatusLabel(t, item.status)}
           </SoftBadge>
         </div>
         <div className="min-w-0">
@@ -415,17 +424,18 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {pendingStatus === 'considered' ? 'Marcar como considerado' : 'Marcar como descartado'}
+              {pendingStatus === 'considered'
+                ? t('admin.feedback.dialog.markConsideredTitle')
+                : t('admin.feedback.dialog.markDiscardedTitle')}
             </DialogTitle>
           </DialogHeader>
           <p className="text-[13px] text-muted-foreground">
-            {item.user_name} recibirá una notificación de este cambio. Puedes agregar una nota
-            explicando el porqué -- es opcional, pero ayuda a que la respuesta no se sienta seca.
+            {t('admin.feedback.dialog.notifyMessage', { name: item.user_name })}
           </p>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Ej. Lo agregamos al roadmap de Q4, o: no encaja con el enfoque actual de la app."
+            placeholder={t('admin.feedback.dialog.notePlaceholder')}
             rows={3}
             maxLength={2000}
             className={`${selectClass} h-auto resize-none py-2`}
@@ -436,7 +446,7 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
               onClick={() => setPendingStatus(null)}
               className="px-3 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-muted"
             >
-              Cancelar
+              {t('admin.cancel')}
             </button>
             <button
               type="button"
@@ -444,7 +454,7 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
               onClick={() => pendingStatus && applyStatus(pendingStatus, note.trim() || undefined)}
               className="px-3 py-1.5 rounded-md text-[13px] bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
-              Confirmar
+              {t('admin.confirm')}
             </button>
           </div>
         </DialogContent>
@@ -456,6 +466,7 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
 const USERS_PER_PAGE = 20
 
 export function Admin() {
+  const { t } = useTranslation('pages')
   const currentUser = useAuthStore((s) => s.user)
   const { data: stats } = useAdminStats()
   const [page, setPage] = useState(1)
@@ -488,27 +499,37 @@ export function Admin() {
   // AdminLayout.tsx.
   return (
     <div>
-      <ViewHeader icon={<ShieldCheck />} title="Administración" />
+      <ViewHeader icon={<ShieldCheck />} title={t('admin.title')} />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 lg:flex lg:gap-2.5 lg:flex-wrap mb-6">
         <StatCard
           compact
           icon={<Users />}
-          label="Usuarios totales"
+          label={t('admin.stats.totalUsers')}
           value={String(stats?.total_users ?? '—')}
         />
-        <StatCard compact icon={<UserCheck />} label="Activos" value={String(stats?.active_users ?? '—')} />
+        <StatCard
+          compact
+          icon={<UserCheck />}
+          label={t('admin.stats.active')}
+          value={String(stats?.active_users ?? '—')}
+        />
         <StatCard
           compact
           icon={<UserPlus />}
-          label="Nuevos últimos 7 días"
+          label={t('admin.stats.newLast7Days')}
           value={String(stats?.new_users_last_7_days ?? '—')}
         />
-        <StatCard compact icon={<GoogleIcon />} label="Con Google" value={String(stats?.google_users ?? '—')} />
+        <StatCard
+          compact
+          icon={<GoogleIcon />}
+          label={t('admin.stats.withGoogle')}
+          value={String(stats?.google_users ?? '—')}
+        />
         <StatCard
           compact
           icon={<UserX />}
-          label="Inactivos 30+ días"
+          label={t('admin.stats.inactive30d')}
           value={String(stats?.inactive_users_30d ?? '—')}
           valueClassName={
             stats && stats.inactive_users_30d > 0 ? 'text-[color:var(--nl-warning-ink)]' : undefined
@@ -517,42 +538,47 @@ export function Admin() {
         <StatCard
           compact
           icon={<Building2 />}
-          label="Cuentas creadas"
+          label={t('admin.stats.accountsCreated')}
           value={String(stats?.total_accounts ?? '—')}
         />
         <StatCard
           compact
           icon={<ArrowLeftRight />}
-          label="Transacciones"
+          label={t('admin.stats.transactions')}
           value={String(stats?.total_transactions ?? '—')}
         />
         <StatCard
           compact
           icon={<Coins />}
-          label="Deudas registradas"
+          label={t('admin.stats.debts')}
           value={String(stats?.total_debts ?? '—')}
         />
-        <StatCard compact icon={<Bot />} label="Consultas IA hoy" value={String(stats?.ai_queries_today ?? '—')} />
+        <StatCard
+          compact
+          icon={<Bot />}
+          label={t('admin.stats.aiQueriesToday')}
+          value={String(stats?.ai_queries_today ?? '—')}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <div className="bg-card border border-border rounded-md p-5">
           <div className="flex items-center gap-2 text-[15px] font-medium mb-4">
             <Activity size={15} className="text-muted-foreground" />
-            Adopción de funciones
+            {t('admin.adoption.title')}
           </div>
           <AdoptionRow
-            label="Con al menos 1 cuenta"
+            label={t('admin.adoption.withAccount')}
             count={stats?.users_with_accounts ?? 0}
             total={stats?.total_users ?? 0}
           />
           <AdoptionRow
-            label="Con al menos 1 deuda"
+            label={t('admin.adoption.withDebt')}
             count={stats?.users_with_debts ?? 0}
             total={stats?.total_users ?? 0}
           />
           <AdoptionRow
-            label="Con al menos 1 recurrente"
+            label={t('admin.adoption.withRecurring')}
             count={stats?.users_with_recurring ?? 0}
             total={stats?.total_users ?? 0}
           />
@@ -561,10 +587,10 @@ export function Admin() {
         <div className="bg-card border border-border rounded-md p-5">
           <div className="flex items-center gap-2 text-[15px] font-medium mb-4">
             <TrendingUp size={15} className="text-muted-foreground" />
-            Altas de usuarios (14 días)
+            {t('admin.signups.title')}
           </div>
           {stats && stats.signups_last_14_days.every((d) => d.count === 0) ? (
-            <EmptyState>Sin altas nuevas en los últimos 14 días.</EmptyState>
+            <EmptyState>{t('admin.signups.empty')}</EmptyState>
           ) : (
             <SimpleBars
               height={140}
@@ -582,7 +608,7 @@ export function Admin() {
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
           <div className="flex items-center gap-2 text-[15px] font-medium">
             <Users size={15} className="text-muted-foreground" />
-            Usuarios
+            {t('admin.users.title')}
           </div>
           <div className="relative w-full sm:w-[260px]">
             <Search
@@ -592,35 +618,33 @@ export function Admin() {
             <input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Buscar por nombre o correo..."
+              placeholder={t('admin.users.searchPlaceholder')}
               className={`${selectClass} h-9 w-full pl-8`}
             />
           </div>
         </div>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Cargando...</p>
+          <p className="text-sm text-muted-foreground">{t('admin.loading')}</p>
         ) : (users?.items.length ?? 0) === 0 ? (
-          <EmptyState>{search ? 'Sin resultados para tu búsqueda.' : 'Sin usuarios.'}</EmptyState>
+          <EmptyState>{search ? t('admin.users.emptySearch') : t('admin.users.empty')}</EmptyState>
         ) : (
           <>
             <div className="hidden lg:grid grid-cols-[1.1fr_75px_85px_60px_70px_65px_85px_75px_75px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <span>Usuario</span>
-              <span>Registrado</span>
-              <span>Última conexión</span>
-              <span className="text-right">Cuentas</span>
-              <span className="text-right">Transac.</span>
-              <span>Salud</span>
-              <span>Rol</span>
-              <span>Estado</span>
-              <span className="text-right">Acción</span>
+              <span>{t('admin.users.table.user')}</span>
+              <span>{t('admin.users.table.registered')}</span>
+              <span>{t('admin.users.table.lastActive')}</span>
+              <span className="text-right">{t('admin.users.table.accounts')}</span>
+              <span className="text-right">{t('admin.users.table.transactions')}</span>
+              <span>{t('admin.users.table.health')}</span>
+              <span>{t('admin.users.table.role')}</span>
+              <span>{t('admin.users.table.status')}</span>
+              <span className="text-right">{t('admin.users.table.action')}</span>
             </div>
             {users?.items.map((u) => (
               <UserRow key={u.id} user={u} isSelf={u.id === currentUser?.id} />
             ))}
             <div className="flex justify-between items-center mt-3.5 text-xs text-muted-foreground">
-              <span>
-                Mostrando {rangeStart}–{rangeEnd} de {total}
-              </span>
+              <span>{t('admin.users.showingRange', { start: rangeStart, end: rangeEnd, total })}</span>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -629,7 +653,7 @@ export function Admin() {
                   className="flex items-center gap-1 rounded px-3 py-1.5 border border-border disabled:opacity-40"
                 >
                   <ChevronLeft size={13} />
-                  Anterior
+                  {t('admin.users.prev')}
                 </button>
                 <button
                   type="button"
@@ -637,7 +661,7 @@ export function Admin() {
                   onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
                   className="flex items-center gap-1 rounded px-3 py-1.5 border border-border disabled:opacity-40"
                 >
-                  Siguiente
+                  {t('admin.users.next')}
                   <ChevronRight size={13} />
                 </button>
               </div>
@@ -650,9 +674,11 @@ export function Admin() {
         <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
           <div className="flex items-center gap-2 text-[15px] font-medium">
             <MessageSquare size={15} className="text-muted-foreground" />
-            Feedback
+            {t('admin.feedback.title')}
             {!!stats?.feedback_new_count && (
-              <SoftBadge severity="blue">{stats.feedback_new_count} nuevo{stats.feedback_new_count === 1 ? '' : 's'}</SoftBadge>
+              <SoftBadge severity="blue">
+                {t('admin.feedback.newBadge', { count: stats.feedback_new_count })}
+              </SoftBadge>
             )}
           </div>
           <Select
@@ -661,31 +687,33 @@ export function Admin() {
           >
             <SelectTrigger className="h-8 w-[170px]">
               <SelectValue>
-                {(v: FeedbackStatus | 'all') => (v === 'all' ? 'Todos los estados' : FEEDBACK_STATUS_LABELS[v])}
+                {(v: FeedbackStatus | 'all') =>
+                  v === 'all' ? t('admin.feedback.allStatuses') : feedbackStatusLabel(t, v)
+                }
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los estados</SelectItem>
-              {(Object.keys(FEEDBACK_STATUS_LABELS) as FeedbackStatus[]).map((status) => (
+              <SelectItem value="all">{t('admin.feedback.allStatuses')}</SelectItem>
+              {FEEDBACK_STATUSES.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {FEEDBACK_STATUS_LABELS[status]}
+                  {feedbackStatusLabel(t, status)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         {feedbackLoading ? (
-          <p className="text-sm text-muted-foreground">Cargando...</p>
+          <p className="text-sm text-muted-foreground">{t('admin.loading')}</p>
         ) : (feedbackItems?.length ?? 0) === 0 ? (
-          <EmptyState>Sin feedback todavía.</EmptyState>
+          <EmptyState>{t('admin.feedback.empty')}</EmptyState>
         ) : (
           <>
             <div className="hidden lg:grid grid-cols-[100px_1fr_1.4fr_120px_140px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <span>Tipo</span>
-              <span>Usuario</span>
-              <span>Mensaje</span>
-              <span>Fecha</span>
-              <span className="text-right">Estado</span>
+              <span>{t('admin.feedback.table.type')}</span>
+              <span>{t('admin.feedback.table.user')}</span>
+              <span>{t('admin.feedback.table.message')}</span>
+              <span>{t('admin.feedback.table.date')}</span>
+              <span className="text-right">{t('admin.feedback.table.status')}</span>
             </div>
             {feedbackItems?.map((item) => (
               <FeedbackRow key={item.id} item={item} />

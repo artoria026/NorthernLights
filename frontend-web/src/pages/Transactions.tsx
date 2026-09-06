@@ -1,5 +1,6 @@
 import { ArrowLeftRight, Check, ChevronLeft, ChevronRight, CreditCard, Pencil, Plus, Trash2, UserPlus, Users } from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -40,6 +41,7 @@ interface DebtorRow {
 }
 
 function SplitExpenseForm({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const { data: accounts } = useAccounts()
   const { data: categories } = useCategories('expense')
   const { data: receivables } = useDebts('owed_to_me')
@@ -89,34 +91,34 @@ function SplitExpenseForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Fecha</label>
+        <label className="text-xs text-muted-foreground">{t('transactions.fields.date')}</label>
         <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={`${selectClass} h-9 w-full`} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Descripción</label>
+        <label className="text-xs text-muted-foreground">{t('transactions.fields.description')}</label>
         <input
           required
-          placeholder="Cena con amigos"
+          placeholder={t('transactions.form.descriptionPlaceholder')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           className={`${selectClass} h-9 w-full`}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Categoría</label>
+        <label className="text-xs text-muted-foreground">{t('transactions.fields.category')}</label>
         <CategorySelect
           categories={categories}
           value={categoryId}
           onValueChange={setCategoryId}
-          placeholder="Selecciona una categoría"
+          placeholder={t('transactions.form.categoryPlaceholder')}
           triggerClassName="h-9 w-full"
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Cuenta que paga el total</label>
+        <label className="text-xs text-muted-foreground">{t('transactions.form.payingAccount')}</label>
         <Select value={payingAccountId || null} onValueChange={(v) => setPayingAccountId(v ?? '')}>
           <SelectTrigger className="h-9 w-full">
-            <SelectValue placeholder="Selecciona una cuenta">
+            <SelectValue placeholder={t('transactions.form.accountPlaceholder')}>
               {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
@@ -130,7 +132,7 @@ function SplitExpenseForm({ onDone }: { onDone: () => void }) {
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Mi parte real</label>
+        <label className="text-xs text-muted-foreground">{t('transactions.form.myShare')}</label>
         <input
           type="number"
           step="0.01"
@@ -142,13 +144,13 @@ function SplitExpenseForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <label className="text-xs text-muted-foreground">Quién más debe</label>
+        <label className="text-xs text-muted-foreground">{t('transactions.form.debtors')}</label>
         {debtors.map((debtor, index) => (
           <div key={index} className="flex gap-2 items-center">
             <input
               required
               list="split-debtor-names"
-              placeholder="Nombre"
+              placeholder={t('transactions.form.debtorNamePlaceholder')}
               className={`${selectClass} h-9 flex-1`}
               value={debtor.person_name}
               onChange={(e) => updateDebtor(index, { person_name: e.target.value })}
@@ -158,7 +160,7 @@ function SplitExpenseForm({ onDone }: { onDone: () => void }) {
               step="0.01"
               required
               className={`${selectClass} h-9 w-28`}
-              placeholder="Monto"
+              placeholder={t('transactions.form.debtorAmountPlaceholder')}
               value={debtor.amount}
               onChange={(e) => updateDebtor(index, { amount: e.target.value })}
             />
@@ -168,7 +170,7 @@ function SplitExpenseForm({ onDone }: { onDone: () => void }) {
                 onClick={() => removeDebtor(index)}
                 className="rounded px-2.5 py-1.5 text-xs border border-border text-muted-foreground hover:text-foreground"
               >
-                Quitar
+                {t('transactions.form.removeDebtor')}
               </button>
             )}
           </div>
@@ -182,19 +184,21 @@ function SplitExpenseForm({ onDone }: { onDone: () => void }) {
           className="w-fit flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs border border-border text-muted-foreground hover:text-foreground"
         >
           <UserPlus size={13} />
-          Agregar deudor
+          {t('transactions.form.addDebtor')}
         </button>
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Cargo total en "{accounts?.find((a) => a.id === payingAccountId)?.name ?? 'la cuenta que paga'}":{' '}
-        {total.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
+        {t('transactions.totalCharge', {
+          account: accounts?.find((a) => a.id === payingAccountId)?.name ?? t('transactions.form.accountFallback'),
+          amount: total.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' }),
+        })}
       </p>
 
       {createSplit.isError && <p className="text-sm text-destructive">{apiErrorMessage(createSplit.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={createSplit.isPending}>
-          Guardar gasto compartido
+          {t('transactions.form.submit')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -218,6 +222,7 @@ function TransactionRow({
   categoryColorById: Map<string, string>
   onEdit: (tx: Transaction) => void
 }) {
+  const { t } = useTranslation('pages')
   const deleteTransaction = useDeleteTransaction()
   const pushToast = useUiStore((s) => s.pushToast)
   const confirm = useConfirmStore((s) => s.ask)
@@ -225,9 +230,9 @@ function TransactionRow({
 
   async function handleDelete() {
     const ok = await confirm({
-      title: 'Eliminar transacción',
-      message: `¿Eliminar la transacción "${tx.description}"? Esta acción no se puede deshacer.`,
-      confirmLabel: 'Eliminar',
+      title: t('transactions.confirmDelete.title'),
+      message: t('transactions.confirmDelete.message', { description: tx.description }),
+      confirmLabel: t('transactions.actions.delete'),
       variant: 'danger',
     })
     if (!ok) return
@@ -263,7 +268,7 @@ function TransactionRow({
             <button
               type="button"
               onClick={() => onEdit(tx)}
-              title="Editar"
+              title={t('transactions.actions.edit')}
               className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info"
             >
               <Pencil size={13} />
@@ -273,7 +278,7 @@ function TransactionRow({
             type="button"
             onClick={handleDelete}
             disabled={deleteTransaction.isPending}
-            title="Eliminar"
+            title={t('transactions.actions.delete')}
             className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
           >
             <Trash2 size={13} />
@@ -306,7 +311,7 @@ function TransactionRow({
             <button
               type="button"
               onClick={() => onEdit(tx)}
-              title="Editar"
+              title={t('transactions.actions.edit')}
               className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info"
             >
               <Pencil size={13} />
@@ -316,7 +321,7 @@ function TransactionRow({
             type="button"
             onClick={handleDelete}
             disabled={deleteTransaction.isPending}
-            title="Eliminar"
+            title={t('transactions.actions.delete')}
             className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
           >
             <Trash2 size={13} />
@@ -328,58 +333,42 @@ function TransactionRow({
 }
 
 function TransactionsHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          El historial completo de tus movimientos: ingresos, gastos, transferencias y préstamos. Puedes
-          filtrar por cuenta, tipo, fecha o texto, y ver los mismos datos como calendario a la derecha —
-          click en un día filtra la lista automáticamente.
-        </p>
+      <HelpSection heading={t('transactions.help.overview.heading')}>
+        <p>{t('transactions.help.overview.body')}</p>
       </HelpSection>
-      <HelpSection heading="+ Nueva transacción">
-        <p>
-          Registra un ingreso, gasto o transferencia entre dos de tus cuentas. Para ingreso/gasto solo
-          eliges cuenta, categoría y monto — la app resuelve sola la contraparte contable, nunca tienes que
-          elegirla. Si el gasto es con una tarjeta de crédito, puedes marcarlo "¿A meses sin intereses?" —
-          eso no crea una deuda aparte, solo etiqueta esa compra para ver su progreso en Cuentas.
-        </p>
+      <HelpSection heading={t('transactions.help.newTransaction.heading')}>
+        <p>{t('transactions.help.newTransaction.body')}</p>
       </HelpSection>
-      <HelpSection heading="Pagar tarjeta">
-        <p>
-          Solo aparece si tienes al menos una tarjeta de crédito registrada. Registra una transferencia
-          real desde cualquier otra cuenta tuya hacia la tarjeta — es el mismo botón que hay en el detalle
-          de la cuenta, disponible aquí para no tener que ir a Cuentas primero.
-        </p>
+      <HelpSection heading={t('transactions.help.payCard.heading')}>
+        <p>{t('transactions.help.payCard.body')}</p>
       </HelpSection>
-      <HelpSection heading="Gasto compartido">
-        <p>
-          Para cuando pagaste algo que solo parcialmente es tu gasto (ej. una cena grupal). Registras el
-          cargo completo a tu cuenta/tarjeta, cuánto es realmente tuyo, y cuánto le corresponde a cada
-          quien — su parte queda como saldo a favor tuyo en Deudas ("Me deben"), no como tu gasto.
-        </p>
+      <HelpSection heading={t('transactions.help.sharedExpense.heading')}>
+        <p>{t('transactions.help.sharedExpense.body1')}</p>
         <DemoFlow
           items={[
-            { label: 'TDC', sublabel: '−$500', tone: 'neg' },
-            { label: 'Mi gasto', sublabel: '$100', tone: 'warn' },
-            { label: 'Me deben', sublabel: '+$400', tone: 'pos' },
+            { label: t('transactions.help.sharedExpense.demo.creditCard'), sublabel: '−$500', tone: 'neg' },
+            { label: t('transactions.help.sharedExpense.demo.myExpense'), sublabel: '$100', tone: 'warn' },
+            { label: t('transactions.help.sharedExpense.demo.owedToMe'), sublabel: '+$400', tone: 'pos' },
           ]}
         />
-        <p>
-          Por tener más de dos movimientos internos, un gasto compartido ya no se puede editar después de
-          creado (solo eliminar) — revisa los montos antes de guardarlo.
-        </p>
+        <p>{t('transactions.help.sharedExpense.body2')}</p>
       </HelpSection>
       <HelpTip>
-        Prestar dinero directo (sin compra de por medio) o que te presten a ti ya no vive aquí — está en{' '}
-        <strong>Deudas</strong>, junto con todo lo demás que involucra deber dinero en cualquier
-        dirección.
+        <Trans i18nKey="transactions.help.tip" ns="pages">
+          Prestar dinero directo (sin compra de por medio) o que te presten a ti ya no vive aquí — está en{' '}
+          <strong>Deudas</strong>, junto con todo lo demás que involucra deber dinero en cualquier
+          dirección.
+        </Trans>
       </HelpTip>
     </>
   )
 }
 
 export function Transactions() {
+  const { t } = useTranslation('pages')
   const { data, isLoading, isError } = useTransactions({ per_page: 100 })
   const { data: accounts } = useAccounts()
   const { data: allCategories } = useCategories()
@@ -438,7 +427,7 @@ export function Transactions() {
     <div>
       <ViewHeader
         icon={<ArrowLeftRight />}
-        title="Transacciones"
+        title={t('transactions.title')}
         help={<TransactionsHelp />}
         section={HEADER_SECTIONS.diario}
         tourKey="transactions"
@@ -453,13 +442,13 @@ export function Transactions() {
                     className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground"
                   >
                     <Users size={14} />
-                    Gasto compartido
+                    {t('transactions.sharedExpense')}
                   </button>
                 }
               />
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Gasto compartido</DialogTitle>
+                  <DialogTitle>{t('transactions.sharedExpense')}</DialogTitle>
                 </DialogHeader>
                 <SplitExpenseForm onDone={() => setSplitOpen(false)} />
               </DialogContent>
@@ -480,19 +469,23 @@ export function Transactions() {
                       className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground"
                     >
                       <CreditCard size={14} />
-                      Pagar tarjeta
+                      {t('transactions.payCard.button')}
                     </button>
                   }
                 />
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Pagar tarjeta{payingAccount ? ` — ${payingAccount.name}` : ''}</DialogTitle>
+                    <DialogTitle>
+                      {payingAccount
+                        ? t('transactions.payCard.titleWithName', { name: payingAccount.name })
+                        : t('transactions.payCard.title')}
+                    </DialogTitle>
                   </DialogHeader>
                   {payingAccount ? (
                     <PayCreditCardForm account={payingAccount} onDone={() => setPayOpen(false)} />
                   ) : (
                     <div className="flex flex-col gap-2">
-                      <p className="text-sm text-muted-foreground">Elige la tarjeta a pagar</p>
+                      <p className="text-sm text-muted-foreground">{t('transactions.payCard.choose')}</p>
                       {creditCards.map((a) => (
                         <button
                           key={a.id}
@@ -517,7 +510,7 @@ export function Transactions() {
               style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
             >
               <Plus size={14} />
-              Nueva transacción
+              {t('transactions.newTransactionButton')}
             </button>
           </>
         }
@@ -530,7 +523,7 @@ export function Transactions() {
             data-tour="transactions:filters"
           >
             <input
-              placeholder="Buscar"
+              placeholder={t('transactions.filters.search')}
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value)
@@ -547,11 +540,13 @@ export function Transactions() {
             >
               <SelectTrigger className="h-9 w-auto">
                 <SelectValue>
-                  {(v: string) => (v === 'all' ? 'Todas las cuentas' : accounts?.find((a) => a.id === v)?.name)}
+                  {(v: string) =>
+                    v === 'all' ? t('transactions.filters.allAccounts') : accounts?.find((a) => a.id === v)?.name
+                  }
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas las cuentas</SelectItem>
+                <SelectItem value="all">{t('transactions.filters.allAccounts')}</SelectItem>
                 {accounts?.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
                     {a.name}
@@ -567,10 +562,12 @@ export function Transactions() {
               }}
             >
               <SelectTrigger className="h-9 w-auto">
-                <SelectValue>{(v: string) => (v === 'all' ? 'Todos los tipos' : entryTypeLabel(v))}</SelectValue>
+                <SelectValue>
+                  {(v: string) => (v === 'all' ? t('transactions.filters.allTypes') : entryTypeLabel(v))}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los tipos</SelectItem>
+                <SelectItem value="all">{t('transactions.filters.allTypes')}</SelectItem>
                 {categoryOptions.map((c) => (
                   <SelectItem key={c} value={c}>
                     {entryTypeLabel(c)}
@@ -603,10 +600,10 @@ export function Transactions() {
                 resetPage()
               }}
               options={[
-                { value: 'ALL', label: 'TODO' },
-                { value: 'INCOME', label: 'INGRESO' },
-                { value: 'EXPENSE', label: 'GASTO' },
-                { value: 'TRANSFER', label: 'TRANSFER' },
+                { value: 'ALL', label: t('transactions.filters.type.all') },
+                { value: 'INCOME', label: t('transactions.filters.type.income') },
+                { value: 'EXPENSE', label: t('transactions.filters.type.expense') },
+                { value: 'TRANSFER', label: t('transactions.filters.type.transfer') },
               ]}
             />
           </div>
@@ -619,21 +616,21 @@ export function Transactions() {
                 data-tour="transactions:sort"
                 className="text-left hover:text-foreground"
               >
-                Fecha {sortDir === 'asc' ? '▲' : '▼'}
+                {t('transactions.fields.date')} {sortDir === 'asc' ? '▲' : '▼'}
               </button>
-              <span>Descripción</span>
-              <span>Cuenta</span>
-              <span>Categoría</span>
-              <span className="text-right">Monto</span>
-              <span className="text-right">Acciones</span>
+              <span>{t('transactions.fields.description')}</span>
+              <span>{t('transactions.fields.account')}</span>
+              <span>{t('transactions.fields.category')}</span>
+              <span className="text-right">{t('transactions.fields.amount')}</span>
+              <span className="text-right">{t('transactions.fields.actions')}</span>
             </div>
             {isLoading ? (
-              <p className="text-sm text-muted-foreground p-6">Cargando...</p>
+              <p className="text-sm text-muted-foreground p-6">{t('transactions.states.loading')}</p>
             ) : isError ? (
-              <p className="text-sm text-destructive p-6">No se pudieron cargar las transacciones.</p>
+              <p className="text-sm text-destructive p-6">{t('transactions.states.error')}</p>
             ) : pageRows.length === 0 ? (
               <p className="text-center text-[12px] text-muted-foreground py-7">
-                Ninguna transacción coincide con tus filtros.
+                {t('transactions.states.empty')}
               </p>
             ) : (
               pageRows.map((tx) => (
@@ -650,8 +647,11 @@ export function Transactions() {
 
           <div className="flex justify-between items-center mt-3.5 text-xs text-muted-foreground">
             <span>
-              Mostrando {filtered.length === 0 ? 0 : clampedPage * PAGE_SIZE + 1}–
-              {Math.min(filtered.length, clampedPage * PAGE_SIZE + PAGE_SIZE)} de {filtered.length}
+              {t('transactions.pagination', {
+                from: filtered.length === 0 ? 0 : clampedPage * PAGE_SIZE + 1,
+                to: Math.min(filtered.length, clampedPage * PAGE_SIZE + PAGE_SIZE),
+                total: filtered.length,
+              })}
             </span>
             <div className="flex gap-2">
               <button
@@ -661,7 +661,7 @@ export function Transactions() {
                 className="flex items-center gap-1 rounded px-3 py-1.5 border border-border disabled:opacity-40"
               >
                 <ChevronLeft size={13} />
-                Anterior
+                {t('transactions.paginationPrev')}
               </button>
               <button
                 type="button"
@@ -669,7 +669,7 @@ export function Transactions() {
                 onClick={() => setPage((p) => Math.min(maxPage, p + 1))}
                 className="flex items-center gap-1 rounded px-3 py-1.5 border border-border disabled:opacity-40"
               >
-                Siguiente
+                {t('transactions.paginationNext')}
                 <ChevronRight size={13} />
               </button>
             </div>

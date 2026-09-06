@@ -1,14 +1,17 @@
 import { Bug, Check, Lightbulb, Megaphone, Send } from 'lucide-react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useUpdateSettings } from '@/hooks/useAuth'
 import { type FeedbackType, useCreateFeedback } from '@/hooks/useFeedback'
 import { getRecentChangelog, LATEST_CHANGELOG_VERSION } from '@/lib/changelog'
+import { activeDateLocale } from '@/lib/utils'
 import { apiErrorMessage } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useUiStore } from '@/stores/uiStore'
 
 function FeedbackForm() {
+  const { t } = useTranslation('common')
   const [type, setType] = useState<FeedbackType>('bug')
   const [message, setMessage] = useState('')
   const createFeedback = useCreateFeedback()
@@ -21,7 +24,7 @@ function FeedbackForm() {
       await createFeedback.mutateAsync({ type, message: message.trim() })
       setMessage('')
       pushToast(
-        type === 'bug' ? 'Gracias, ya lo reportamos.' : 'Gracias por la idea, la vamos a revisar.',
+        type === 'bug' ? t('changelogButton.feedback.toastBug') : t('changelogButton.feedback.toastFeature'),
         'success',
       )
     } catch (error) {
@@ -32,7 +35,7 @@ function FeedbackForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <p className="text-[12px] font-medium text-muted-foreground">
-        ¿Encontraste un bug o tenés una idea para mejorar la app?
+        {t('changelogButton.feedback.prompt')}
       </p>
       <div className="flex gap-2">
         <button
@@ -46,7 +49,7 @@ function FeedbackForm() {
           }}
         >
           <Bug size={13} />
-          Reportar un bug
+          {t('changelogButton.feedback.tabBug')}
         </button>
         <button
           type="button"
@@ -59,7 +62,7 @@ function FeedbackForm() {
           }}
         >
           <Lightbulb size={13} />
-          Sugerir una función
+          {t('changelogButton.feedback.tabFeature')}
         </button>
       </div>
       <textarea
@@ -70,7 +73,7 @@ function FeedbackForm() {
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         placeholder={
-          type === 'bug' ? 'Contanos qué pasó y en qué pantalla...' : 'Contanos tu idea...'
+          type === 'bug' ? t('changelogButton.feedback.placeholderBug') : t('changelogButton.feedback.placeholderFeature')
         }
         className="w-full rounded-lg border border-border px-3 py-2 text-[13px] outline-none transition-colors resize-none focus:border-[var(--nl-accent)]"
         style={{ background: 'var(--nl-bg-input)' }}
@@ -82,7 +85,7 @@ function FeedbackForm() {
         style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
       >
         <Send size={13} />
-        {createFeedback.isPending ? 'Enviando...' : 'Enviar'}
+        {createFeedback.isPending ? t('changelogButton.feedback.sending') : t('changelogButton.feedback.send')}
       </button>
     </form>
   )
@@ -96,6 +99,7 @@ function FeedbackForm() {
  * would "show up twice" (you'd close one and the other would appear
  * behind it). */
 export function ChangelogButton({ iconSize = 16 }: { iconSize?: number }) {
+  const { t } = useTranslation('common')
   const user = useAuthStore((s) => s.user)
   const setChangelogOpen = useUiStore((s) => s.setChangelogOpen)
   const hasUnseen =
@@ -104,7 +108,7 @@ export function ChangelogButton({ iconSize = 16 }: { iconSize?: number }) {
   return (
     <button
       type="button"
-      title="Novedades"
+      title={t('changelogButton.trigger')}
       onClick={() => setChangelogOpen(true)}
       className="group relative p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent"
     >
@@ -131,6 +135,7 @@ export function ChangelogButton({ iconSize = 16 }: { iconSize?: number }) {
  * marks it as seen via useUpdateSettings, same pattern as the theme: it
  * travels with the account, not stuck to this browser alone. */
 export function ChangelogDialog() {
+  const { t } = useTranslation('common')
   const user = useAuthStore((s) => s.user)
   const updateSettings = useUpdateSettings()
   const hasUnseen =
@@ -157,7 +162,7 @@ export function ChangelogDialog() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="w-[95vw] max-w-[95vw] sm:max-w-[95vw] xl:max-w-[1400px] h-[88vh] max-h-[88vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Novedades</DialogTitle>
+          <DialogTitle>{t('changelogButton.dialogTitle')}</DialogTitle>
         </DialogHeader>
         <div className="grid md:grid-cols-[1.3fr_1fr] gap-6 overflow-y-auto pr-1 flex-1 min-h-0">
           <div className="flex flex-col gap-5">
@@ -165,8 +170,7 @@ export function ChangelogDialog() {
               <div className="flex flex-col items-center justify-center gap-2 text-center py-10">
                 <Megaphone size={28} className="text-muted-foreground/40" />
                 <p className="text-sm text-muted-foreground max-w-xs">
-                  Recién estamos empezando — todavía no hay novedades que mostrar. Vuelve por aquí después
-                  de la próxima actualización.
+                  {t('changelogButton.empty')}
                 </p>
               </div>
             )}
@@ -183,7 +187,7 @@ export function ChangelogDialog() {
                     <span className="text-[15px] font-medium">{entry.title}</span>
                   </div>
                   <span className="text-[11px] text-muted-foreground flex-shrink-0">
-                    {new Date(entry.date).toLocaleDateString('es-MX', {
+                    {new Date(entry.date).toLocaleDateString(activeDateLocale(), {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric',
@@ -214,7 +218,7 @@ export function ChangelogDialog() {
           style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
         >
           <Check size={14} />
-          Entendido
+          {t('changelogButton.acknowledge')}
         </button>
       </DialogContent>
     </Dialog>

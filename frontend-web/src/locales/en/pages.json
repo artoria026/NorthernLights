@@ -1,0 +1,1484 @@
+{
+  "auth": {
+    "login": {
+      "valueProps": {
+        "health": {
+          "title": "Financial health at a glance",
+          "text": "Income, expenses, and trends month over month, no spreadsheets."
+        },
+        "privacy": {
+          "title": "Your data, your rules",
+          "text": "Every account and transaction is isolated per user."
+        },
+        "advisor": {
+          "title": "An advisor with real context",
+          "text": "The AI knows your finances and responds with that in mind."
+        }
+      },
+      "heroTitle": "Financial clarity, without the noise.",
+      "heroSubtitle": "Accounts, debts, budget, and an AI advisor that already knows your story — all in one place.",
+      "welcomeTitle": "Welcome back",
+      "welcomeSubtitle": "Log in to continue managing your finances.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@email.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "••••••••",
+      "showPasswordTitle": "Show password",
+      "hidePasswordTitle": "Hide password",
+      "submitPending": "Signing in...",
+      "submitCta": "Sign in",
+      "dividerText": "or continue with",
+      "googleContinue": "Continue with Google",
+      "googleComingSoon": "(coming soon)",
+      "googleUnavailableTitle": "Not available yet",
+      "devLoginButton": "Use test account (dev only)",
+      "noAccountText": "Don't have an account?",
+      "registerLink": "Sign up"
+    },
+    "register": {
+      "valueProps": {
+        "quickStart": {
+          "title": "Get started in minutes",
+          "text": "Create your account and start logging transactions, no complex setup."
+        },
+        "privacy": {
+          "title": "Private from day one",
+          "text": "Your accounts and transactions stay isolated — only you access your data."
+        },
+        "advisor": {
+          "title": "An advisor by your side",
+          "text": "Ask the AI about your expenses as soon as you log your first transactions."
+        }
+      },
+      "heroTitle": "Your money, finally organized.",
+      "heroSubtitle": "Create your free account and start seeing your finances clearly from day one.",
+      "title": "Create your account",
+      "subtitle": "Start organizing your finances in one place.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Your name",
+      "emailLabel": "Email",
+      "emailPlaceholder": "you@email.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "••••••••",
+      "showPasswordTitle": "Show password",
+      "hidePasswordTitle": "Hide password",
+      "acceptDisclaimerPrefix": "I accept the",
+      "privacyNotice": "Privacy Notice",
+      "submitPending": "Creating...",
+      "submitCta": "Create account",
+      "haveAccountText": "Already have an account?",
+      "loginLink": "Log in"
+    },
+    "layout": {
+      "featureSlides": {
+        "financialHealth": {
+          "title": "Your financial health, month by month",
+          "subtitle": "Income, expenses, and net worth in one always up-to-date view."
+        },
+        "budget": {
+          "title": "Budget by category, no surprises",
+          "subtitle": "Compare what you planned against what you actually spent, category by category.",
+          "categories": {
+            "food": "Food",
+            "transport": "Transport",
+            "leisure": "Leisure",
+            "utilities": "Utilities"
+          }
+        },
+        "debts": {
+          "title": "Your debts, under control",
+          "subtitle": "See how much you've already paid off each one, at a glance.",
+          "paidLabel": "Paid"
+        }
+      },
+      "slideAriaLabel": "View screen {{current}} of {{total}}"
+    },
+    "callback": {
+      "errors": {
+        "googleCancelled": "You cancelled the Google sign-in.",
+        "invalidState": "The session expired. Please try again.",
+        "googleExchangeFailed": "We couldn't connect to Google. Please try again.",
+        "accountDisabled": "This account is disabled.",
+        "serverError": "An unexpected error occurred.",
+        "generic": "An error occurred."
+      },
+      "loadingText": "Signing in..."
+    }
+  },
+  "dashboard": {
+    "title": "Home",
+    "subtitle": "{{greeting}} — here's a summary of your finances.",
+    "subtitleWithName": "{{greeting}}, {{name}} — here's a summary of your finances.",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "upcomingPaymentsCount_one": "{{count}} payment due in the next 3 days",
+    "upcomingPaymentsCount_other": "{{count}} payments due in the next 3 days",
+    "stats": {
+      "liquidity": "Liquidity",
+      "accountsCount_one": "{{count}} account",
+      "accountsCount_other": "{{count}} accounts",
+      "revolvingDebt": "Revolving debt",
+      "avgApr": "Average APR {{pct}}%",
+      "noActiveCards": "No active credit cards",
+      "monthBudget": "Month budget",
+      "weekBudget": "Week budget",
+      "monthIncome": "Month income",
+      "monthExpenses": "Month expenses"
+    },
+    "recentTransactions": {
+      "heading": "Recent transactions",
+      "viewAll": "View all transactions →",
+      "columns": {
+        "name": "Name",
+        "amount": "Amount",
+        "category": "Category",
+        "date": "Date"
+      },
+      "empty": "No transactions yet."
+    },
+    "upcomingPayments": {
+      "heading": "Upcoming payments",
+      "dueDate": "Due {{date}}",
+      "empty": "No upcoming payments."
+    },
+    "accounts": {
+      "heading": "Accounts",
+      "viewAll": "See all →",
+      "empty": "No accounts."
+    },
+    "activeDebts": {
+      "heading": "Active debts",
+      "viewAll": "See all →",
+      "progressOwedToMe": "{{balance}} to collect out of {{total}}",
+      "progressOwedByMe": "{{balance}} owed out of {{total}}",
+      "empty": "No active debts."
+    },
+    "cashflow": {
+      "heading": "This week's cash flow",
+      "subtitle": "Income vs. expenses, last 7 days",
+      "income": "Income",
+      "expenses": "Expenses"
+    },
+    "netWorth": {
+      "heading": "Net worth",
+      "viewReports": "View reports →",
+      "subtitle": "At the close of each month with a generated report",
+      "empty": "Generate reports for at least 2 months (in Reports) to see the trend here."
+    },
+    "monthDelta": {
+      "comparesAtMonthEnd": "Compares once the month closes",
+      "vsPreviousMonth": "{{pct}}% vs previous month"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "A summary of the overall state of your finances: how much liquid money you have, how much you owe on credit cards, how close you are to your budget limit, and which payments are coming up."
+      },
+      "cardsAbove": {
+        "heading": "The cards up top",
+        "body": "<0>Liquidity</0> adds up the balance of your cash/bank-type accounts (not credit cards). <2>Revolving debt</2> is what you owe on active credit cards, with its average APR. <4>Month budget</4> and <6>week budget</6> show what percentage you've spent against what was budgeted — the color changes from green to orange to red depending on how close you are to the limit. As soon as you generate the current month's report (Reports → Generate), two more cards appear: <8>Month income</8> and <10>Month expenses</10>, each compared against the previous month."
+      },
+      "upcomingPayments": {
+        "heading": "Upcoming payments",
+        "body": "Combines your active recurring expenses (Netflix, rent, etc.) with debt payments due in the next 7 days. If something is due in 3 days or less, it shows as a notice above the cards."
+      },
+      "netWorthAndDebts": {
+        "heading": "Net worth and active debts",
+        "body": "The net worth line uses your generated monthly reports (Reports → Generate); if a month has no report, no point appears for it. Each debt's progress compares the current balance against the original amount — it doesn't distinguish principal from interest, it's a quick visual reference."
+      },
+      "readOnlyTip": "This screen is read-only — to record transactions use Transactions, and to see the detail of each item go to its specific page (the \"See all →\" links take you straight there)."
+    },
+    "weekdayShort": [
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ]
+  },
+  "accounts": {
+    "title": "Accounts",
+    "assets": "ASSETS",
+    "liabilities": "LIABILITIES",
+    "netWorth": "NET WORTH",
+    "loading": "Loading...",
+    "emptyDetail": "Create an account to see its history here.",
+    "noTransactionsMatch": "No transaction matches your filters.",
+    "showingCount": "Showing {{shown}} of {{total}}",
+    "viewAllInTransactions": "View all in Transactions →",
+    "kinds": {
+      "checking": {
+        "label": "Bank account",
+        "sublabel": "checking"
+      },
+      "savings": {
+        "label": "Savings account",
+        "sublabel": ""
+      },
+      "cash": {
+        "label": "Cash",
+        "sublabel": ""
+      },
+      "credit_card": {
+        "label": "Credit",
+        "sublabel": "card"
+      }
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "newAccount": {
+      "dialogTitle": "New account",
+      "button": "Add account"
+    },
+    "editAccount": {
+      "dialogTitle": "Edit account"
+    },
+    "reconcile": {
+      "title": "Reconcile balance",
+      "currentBalanceIntro": "Current account: <strong>{{balance}}</strong>. Enter what you actually have (counted, or from your statement) and the rest adjusts itself.",
+      "realBalanceLabel": "Real balance",
+      "noteLabel": "Note (optional)",
+      "noteTip": "Over time these notes tell you what you're not recording.",
+      "notePlaceholder": "e.g. I counted my wallet and had less, probably Friday's tacos",
+      "pendingEntry": "This will create an entry adjustment of <strong>{{amount}}</strong>.",
+      "pendingExit": "This will create an exit adjustment of <strong>{{amount}}</strong>.",
+      "noAdjustmentNeeded": "Your balance already matches, no need to adjust.",
+      "pendingLabel": "Reconciling..."
+    },
+    "payCard": {
+      "button": "Pay card",
+      "dialogTitle": "Pay card — {{name}}"
+    },
+    "newTransaction": {
+      "button": "New transaction"
+    },
+    "search": {
+      "placeholder": "Search transactions"
+    },
+    "segment": {
+      "all": "ALL",
+      "in": "IN",
+      "out": "OUT"
+    },
+    "table": {
+      "date": "Date",
+      "description": "Description",
+      "category": "Category",
+      "charge": "Charge",
+      "payment": "Payment",
+      "actions": "Actions"
+    },
+    "installments": {
+      "active_one": "{{count}} active interest-free installment purchase",
+      "active_other": "{{count}} active interest-free installment purchases",
+      "committedThisMonth": "COMMITTED THIS MONTH",
+      "perMonth": "{{amount}}/mo"
+    },
+    "msiBadge": "Installments {{paid}}/{{total}}",
+    "tdcCycle": {
+      "billingDay": "BILLING DAY",
+      "paymentLimit": "PAYMENT DUE DAY",
+      "cycleBalance": "CYCLE BALANCE",
+      "availableCredit": "AVAILABLE CREDIT",
+      "daysUntilDue": "({{days}}d)"
+    },
+    "form": {
+      "accountTypeLabel": "What type of account?",
+      "name": "Name",
+      "namePlaceholderCard": "E.g: Stori Mastercard",
+      "namePlaceholderBank": "E.g: BBVA Payroll",
+      "creditLimit": "Credit limit",
+      "balanceTodayLabel": "How much do you owe today?",
+      "balanceTodayTip": "What you owe today on this card, not the limit. If you don't know the exact amount, use an estimate.",
+      "balanceTodayLabelSimple": "How much do you have today?",
+      "interestRateLabel": "Annual interest rate (%)",
+      "interestRateTipNew": "The APR or annual rate your bank charges. You'll find it in your contract or app. E.g: 47.5",
+      "interestRateTipEdit": "The APR or annual rate your bank charges. E.g: 47.5",
+      "interestRatePlaceholder": "E.g: 47.5",
+      "rateAsPercentSuffix": "= {{rate}}% annual",
+      "rateDecimalWarning": "Did you mean {{rate}}%?",
+      "billingDayLabel": "What day does your statement close?",
+      "billingDayTip": "The day of the month your bank generates your statement. E.g: if it's the 27th, enter 27.",
+      "dueDayLabel": "Payment due day?",
+      "dueDayTip": "The day of the month your payment is due to avoid late interest.",
+      "sameDayWarning": "The billing day and the payment due day are the same — check that this is correct.",
+      "balanceNegative": "The balance can't be negative.",
+      "showMoreDetails": "+ More details (optional)",
+      "showLessDetails": "− Fewer details",
+      "last4": "Last 4 digits",
+      "currency": "Currency",
+      "color": "Color",
+      "notes": "Notes",
+      "daySelectPlaceholder": "Select...",
+      "submitCreate": "Create account",
+      "submitSave": "Save changes",
+      "initialBalanceLabelCard": "Initial balance (credit used)",
+      "initialBalanceLabel": "Initial balance",
+      "initialBalanceTipCard": "The credit you already had used on this card when you registered it -- not the credit limit. Changing it doesn't touch any transaction, it only shifts the current balance by the same difference.",
+      "initialBalanceTip": "The money you already had in this account when you registered it. Changing it doesn't touch any transaction, it only shifts the current balance by the same difference.",
+      "hasTransactionsWarning": "This account already has transactions. Changing this value will recalculate the current balance (we'll ask you to confirm before saving).",
+      "logo": {
+        "label": "Logo (optional)",
+        "tip": "It's yours and at your own discretion — the app doesn't include or redistribute bank logos.",
+        "change": "Change",
+        "upload": "Upload image",
+        "remove": "Remove",
+        "processError": "The image could not be processed."
+      }
+    },
+    "confirmInitialBalance": {
+      "title": "Change initial balance",
+      "message": "This account already has transactions recorded. Changing the initial balance from {{oldBalance}} to {{newBalance}} will recalculate the current balance from {{currentBalance}} to {{recalculatedBalance}} -- no existing transaction is modified. Continue?"
+    },
+    "confirmDeleteAccount": {
+      "title": "Delete account",
+      "message": "Delete the account \"{{name}}\"? This action cannot be undone."
+    },
+    "confirmDeleteTransaction": {
+      "title": "Delete transaction",
+      "message": "Delete the transaction \"{{description}}\"? This action cannot be undone."
+    },
+    "toast": {
+      "accountAdded": "Account <strong>{{name}}</strong> added",
+      "accountUpdated": "Account <strong>{{name}}</strong> updated",
+      "adjustmentEntryRegistered": "Entry adjustment recorded: {{amount}}",
+      "adjustmentExitRegistered": "Exit adjustment recorded: {{amount}}"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "Your real accounts: banks, cash, and credit cards. The summary above (Assets, Liabilities, Net worth) is calculated by adding up the balance of all of them."
+      },
+      "accountTypes": {
+        "heading": "Account types",
+        "body": "When creating an account you choose between <strong>bank</strong>, <strong>savings</strong>, <strong>cash</strong>, and <strong>credit card</strong>. The first three are money you have available; the card is a liability (what you owe) -- not the same as a Debt: formal or informal loans live separately, in Debts."
+      },
+      "creditCards": {
+        "heading": "Credit cards",
+        "body": "Besides the name and balance, a credit card stores credit limit, interest rate, billing day, and payment due day — the last two feed the billing cycle you see in the account's detail. The \"Pay card\" button (here or in Transactions) records the payment as a real transfer from any of your other accounts. If you buy something in interest-free installments, mark it when recording the expense and you'll see the progress (\"installments paid/total\") right in the card's history."
+      },
+      "logo": {
+        "heading": "Logo and customization",
+        "body": "You can upload a photo/logo to identify the account at a glance (it's cropped and fitted to a square automatically) and choose a color that's used in charts and lists throughout the app."
+      },
+      "transactions": {
+        "heading": "Account transactions",
+        "body": "When you select an account on the left, you see its transaction history on the right, with an In/Out filter and search."
+      },
+      "reconcile": {
+        "heading": "Reconcile balance",
+        "body": "Available on bank/savings accounts. You enter what you actually have (counted, or from your statement) and the app records an adjustment transaction for the difference — unlike editing the \"Initial balance\", this does show up as a visible transaction in your history."
+      },
+      "tip": "Lending money to someone, or being lent money, doesn't create an account here — it lives in Debts, separate from your real accounts, no matter how many people are involved."
+    }
+  },
+  "transactions": {
+    "title": "Transactions",
+    "newTransactionButton": "New transaction",
+    "sharedExpense": "Shared expense",
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "confirmDelete": {
+      "title": "Delete transaction",
+      "message": "Delete the transaction \"{{description}}\"? This action cannot be undone."
+    },
+    "fields": {
+      "date": "Date",
+      "description": "Description",
+      "category": "Category",
+      "account": "Account",
+      "amount": "Amount",
+      "actions": "Actions"
+    },
+    "form": {
+      "descriptionPlaceholder": "Dinner with friends",
+      "categoryPlaceholder": "Select a category",
+      "payingAccount": "Account paying the total",
+      "accountPlaceholder": "Select an account",
+      "accountFallback": "the paying account",
+      "myShare": "My actual share",
+      "debtors": "Who else owes",
+      "debtorNamePlaceholder": "Name",
+      "debtorAmountPlaceholder": "Amount",
+      "removeDebtor": "Remove",
+      "addDebtor": "Add debtor",
+      "submit": "Save shared expense"
+    },
+    "totalCharge": "Total charge on \"{{account}}\": {{amount}}",
+    "payCard": {
+      "button": "Pay credit card",
+      "title": "Pay credit card",
+      "titleWithName": "Pay credit card — {{name}}",
+      "choose": "Choose the card to pay"
+    },
+    "filters": {
+      "search": "Search",
+      "allAccounts": "All accounts",
+      "allTypes": "All types",
+      "type": {
+        "all": "ALL",
+        "income": "INCOME",
+        "expense": "EXPENSE",
+        "transfer": "TRANSFER"
+      }
+    },
+    "states": {
+      "loading": "Loading...",
+      "error": "Transactions could not be loaded.",
+      "empty": "No transaction matches your filters."
+    },
+    "pagination": "Showing {{from}}–{{to}} of {{total}}",
+    "paginationPrev": "Previous",
+    "paginationNext": "Next",
+    "help": {
+      "overview": {
+        "heading": "What this screen is",
+        "body": "The full history of your activity: income, expenses, transfers and loans. You can filter by account, type, date or text, and see the same data as a calendar on the right — clicking a day filters the list automatically."
+      },
+      "newTransaction": {
+        "heading": "+ New transaction",
+        "body": "Record income, an expense, or a transfer between two of your accounts. For income/expense you only pick account, category and amount — the app resolves the accounting counterpart on its own, you never have to choose it. If the expense is on a credit card, you can mark it \"Interest-free installments?\" — that doesn't create a separate debt, it just tags that purchase so you can see its progress in Accounts."
+      },
+      "payCard": {
+        "heading": "Pay credit card",
+        "body": "Only shows up if you have at least one credit card registered. Records a real transfer from any of your other accounts to the card — it's the same button available in the account's detail view, offered here so you don't have to go to Accounts first."
+      },
+      "sharedExpense": {
+        "heading": "Shared expense",
+        "body1": "For when you paid for something that's only partly your expense (e.g. a group dinner). You record the full charge to your account/card, how much is really yours, and how much each person owes — their share becomes a balance in your favor in Debts (\"They owe me\"), not your expense.",
+        "demo": {
+          "creditCard": "Credit card",
+          "myExpense": "My expense",
+          "owedToMe": "They owe me"
+        },
+        "body2": "Because it involves more than two internal movements, a shared expense can no longer be edited once created (only deleted) — double check the amounts before saving it."
+      },
+      "tip": "Lending money directly (with no purchase involved), or someone lending to you, no longer lives here — it's in <1>Debts</1>, along with everything else that involves owing money in either direction."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "sections": {
+      "functions": "FEATURES"
+    },
+    "profile": {
+      "title": "Profile",
+      "avatar": {
+        "change": "Change photo",
+        "upload": "Upload photo",
+        "remove": "Remove",
+        "error": "Couldn't process the image."
+      },
+      "fullName": "Full name",
+      "email": "Email",
+      "saveChanges": "Save changes",
+      "saving": "Saving...",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "changePassword": "Change password",
+      "changingPassword": "Updating...",
+      "passwordUpdated": "Password updated."
+    },
+    "security": {
+      "title": "Security",
+      "twoFactor": "Two-factor authentication",
+      "comingSoon": "Coming soon — active sessions and 2FA aren't implemented yet."
+    },
+    "preferences": {
+      "title": "Notifications and preferences",
+      "theme": "Theme",
+      "themeOptions": {
+        "dark": "Dark",
+        "light": "Light"
+      },
+      "emailNotifications": {
+        "label": "Email notifications",
+        "description": "Reports, debt and budget alerts."
+      },
+      "pushNotifications": {
+        "label": "Push notifications",
+        "description": "Credit card due dates and upcoming payments."
+      },
+      "payCycle": "Pay cycle",
+      "payCycleOptions": {
+        "weekly": "Weekly",
+        "biweekly": "Biweekly",
+        "monthly": "Monthly"
+      },
+      "language": "Language"
+    },
+    "debtTrouble": {
+      "title": "Debt trouble",
+      "label": "I have a debt with payment trouble",
+      "description": "Turn this on if you have a past-due loan or debt you're not paying. It enables a separate record for that debt in Debts and tells the AI advisor to help you analyze how to pay it off."
+    },
+    "admin": {
+      "title": "Administration",
+      "description": "You have admin permissions — manage users and check the app's global metrics.",
+      "goToPanel": "Go to admin panel"
+    },
+    "connectedAccounts": {
+      "title": "Connected accounts",
+      "google": "Google",
+      "unlink": "Unlink",
+      "notLinked": "Not linked",
+      "linkHint": "Sign in with Google from the login screen to link it to this account."
+    },
+    "privacy": {
+      "title": "Privacy",
+      "viewNotice": "View Privacy Notice",
+      "noticeTitle": "Privacy Notice"
+    },
+    "dataManagement": {
+      "title": "Delete data",
+      "description": "Delete information from your account by category, without having to delete it entirely. This can't be undone.",
+      "manage": "Manage data deletion",
+      "passwordLabel": "Confirm your password (if your account uses Google, leave this empty)",
+      "quickOptions": "Quick options",
+      "eraseAllExceptAccounts": "Delete everything except accounts",
+      "eraseAllIncludingAccounts": "Delete everything, including accounts",
+      "selective": "Selective deletion",
+      "erasing": "Deleting...",
+      "eraseSelected": "Delete selected ({{count}})",
+      "close": "Close",
+      "deleteSummary": "Done: {{list}} was deleted.",
+      "categories": {
+        "transactions": "Transactions",
+        "debts": "Debts (what you owe and what's owed to you)",
+        "recurring": "Recurring items and subscriptions",
+        "budgets": "Budgets",
+        "insights": "Insights",
+        "reports": "Generated reports",
+        "notifications": "Notifications",
+        "chat": "AI Advisor chat",
+        "categories": "Custom categories",
+        "accounts": "Bank accounts (also deletes transactions and recurring items)"
+      }
+    },
+    "deleteAccount": {
+      "title": "Delete account",
+      "description": "Deletes access to your account and closes all your sessions. This can't be undone.",
+      "trigger": "Delete my account",
+      "passwordLabel": "Confirm your password (if your account uses Google, leave this empty)",
+      "cancel": "Cancel",
+      "deleting": "Deleting...",
+      "confirm": "Delete permanently"
+    },
+    "session": {
+      "title": "Session",
+      "logoutConfirm": {
+        "title": "Log out",
+        "message": "Are you sure you want to log out?",
+        "confirmLabel": "Log out"
+      },
+      "loggingOut": "Logging out...",
+      "logout": "Log out"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What is this screen",
+        "body": "Your profile and account preferences — not settings for one particular screen, but for the whole app: how you look, how you identify yourself, and how you sign in."
+      },
+      "profilePhoto": {
+        "heading": "Profile photo",
+        "body": "If you signed in with Google, your photo is imported automatically the first time. You can upload your own whenever you want — once you upload one manually, a future Google login won't replace it anymore."
+      },
+      "themeNotificationsPayCycle": {
+        "heading": "Theme, language, notifications and pay cycle",
+        "body": "The theme (dark/light) and language are saved to your account, not this browser -- if you sign in from another device, they look the same. The pay cycle (weekly/biweekly/monthly) is what Dashboard and Budget use to calculate the current week/period."
+      },
+      "debtTrouble": {
+        "heading": "Debt trouble",
+        "body": "Off by default on purpose — turn it on only if you genuinely have a past-due loan or debt you're not paying. It enables a separate section in Debts and gives the AI Advisor context to help you analyze how to get out of it."
+      },
+      "googleAccount": {
+        "heading": "Google account",
+        "body": "If you linked Google, you can unlink it here — but only if your account also has a password; otherwise you'd be left with no way to sign in."
+      },
+      "eraseData": {
+        "heading": "Delete data",
+        "body": "To start fresh without losing your account: two quick buttons (\"everything except accounts\" or \"absolutely everything\") and a list to delete only specific categories — for example, just transactions, or just the AI Advisor history. Deleting bank accounts also deletes your transactions and recurring items, since they depend on the account existing."
+      },
+      "tip": "Deleting your account is permanent: it closes all your sessions and disables access. \"Delete data\" is different — your login stays intact, only what you choose gets deleted."
+    }
+  },
+  "debts": {
+    "title": "Debts",
+    "directions": {
+      "owedByMe": "I owe",
+      "owedToMe": "Owed to me"
+    },
+    "header": {
+      "unplannedButton": "Unplanned debt",
+      "unplannedDialogTitle": "Register unplanned debt",
+      "newDebtButton": "Add debt",
+      "newDebtDialogTitle": "New debt"
+    },
+    "stats": {
+      "totalOwedToMe": "Total owed to me",
+      "unplanned": "Unplanned",
+      "totalOwedByMe": "Total owed",
+      "monthlyCommitment": "Monthly commitment"
+    },
+    "troubleModeCta": "Do you have an overdue or problem debt? Turn it on in Settings.",
+    "unplannedSection": {
+      "heading": "No payment plan",
+      "nameHeader": "Name",
+      "creditorHeader": "Creditor",
+      "amountHeader": "Amount",
+      "actionHeader": "Action"
+    },
+    "activeSection": {
+      "heading": "With active plan",
+      "loading": "Loading...",
+      "emptyReceivable": "No one owes you money with an active plan.",
+      "emptyPayable": "You have no debts with an active payment plan."
+    },
+    "newUnplannedForm": {
+      "whoOwesYouLabel": "Who owes you?",
+      "whoLentLabel": "Who lent it to you?",
+      "creditorLabel": "Creditor (optional)",
+      "amountLabel": "Estimated amount",
+      "submitButton": "Register"
+    },
+    "activateForm": {
+      "originalAmountNote": "Original amount: {{amount}}. Leave \"agreed amount\" empty if there was no reduction.",
+      "agreedAmountLabel": "Agreed amount (if there was a reduction)",
+      "paymentAmountLabel": "Installment",
+      "frequencyLabel": "Frequency",
+      "fundingAccountFromLabel": "Which account did the money come out of? (optional)",
+      "fundingAccountToLabel": "Which account did the money go into? (optional)",
+      "fundingAccountPlaceholder": "None, I already had it before using the app",
+      "noneOption": "None",
+      "startDateLabel": "Start date",
+      "pendingLabel": "Activating...",
+      "submitButton": "Activate debt"
+    },
+    "newDebtForm": {
+      "nameLabelReceivable": "Who are you lending to?",
+      "nameLabel": "Name",
+      "typeLabel": "Type",
+      "totalAmountLabel": "Total amount",
+      "paymentAmountLabel": "Installment (optional)",
+      "frequencyLabel": "Frequency",
+      "fundingAccountFromLabel": "Which account is the money coming out of? (optional)",
+      "fundingAccountToLabel": "Which account did the money go into? (optional)",
+      "fundingAccountPlaceholder": "None, I already had it before using the app",
+      "noneOption": "None",
+      "submitButton": "Create debt"
+    },
+    "registerPaymentForm": {
+      "oweYouNote": "Owes you: {{amount}}",
+      "currentBalanceNote": "Current balance: {{amount}}",
+      "accountToLabel": "Account the money goes into",
+      "accountFromLabel": "Account that pays",
+      "accountPlaceholder": "Select an account",
+      "amountLabel": "Amount",
+      "dateLabel": "Date",
+      "registerCollectionButton": "Register collection",
+      "registerPaymentButton": "Register payment"
+    },
+    "correctBalanceForm": {
+      "oweYouNote": "Owes you: {{amount}}",
+      "currentBalanceNote": "Current balance: {{amount}}",
+      "balanceLabel": "Correct balance",
+      "submitButton": "Save",
+      "confirmTitle": "Correct balance",
+      "confirmLabel": "Correct balance",
+      "confirmMessage": "You're about to change the balance of \"{{name}}\" from {{from}} to {{to}} directly -- it doesn't register any payment or modify existing ones, it only adjusts the number. Continue?"
+    },
+    "toast": {
+      "balanceUpdated": "<0>{{name}}</0>'s balance updated"
+    },
+    "card": {
+      "receivableBadge": "owes you",
+      "collectedLabel": "Collected",
+      "aprLabel": "APR",
+      "oweYouLabel": "Owes you",
+      "balanceLabel": "Balance",
+      "completed": "Paid off",
+      "nextPayment": "Next: {{date}}",
+      "correctButton": "Correct",
+      "correctDialogTitle": "Correct balance — {{name}}",
+      "collectButton": "Collect",
+      "payButton": "Pay",
+      "collectionDialogTitle": "Collection — {{name}}",
+      "paymentDialogTitle": "Payment — {{name}}"
+    },
+    "unplannedRow": {
+      "activateButton": "Activate",
+      "activateDialogTitle": "Activate — {{name}}"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "Everything that involves owing money, in either direction: personal loans, payroll loans, store credit, or something as informal as lending a friend $100 or your grandfather lending you $100,000. Credit cards don't live here -- they're paid off and you see the progress of your installment purchases from Accounts. The tab above switches between <0>I owe</0> and <1>Owed to me</1> — same model, same screen, only who owes whom changes."
+      },
+      "addDebt": {
+        "heading": "Add debt",
+        "body": "Register a debt with its full plan: amount, payment frequency and, optionally, which account the cash moved from/to when it originated. Under \"I owe\" you also choose the type (personal loan, informal, etc.) — under \"Owed to me\" it's always an informal loan."
+      },
+      "unplannedDebt": {
+        "heading": "Unplanned debt",
+        "body1": "For when you don't have the details clear yet — just a name and an amount. It never moves money out of any account. Once you know how it's going to be paid, you \"activate\" it with a plan (and there you can say which account the cash came from/went into, if applicable).",
+        "body2": "This section is off by default — it only appears if you turn on \"I have a debt with payment problems\" in Settings. Once turned on, the AI advisor can also see these debts and help you analyze how to pay them off.",
+        "steps": [
+          "Unplanned debt: save the name and the amount, nothing more.",
+          "Once you decide how to pay it, activate it with an amount/frequency/account.",
+          "From then on it behaves like any other debt."
+        ]
+      },
+      "registerPayment": {
+        "heading": "Register payment / collection",
+        "body": "Lowers the outstanding balance and moves real money to/from the account you choose — it's a real transaction, not just a number changing. Under \"Owed to me\" it's called \"Register collection\" (you're getting paid), under \"I owe\" it's \"Register payment\"."
+      },
+      "correctBalance": {
+        "heading": "Correct balance",
+        "body": "Adjusts the outstanding balance directly to what it really is today, without registering payment by payment — meant for when you're loading old history and just need to leave the final number correct. Unlike \"Register payment\", it doesn't move money out of any account or affect payments already registered."
+      },
+      "tip": "Lending or borrowing isn't an expense or income — your total net worth doesn't change, it just moves from one account to another (or to this list, if it doesn't have an associated account yet)."
+    }
+  },
+  "budget": {
+    "title": "Budget",
+    "defineLimit": "Set limit",
+    "limitsDialogTitle": "Monthly limits by category",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "backToToday": "Back to today",
+    "viewFullMonthReport": "View full month report →",
+    "stats": {
+      "budgeted": "Budgeted",
+      "spent": "Spent",
+      "spentPctNote": "{{pct}}% of budget",
+      "available": "Available",
+      "estimatedIncomeLabel": "Estimated income: ",
+      "committedFixed": "Fixed committed",
+      "debtsAndRecurringNote": "Active debts and recurring items"
+    },
+    "categoriesWithLimit_one": "{{count}} category with a limit",
+    "categoriesWithLimit_other": "{{count}} categories with a limit",
+    "daysLeft_one": "{{count}} day left",
+    "daysLeft_other": "{{count}} days left",
+    "categoriesNearOrOverLimit_one": "{{count}} category near or over the limit",
+    "categoriesNearOrOverLimit_other": "{{count}} categories near or over the limit",
+    "breakdownByCategory": "Breakdown by category",
+    "loading": "Loading...",
+    "noCategoriesYet": "Set category limits to see your progress here.",
+    "expenseDistribution": "Expense distribution",
+    "thisMonth": "this month",
+    "noExpensesThisMonth": "No expenses yet this month.",
+    "noExpensesThatMonth": "No expenses recorded that month.",
+    "recurringPayments": "Recurring payments",
+    "noActiveRecurring": "No active recurring items.",
+    "weeklyView": "Weekly view",
+    "weekShortLabel": "W{{week}}",
+    "weekRange": "Week {{week}} · {{from}} — {{to}}",
+    "weeklyViewCurrentMonthOnly": "The weekly view only applies to the current month.",
+    "backToTodayToSee": "Back to today to see it",
+    "trendHeading": "Trend · % of budget used per month",
+    "setLimits": {
+      "description": "Set a monthly limit for the categories you want to control. Leave blank the ones you don't want to limit.",
+      "pastMonthNote": "This affects the current month, not the past month you're viewing.",
+      "noLimitPlaceholder": "No limit",
+      "average3MonthsLabel": "3-month average:",
+      "noExpenseCategories": "No expense categories.",
+      "saveChanges": "Save changes"
+    },
+    "categoryRow": {
+      "vsLastMonth": "{{pct}}% vs last month",
+      "average3MonthsLabel": "Average last 3 months:",
+      "aboveLimit": " (above your limit)",
+      "belowLimit": " (below your limit)",
+      "useThisAmount": "Use this amount"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "How much you plan to spend per variable expense category (food, transportation, etc.) each month, against what you've actually spent — separate from your committed fixed expenses (debts, recurring items)."
+      },
+      "settingLimit": {
+        "heading": "Setting a limit",
+        "body": "You set a monthly cap on a category. If you haven't set a limit on any category, nothing shows up in the breakdown — it's optional, category by category."
+      },
+      "limitSuggestion": {
+        "heading": "Limit suggestion",
+        "body": "When your average spending over the last 3 months in a category differs from its current limit, it's flagged for you and you can apply it with one click — no need to calculate it yourself."
+      },
+      "available": {
+        "heading": "Available",
+        "body": "Estimated income minus fixed committed minus spent. If it turns red (negative), you've already gone over what you can spend this month."
+      },
+      "navigatingPastMonths": {
+        "heading": "Browsing past months",
+        "body": "Use the arrows next to the month to review how you did in previous months. The weekly view and the limit alert only apply to the current month — a closed month no longer has a \"current week\"."
+      },
+      "categoryArrow": {
+        "heading": "Arrow per category",
+        "body": "Compares this category's spending against the previous month. Red pointing up if you spent more than 5% more, green pointing down if you spent less — no arrow if it's roughly the same."
+      },
+      "fixedCommittedTip": "\"Fixed committed\" is your active debts and recurring items — money you already know you're going to spend, which is why it doesn't compete with the variable budget above."
+    }
+  },
+  "categories": {
+    "title": "Categories",
+    "newButton": "New category",
+    "newIncomeTitle": "New income category",
+    "newExpenseTitle": "New expense category",
+    "newSubcategoryTitle": "New subcategory of {{parent}}",
+    "editCategoryTitle": "Edit category",
+    "editSubcategoryTitle": "Edit subcategory",
+    "deleteCategoryTitle": "Delete category",
+    "deleteSubcategoryTitle": "Delete subcategory",
+    "deactivateCategoryTitle": "Deactivate category",
+    "deleteConfirmMessage": "Delete \"{{name}}\"? Transactions using it will be left uncategorized. This action cannot be undone.",
+    "deactivateConfirmMessage": "Deactivate \"{{name}}\" for you? It will stop appearing in your list and your transactions using it will be left uncategorized -- you can reactivate it whenever you want, this only affects you.",
+    "deleteButton": "Delete",
+    "deactivateButton": "Deactivate",
+    "nameLabel": "Name",
+    "namePlaceholderIncome": "E.g.: Freelance",
+    "namePlaceholderExpense": "E.g.: Pets",
+    "colorLabel": "Color",
+    "colorSwatchAriaLabel": "Color {{color}}",
+    "customColorTitle": "Choose any color",
+    "customColorAriaLabel": "Custom color",
+    "iconLabel": "Icon",
+    "iconSearchPlaceholder": "Search across all 8 categories… e.g. gas, coffee",
+    "recentlyUsed": "Recently used",
+    "iconCount_one": "{{count}} icon",
+    "iconCount_other": "{{count}} icons",
+    "noResults": " — no results",
+    "createSubcategoryButton": "Create subcategory",
+    "createIncomeCategoryButton": "Create income category",
+    "createExpenseCategoryButton": "Create expense category",
+    "saveChangesButton": "Save changes",
+    "systemLabel": "System",
+    "deactivateTooltip": "Deactivate for me",
+    "receivedThisMonth": "Received this month",
+    "spentThisMonth": "Spent this month",
+    "subcategoriesButton": "Subcategories",
+    "subcategoryCount_one": "{{count}} subcategory",
+    "subcategoryCount_other": "{{count}} subcategories",
+    "addSubcategoryButton": "Subcategory",
+    "noSubcategory": "No subcategory",
+    "hiddenSectionTitle": "Deactivated categories (only for you)",
+    "reactivateButton": "Reactivate",
+    "incomeOption": "Income",
+    "expenseOption": "Expenses",
+    "loading": "Loading...",
+    "emptyState": "No categories yet.",
+    "help": {
+      "whatIsThisHeading": "What this screen is",
+      "whatIsThisBody": "The categories you use to classify your income and expenses. Each card shows how much you've received or spent in that category during the current month.",
+      "systemVsYoursHeading": "System vs. yours",
+      "systemVsYoursBody": "Categories marked <strong>System</strong> come predefined and can't be edited or deleted (they guarantee there's always somewhere to classify a transaction), but you can <strong>deactivate</strong> them for yourself with the crossed-out eye icon if you don't use them — they stop appearing in your list and you can reactivate them whenever you want from the section below; it doesn't affect other users. Categories you create can be renamed, have their color/icon changed, or be deleted with the \"×\".",
+      "subcategoriesHeading": "Subcategories",
+      "subcategoriesBody": "Top-level expense categories can have subcategories (e.g. \"Restaurants\" and \"Groceries\" inside \"Food and Drink\") — expand the category to see them or add a new one. Only one level is allowed: a subcategory can't have subcategories of its own. The monthly budget is always defined on the parent category; what you spend on its subcategories adds up there automatically. The bar below each card's amount compares that direct expense against its subcategories, each with its own color.",
+      "transactionsHeading": "What happens to transactions",
+      "transactionsBody": "When you deactivate a system category or delete one of your own (trash icon), the transactions that had it assigned are left uncategorized (they aren't deleted, and the action isn't blocked) — you can recategorize them later if needed.",
+      "tip": "You never choose an accounting account when using a category in a transaction — the system resolves it internally on its own. Here you only manage the catalog of names."
+    }
+  },
+  "recurring": {
+    "title": "Recurring Expenses",
+    "header": {
+      "addButton": "Add recurring item"
+    },
+    "newItemDialogTitle": "New recurring expense",
+    "form": {
+      "nameLabel": "Name",
+      "namePlaceholder": "E.g.: Car insurance, Dentist",
+      "typeLabel": "Type",
+      "utilityHint": "Essential utilities alert daily starting the first day they go unconfirmed.",
+      "amountLabel": "Amount",
+      "frequencyLabel": "Frequency",
+      "categoryLabel": "Category",
+      "categoryPlaceholder": "Select category",
+      "accountLabelPaying": "Paying account (bank/credit card)",
+      "accountLabelReceiving": "Receiving account (bank/credit card)",
+      "accountPlaceholder": "Select account",
+      "nextDateLabel": "Next charge",
+      "urgencyLabel": "Alert urgency"
+    },
+    "newItemForm": {
+      "submitButton": "Create"
+    },
+    "editItemForm": {
+      "submitButton": "Save changes"
+    },
+    "pendingRow": {
+      "rejectTitle": "Reject",
+      "confirmButton": "Confirm"
+    },
+    "itemActions": {
+      "editTitle": "Edit",
+      "editDialogTitle": "Edit — {{name}}",
+      "pauseTitle": "Pause",
+      "cancelTitle": "Cancel",
+      "resumeButton": "Reactivate"
+    },
+    "creditCardCommitments": {
+      "heading": "What your cards already owe by the next cutoff",
+      "hint": "Monthly installments from interest-free purchases + what you've already spent in each card's open cycle. Informational only -- it isn't included in \"Committed / month\" above.",
+      "msiLabel": "Interest-free installments {{amount}}",
+      "cycleLabel": "cycle {{amount}}"
+    },
+    "stats": {
+      "committedMonthly": "Committed / month",
+      "committedMonthlyNote": "Active services and utilities (no subscriptions or income)",
+      "recurringIncome": "Recurring income / month",
+      "recurringIncomeNote": "Payroll and other active income",
+      "pendingLabel": "Unconfirmed",
+      "pendingNoteAction": "Confirm them below",
+      "pendingNoteOk": "All caught up",
+      "activeItems": "Active items"
+    },
+    "pendingSection": {
+      "heading": "Payments pending confirmation",
+      "table": {
+        "concept": "Description",
+        "date": "Date",
+        "amount": "Amount",
+        "action": "Action"
+      }
+    },
+    "upcomingSection": {
+      "heading": "Upcoming payments (7 days)",
+      "empty": "Nothing scheduled in the next 7 days."
+    },
+    "breakdownSection": {
+      "heading": "Breakdown by category",
+      "centerSub": "per month",
+      "otherCategory": "Other",
+      "empty": "No active services/utilities yet."
+    },
+    "listSection": {
+      "heading": "Recurring services and income",
+      "filter": {
+        "active": "Active",
+        "paused": "Paused",
+        "cancelled": "Cancelled",
+        "all": "All"
+      },
+      "loading": "Loading...",
+      "empty": "No recurring items with this status.",
+      "table": {
+        "name": "Name",
+        "type": "Type",
+        "amount": "Amount",
+        "frequency": "Frequency",
+        "nextDate": "Next charge",
+        "urgency": "Urgency",
+        "statusAction": "Status / Action"
+      }
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "Expenses and income that repeat on a fixed cycle — services, utilities (power, water, internet) and recurring income like payroll. Subscriptions (Netflix, Spotify, etc.) have their own dedicated page."
+      },
+      "unconfirmed": {
+        "heading": "Unconfirmed",
+        "body": "As a recurring item's date approaches, the system automatically prepares the movement as a draft — it shows up above so you can confirm it (it's recorded as-is) or reject it (it didn't happen, it's discarded) before it counts as a real transaction."
+      },
+      "editPauseCancel": {
+        "heading": "Edit / Pause / Cancel / Resume",
+        "body": "Edit changes amount, frequency, account, category, urgency, or next charge date without losing the item's history — use it when your rent goes up or a service's amount changes. Pause temporarily stops automatic generation without losing the configuration. Cancel retires it for good. All of them can be resumed later."
+      },
+      "upcomingAndBreakdown": {
+        "heading": "Upcoming payments and breakdown by category",
+        "body": "\"Upcoming payments\" are the ones falling in the next 7 days, to help plan your pay period. The breakdown by category splits \"Committed / month\" (same total, same scope: no subscriptions or income) so you can see where that money goes."
+      },
+      "cardDebts": {
+        "heading": "What your cards already owe",
+        "body": "Only shows up if you have at least one credit card. It adds up the monthly installments from your active interest-free purchases (fixed, has to be paid no matter what) plus what you've already spent in each card's open cycle (variable, keeps rising until it closes). It's informational only -- it isn't added to \"Committed / month\" above, because that expense was already counted in the budget for the month it happened; adding it here too would count it twice."
+      },
+      "tip": "Alert urgency (normal/high/critical) controls how insistent the reminder is before the charge date — it doesn't affect the amount or the date itself. \"Essential utilities\" are the exception: they alert daily starting the first day they go unconfirmed, regardless of the urgency you set."
+    }
+  },
+  "subscriptions": {
+    "title": "Subscriptions",
+    "header": {
+      "addButton": "New subscription"
+    },
+    "newItemDialogTitle": "New subscription",
+    "activeSinceThisMonth": "Active this month",
+    "activeSince_one": "Active for {{count}} month",
+    "activeSince_other": "Active for {{count}} months",
+    "stillUsingSuffix": " — still using it?",
+    "form": {
+      "nameLabel": "Name",
+      "namePlaceholder": "E.g.: Spotify, Netflix, Claude Pro",
+      "amountLabel": "Amount",
+      "frequencyLabel": "Billing frequency",
+      "monthlyEquivalentNote": "≈ {{amount}} / month",
+      "categoryLabel": "Category",
+      "categoryPlaceholder": "Select category",
+      "accountLabel": "Paying account (bank/credit card)",
+      "accountPlaceholder": "Select account",
+      "nextDateLabel": "Next charge"
+    },
+    "newItemForm": {
+      "submitButton": "Create subscription"
+    },
+    "editItemForm": {
+      "submitButton": "Save changes"
+    },
+    "itemActions": {
+      "editTitle": "Edit",
+      "editDialogTitle": "Edit — {{name}}",
+      "pauseTitle": "Pause",
+      "cancelTitle": "Cancel",
+      "resumeButton": "Reactivate"
+    },
+    "monthlyEquivalentSuffix": "≈ {{amount}}/month",
+    "fallbackCategoryName": "No category",
+    "stats": {
+      "committedMonthly": "Committed to subscriptions / month",
+      "committedMonthlyNote": "≈ {{amount}} / year",
+      "active": "Active",
+      "paused": "Paused",
+      "cancelled": "Cancelled"
+    },
+    "renewalsSection": {
+      "heading": "Upcoming renewals (7 days)",
+      "empty": "Nothing renewing in the next 7 days."
+    },
+    "listSection": {
+      "heading": "All your subscriptions",
+      "filter": {
+        "active": "Active",
+        "paused": "Paused",
+        "cancelled": "Cancelled",
+        "all": "All"
+      },
+      "loading": "Loading...",
+      "emptyActive": "You don't have any active subscriptions.",
+      "emptyPaused": "You don't have any paused subscriptions.",
+      "emptyCancelled": "You don't have any cancelled subscriptions.",
+      "emptyAll": "You don't have any subscriptions.",
+      "table": {
+        "name": "Name",
+        "charge": "Charge",
+        "monthlyEquivalent": "Monthly equivalent",
+        "nextDate": "Next charge",
+        "statusAction": "Status / Action"
+      }
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "Your subscriptions (streaming, software, memberships) separate from other recurring items — so you can see at a glance how much they cost you per month in total, without mixing them with rent or utilities."
+      },
+      "monthlyCommitment": {
+        "heading": "Monthly commitment",
+        "body": "Since not all of them charge every month (some are annual or biweekly), the total converts each frequency to its monthly equivalent so the sum makes sense."
+      },
+      "editPauseCancel": {
+        "heading": "Edit / Pause / Cancel / Resume",
+        "body": "Edit changes amount, frequency, account, category, or next charge date without losing the history — use it when the price goes up (happens often with streaming and software). Pause stops the automatic charge without losing the configuration. Cancel is permanent. Both can be reverted."
+      },
+      "activeSince": {
+        "heading": "Active for N months",
+        "body": "A passive reminder of how long a subscription has been active — starting at 12 months it flags it, so every now and then you ask yourself whether you're really still using it."
+      },
+      "upcomingRenewals": {
+        "heading": "Upcoming renewals",
+        "body": "The ones charging in the next 7 days, so no charge catches you off guard."
+      },
+      "tip": "The amount is automatically recorded in Transactions when the charge date arrives — it first shows up as pending confirmation in Recurring."
+    }
+  },
+  "insights": {
+    "title": "Insights",
+    "generateInsights": "Generate insights",
+    "generating": "Generating...",
+    "activeInsights": "Active insights",
+    "totalGenerated": "Total generated",
+    "loading": "Loading...",
+    "noActiveInsights": "No active insights. Generate new ones or ask the AI Advisor to save a plan.",
+    "history": "History",
+    "noHistoryYet": "No history yet.",
+    "pageOf": "Page {{page}} of {{total}}",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "nextReview": "Next review: {{date}}",
+    "reviewedCount": "· reviewed {{count}}x",
+    "viewReviewsCount": "View reviews ({{count}})",
+    "markResolved": "Mark resolved",
+    "dismiss": "Dismiss",
+    "reviewsDialogTitle": "Reviews — {{title}}",
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "category": {
+      "spending": "Expense",
+      "debt": "Debt",
+      "savings": "Savings",
+      "income": "Income",
+      "budget": "Budget",
+      "general": "General"
+    },
+    "trend": {
+      "improved": "Improved",
+      "worsened": "Worsened",
+      "stable": "Stable"
+    },
+    "status": {
+      "active": "Active",
+      "dismissed": "Dismissed",
+      "resolved": "Resolved"
+    },
+    "metrics": {
+      "netWorth": "Net worth",
+      "healthScore": "Financial health",
+      "committedMonthly": "Committed monthly"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "Automatic observations about your finances based on your real data (spending, budget, debts) — a detected pattern, an alert, a suggestion. Up to 10 active at a time."
+      },
+      "generateInsights": {
+        "heading": "Generate insights",
+        "body": "Runs the analysis on your current situation and creates new insights if it finds something worth pointing out. They're also created automatically when you ask the AI Advisor to save a plan."
+      },
+      "markResolvedDismiss": {
+        "heading": "Mark resolved / Dismiss",
+        "body": "Resolved is for when you've already addressed what it said. Dismiss is for when a particular one doesn't interest you. Both remove it from the active list and it stays in the history below."
+      },
+      "viewReviews": {
+        "heading": "View reviews",
+        "body": "While an insight is still active, it re-evaluates itself (with your data at the time) on each review date, and the AI says whether your situation improved, worsened, or stayed the same — with a comparison of your key numbers (net worth, financial health, committed monthly) against those from when it was created."
+      },
+      "tip": "Priority (high/medium/low) reflects how urgent it is — it isn't tied to any automatic action, it's just so you can decide what to attend to first."
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "generating": "Generating...",
+    "generatePreviousMonth": "Generate previous month",
+    "generatePreviousYear": "Generate previous year",
+    "regenerateTooltip": "Regenerate this report from scratch",
+    "period": {
+      "month": "Monthly",
+      "year": "Yearly"
+    },
+    "flow": {
+      "all": "All",
+      "income": "Income",
+      "expense": "Expenses"
+    },
+    "flowBadge": {
+      "income": "Income",
+      "expense": "Expense",
+      "general": "General"
+    },
+    "stats": {
+      "income": "Income",
+      "expenses": "Expenses",
+      "savingsRate": "Savings rate",
+      "dti": "DTI",
+      "healthScore": "Financial health"
+    },
+    "trendNote": {
+      "improved": "↑ improved vs previous",
+      "worsened": "↓ worsened vs previous",
+      "stable": "→ stable"
+    },
+    "confirmRegenerate": {
+      "title": "Regenerate report",
+      "confirmLabel": "Regenerate",
+      "monthlyMessage": "This will recalculate the {{period}} report from scratch with your current transactions, including the AI-generated points. Continue?",
+      "yearlyMessage": "This will recalculate the {{period}} report from scratch with your current transactions, including the AI-generated points. It also recalculates the 12 months of that year. Continue?"
+    },
+    "emptyState": {
+      "month": "No monthly reports generated yet. Use the \"Generate previous month\" button.",
+      "year": "No yearly reports yet. First generate the monthly reports for the year, then use \"Generate previous year\"."
+    },
+    "adjustmentsNote_one": "<strong>{{count}}</strong> balance adjustment this period — in {{in}}, out {{out}}, net <net>{{net}}</net>.",
+    "adjustmentsNote_other": "<strong>{{count}}</strong> balance adjustments this period — in {{in}}, out {{out}}, net <net>{{net}}</net>.",
+    "viewInTransactions": "View in Transactions →",
+    "incomeCategoriesHeading": "Income categories",
+    "expenseCategoriesHeading": "Expense categories",
+    "noCategoryMovements": "No movements in this category.",
+    "periodPointsHeading": "Points for this period",
+    "periodPointsSubtitle": "Generated by AI from the already-closed summary.",
+    "noPointsForFilter": "No points for this filter.",
+    "netWorthHeading": "Net worth — history",
+    "netWorthEmpty": "Generate reports for previous months to see the net worth history here.",
+    "currentMonthNote": "Current month (not yet closed): income {{income}}, expenses {{expenses}}.",
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "Reports for periods that are already closed (previous month or year) — unlike Budget/Dashboard, which are real-time, a report is a frozen \"snapshot\" of a period that already ended, with analysis generated over those numbers."
+      },
+      "generateMonthYear": {
+        "heading": "Generate previous month/year",
+        "body": "Reports aren't created on their own — you generate them whenever you want to see them. A yearly report needs the monthly reports for that year to already exist."
+      },
+      "regenerateReport": {
+        "heading": "Regenerate a report",
+        "body": "The icon next to the period selector recalculates the report you're viewing from scratch, with your current transactions — useful if you generated a report before loading old history and it came out nearly empty. For a yearly report, it also recalculates the 12 months of that year."
+      },
+      "incomeExpenseAll": {
+        "heading": "Income / Expenses / All",
+        "body": "Filters both the featured category and the \"Points for this period\" (AI-generated observations about that specific report)."
+      },
+      "netWorthHistory": {
+        "heading": "Net worth — history",
+        "body": "Combines all your generated monthly reports to draw your net worth line over time — the more months you generate, the more complete it looks."
+      },
+      "savingsRateDtiColors": {
+        "heading": "Savings rate and DTI colors",
+        "body": "Savings rate: red if negative (you spent more than you earned), orange below 10%, green from there up. DTI (debt/income): orange from 20%, red from 36% — the classic \"risk zone\" threshold in personal finance."
+      },
+      "tip": "Savings rate and DTI are indicators for the closed report, not the current month — for that, use the \"Current month\" note at the bottom of the page."
+    }
+  },
+  "advisor": {
+    "title": "AI Advisor",
+    "typingLabel": "The advisor is typing",
+    "header": {
+      "connected": "Connected",
+      "unlimited": "Unlimited",
+      "unlimitedTitle": "Admin account: no daily query limit",
+      "usageTitle": "{{used}} of {{limit}} queries used today",
+      "usageToday": "{{remaining}}/{{limit}} today",
+      "clearHistoryTitle": "Clear history"
+    },
+    "actionCard": {
+      "confirmTitle": "Confirm action",
+      "doneTitle": "Action recorded",
+      "confirmButton": "Confirm",
+      "cancelButton": "Cancel",
+      "inactiveNotice": "This proposal is no longer active."
+    },
+    "suggestions": {
+      "budget": "How's my budget going?",
+      "debtPriority": "Which debt should I pay off first?",
+      "savings": "Am I saving enough?",
+      "summary": "Summarize my finances",
+      "logExpense": "Log a $200 expense on food today"
+    },
+    "emptyState": "Ask me about your financial situation, whether you can afford something, or ask me to build you a savings plan. I can also log accounts, debts, and transactions for you if you tell me the details.",
+    "newMessageButton": "New message",
+    "retryButton": "Retry",
+    "insightSaved": "Insight saved: {{title}}",
+    "viewIt": "View it →",
+    "removeAttachment": "Remove {{name}}",
+    "pdfPasswordPlaceholder": "PDF password (if any, same for all)",
+    "attachTitle": "Attach account statements as PDF",
+    "moreOptionsTitle": "More ways to bring in data (Excel, prompt for another AI)",
+    "inputPlaceholderWithAttachment": "Some context (e.g. \"this is 3 months of my Platinum credit card\")...",
+    "inputPlaceholder": "Type your question...",
+    "sidebar": {
+      "financialSummary": "FINANCIAL SUMMARY",
+      "netWorth": "Net worth",
+      "financialHealth": "Financial health",
+      "committedMonthly": "Committed / month",
+      "availableThisWeek": "Available this week",
+      "runway": "Runway",
+      "recentTransactions": "RECENT TRANSACTIONS",
+      "viewAll": "View all →",
+      "disclaimer": "The advisor uses this same financial snapshot and several tools to answer with your real data, and can create accounts, debts, recurring items, or transactions if you ask it to log them (it will always confirm with you before saving anything)."
+    },
+    "dialog": {
+      "title": "More ways to bring in data",
+      "bulkExcelHeading": "Bulk upload from Excel",
+      "promptHeading": "Prompt for your other chat",
+      "promptDescription": "Copy it and paste it into the conversation where you've been tracking your finances (ChatGPT, Gemini, etc.). That AI will give you back a summary you can paste here in the chat.",
+      "copyButton": "Copy prompt",
+      "copiedButton": "Copied"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "An AI chat that sees your real financial situation (accounts, debts, budget, recent transactions) and answers using that as context — these aren't generic answers."
+      },
+      "suggestions": {
+        "heading": "Suggestions",
+        "body": "The common-question buttons are just a starting point — you can ask whatever you want in the text box below."
+      },
+      "clearHistory": {
+        "heading": "Clear history",
+        "body": "The trash icon deletes the saved conversation — useful for starting fresh, it doesn't affect your financial data, only the chat."
+      },
+      "remainingQueriesToday": {
+        "heading": "Queries left today",
+        "body": "There's a daily question limit to control AI costs. The number next to \"Connected\" tells you how many you have left — it resets every day."
+      },
+      "historicalData": {
+        "heading": "Bringing in historical data",
+        "body": "The 📎 next to the message attaches account statements as PDF (works even if they're password-protected — type it once for the whole batch) — the assistant logs regular charges and installment purchases (MSI) at their full amount only once, without duplicating when that same installment shows up again in later statements. Marking a purchase as an installment plan to see its progress in Accounts is a separate step you do yourself when reviewing the transaction — the assistant doesn't do it on its own. The \"+\" button has two more ways in: uploading a pre-filled Excel file, or copying a prompt to paste into another AI (ChatGPT, Gemini) and bring back an already-structured summary."
+      },
+      "tip": "If you ask it to save a plan or recommendation, it creates it as an Insight you can view later in that section (we'll let you know right there in the chat when it happens). It can also create accounts, debts, recurring items, or log transactions if you dictate the details or attach a PDF — it always summarizes what it's about to save and waits for your confirmation before doing it. It can't edit or delete anything that already exists."
+    }
+  },
+  "admin": {
+    "title": "Administration",
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "stats": {
+      "totalUsers": "Total users",
+      "active": "Active",
+      "newLast7Days": "New in last 7 days",
+      "withGoogle": "With Google",
+      "inactive30d": "Inactive 30+ days",
+      "accountsCreated": "Accounts created",
+      "transactions": "Transactions",
+      "debts": "Debts registered",
+      "aiQueriesToday": "AI queries today"
+    },
+    "adoption": {
+      "title": "Feature adoption",
+      "withAccount": "With at least 1 account",
+      "withDebt": "With at least 1 debt",
+      "withRecurring": "With at least 1 recurring item"
+    },
+    "signups": {
+      "title": "User signups (14 days)",
+      "empty": "No new signups in the last 14 days."
+    },
+    "users": {
+      "title": "Users",
+      "searchPlaceholder": "Search by name or email...",
+      "emptySearch": "No results for your search.",
+      "empty": "No users.",
+      "self": "(you)",
+      "never": "Never",
+      "accountsCount_one": "{{count}} account",
+      "accountsCount_other": "{{count}} accounts",
+      "mobileSummary": "Since {{date}} · {{accounts}} · {{txCount}} tx · Last active: {{lastActive}}",
+      "showingRange": "Showing {{start}}–{{end}} of {{total}}",
+      "prev": "Previous",
+      "next": "Next",
+      "table": {
+        "user": "User",
+        "registered": "Registered",
+        "lastActive": "Last active",
+        "accounts": "Accounts",
+        "transactions": "Tx.",
+        "health": "Health",
+        "role": "Role",
+        "status": "Status",
+        "action": "Action"
+      }
+    },
+    "role": {
+      "admin": "Admin",
+      "user": "User"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "makeAdmin": "Make admin",
+      "removeAdmin": "Remove admin",
+      "deactivate": "Deactivate",
+      "reactivate": "Reactivate",
+      "cantDeactivateSelf": "You can't deactivate your own account",
+      "resetPassword": "Reset password"
+    },
+    "confirmGenerateTempPassword": {
+      "title": "Reset password",
+      "message": "Generate a temporary password for \"{{name}}\" ({{email}})? Their current password stops working immediately.",
+      "confirmLabel": "Generate"
+    },
+    "confirmDeactivateUser": {
+      "title": "Deactivate user",
+      "message": "Deactivate \"{{name}}\" ({{email}})? They won't be able to log in until you reactivate them.",
+      "confirmLabel": "Deactivate"
+    },
+    "confirmGrantAdmin": {
+      "title": "Make admin",
+      "message": "Grant admin permissions to \"{{name}}\"?"
+    },
+    "confirmRevokeAdmin": {
+      "title": "Remove admin",
+      "message": "Remove admin permissions from \"{{name}}\"?"
+    },
+    "tempPasswordDialog": {
+      "title": "Temporary password — {{name}}",
+      "description": "Share it with the user now outside the app — it can't be shown again.",
+      "copy": "Copy",
+      "copiedToast": "Password copied",
+      "copyFailedToast": "Couldn't copy -- select it manually"
+    },
+    "feedback": {
+      "title": "Feedback",
+      "newBadge_one": "{{count}} new",
+      "newBadge_other": "{{count}} new",
+      "allStatuses": "All statuses",
+      "empty": "No feedback yet.",
+      "note": "Note: {{note}}",
+      "table": {
+        "type": "Type",
+        "user": "User",
+        "message": "Message",
+        "date": "Date",
+        "status": "Status"
+      },
+      "type": {
+        "bug": "Bug",
+        "suggestion": "Suggestion"
+      },
+      "status": {
+        "new": "New",
+        "read": "Read",
+        "considered": "Considered",
+        "discarded": "Discarded"
+      },
+      "dialog": {
+        "markConsideredTitle": "Mark as considered",
+        "markDiscardedTitle": "Mark as discarded",
+        "notifyMessage": "{{name}} will get a notification about this change. You can add a note explaining why -- it's optional, but it helps the response not feel cold.",
+        "notePlaceholder": "E.g. We added it to the Q4 roadmap, or: it doesn't fit the app's current focus."
+      }
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "loading": "Loading...",
+    "empty": "No notifications.",
+    "totalBadge": "{{total}} total",
+    "timeAgo": {
+      "now": "now",
+      "minutes_one": "{{count}} min ago",
+      "minutes_other": "{{count}} min ago",
+      "hours_one": "{{count}} h ago",
+      "hours_other": "{{count}} h ago",
+      "days_one": "{{count}} d ago",
+      "days_other": "{{count}} d ago"
+    },
+    "help": {
+      "whatIsThisScreen": {
+        "heading": "What this screen is",
+        "body": "All the alerts the app has generated for you: reports ready, new insights, budget or debt alerts, cards coming due, and pending payment reminders."
+      },
+      "readingNotifications": {
+        "heading": "Reading notifications",
+        "body": "A colored dot marks what you haven't read. Clicking a notification marks it as read; \"Mark all as read\" does it for all of them at once."
+      },
+      "tip": "Each notification's icon and color indicate its type (debt, budget, report, insight) — you don't need to open it to know what it's about."
+    }
+  },
+  "goals": {
+    "title": "Goals",
+    "comingSoon": "Coming soon — savings goals (for example, a down payment or an emergency fund) aren't a backend module yet. Once it's built, you'll be able to set a target amount, a monthly contribution, and see a projection of when you'll reach it."
+  }
+}

@@ -1,3 +1,5 @@
+import i18n from './i18n'
+
 const IMAGE_MAX_SOURCE_BYTES = 8 * 1024 * 1024 // 8MB input, before normalizing
 
 function readImage(file: File): Promise<HTMLImageElement> {
@@ -10,7 +12,7 @@ function readImage(file: File): Promise<HTMLImageElement> {
     }
     img.onerror = () => {
       URL.revokeObjectURL(url)
-      reject(new Error('No se pudo leer la imagen'))
+      reject(new Error(i18n.t('image.couldNotReadImage', { ns: 'common' })))
     }
     img.src = url
   })
@@ -27,7 +29,7 @@ export async function fileToNormalizedDataUrl(file: File, size = 128): Promise<s
   canvas.width = size
   canvas.height = size
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('No se pudo procesar la imagen')
+  if (!ctx) throw new Error(i18n.t('image.couldNotProcessImage', { ns: 'common' }))
   const scale = Math.min(size / img.width, size / img.height)
   const w = img.width * scale
   const h = img.height * scale
@@ -40,10 +42,10 @@ export async function fileToNormalizedDataUrl(file: File, size = 128): Promise<s
  * show if not. */
 export function validateImageFile(file: File): string | null {
   if (!file.type.startsWith('image/')) {
-    return 'Selecciona una imagen (PNG, JPG o WebP).'
+    return i18n.t('image.selectValidImage', { ns: 'common' })
   }
   if (file.size > IMAGE_MAX_SOURCE_BYTES) {
-    return 'La imagen es muy pesada (máx. 8 MB).'
+    return i18n.t('image.imageTooLarge', { ns: 'common' })
   }
   return null
 }

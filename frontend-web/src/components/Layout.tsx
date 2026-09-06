@@ -1,4 +1,5 @@
 import { Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Outlet, useLocation } from 'react-router-dom'
 import { AppSidebar } from '@/components/AppSidebar'
 import { TransactionModals } from '@/components/nl/TransactionModals'
@@ -9,6 +10,7 @@ import { useTransactionModalStore } from '@/stores/transactionModalStore'
 const QUICK_ADD_FAB_HIDDEN_PATHS = ['/settings']
 
 export function Layout() {
+  const { t } = useTranslation('common')
   const openQuick = useTransactionModalStore((s) => s.openQuick)
   const { pathname } = useLocation()
   const showQuickAddFab = !QUICK_ADD_FAB_HIDDEN_PATHS.includes(pathname)
@@ -89,7 +91,7 @@ export function Layout() {
         <button
           type="button"
           onClick={openQuick}
-          title="Agregar rápido"
+          title={t('layout.quickAdd')}
           className="fixed bottom-5 right-5 lg:bottom-8 lg:right-10 w-[48px] h-[48px] lg:w-[52px] lg:h-[52px] rounded-full flex items-center justify-center z-30"
           style={{
             background: 'var(--nl-accent)',

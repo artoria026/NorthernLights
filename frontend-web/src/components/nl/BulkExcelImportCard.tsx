@@ -1,5 +1,6 @@
 import { Download, Upload } from 'lucide-react'
 import { type ChangeEvent, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDownloadTemplate, useUploadBulkImport } from '@/hooks/useBulkImport'
 import { apiErrorMessage } from '@/services/api'
 
@@ -8,6 +9,7 @@ import { apiErrorMessage } from '@/services/api'
  * upload (multipart) with no AI in between: every valid row gets recorded
  * directly, with no confirmation step. */
 export function BulkExcelImportCard() {
+  const { t } = useTranslation('common')
   const downloadTemplate = useDownloadTemplate()
   const uploadFile = useUploadBulkImport()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -28,10 +30,7 @@ export function BulkExcelImportCard() {
 
   return (
     <div>
-      <p className="text-sm text-muted-foreground mb-4">
-        ¿Llevas días sin registrar nada pero tienes todo anotado de forma burda? Descarga la plantilla,
-        llénala (ya trae tus cuentas y categorías como listas desplegables) y súbela.
-      </p>
+      <p className="text-sm text-muted-foreground mb-4">{t('bulkExcelImportCard.intro')}</p>
 
       <div className="flex flex-wrap gap-2 mb-3">
         <button
@@ -41,7 +40,9 @@ export function BulkExcelImportCard() {
           className="flex items-center gap-1.5 rounded-md border border-border px-3.5 py-2 text-sm hover:bg-muted disabled:opacity-50"
         >
           <Download size={14} />
-          {downloadTemplate.isPending ? 'Generando...' : 'Descargar plantilla'}
+          {downloadTemplate.isPending
+            ? t('bulkExcelImportCard.generatingButton')
+            : t('bulkExcelImportCard.downloadTemplateButton')}
         </button>
         <button
           type="button"
@@ -51,7 +52,9 @@ export function BulkExcelImportCard() {
           style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
         >
           <Upload size={14} />
-          {uploadFile.isPending ? 'Cargando...' : 'Cargar archivo'}
+          {uploadFile.isPending
+            ? t('bulkExcelImportCard.uploadingButton')
+            : t('bulkExcelImportCard.uploadFileButton')}
         </button>
         <input
           ref={fileInputRef}
@@ -63,7 +66,9 @@ export function BulkExcelImportCard() {
       </div>
 
       {fileName && !uploadFile.isPending && (
-        <p className="text-xs text-muted-foreground mb-2">Último archivo: {fileName}</p>
+        <p className="text-xs text-muted-foreground mb-2">
+          {t('bulkExcelImportCard.lastFile', { fileName })}
+        </p>
       )}
 
       {uploadFile.isError && (
@@ -73,18 +78,21 @@ export function BulkExcelImportCard() {
       {result && (
         <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-border">
           <p className="text-sm" style={{ color: 'var(--nl-accent-ink)' }}>
-            Se registraron {result.created} movimiento{result.created === 1 ? '' : 's'}.
+            {t('bulkExcelImportCard.resultSummary', { count: result.created })}
           </p>
           {result.errors.length > 0 && (
             <div className="flex flex-col gap-1">
               <p className="text-xs text-muted-foreground">
-                {result.errors.length} fila{result.errors.length === 1 ? '' : 's'} con problemas:
+                {t('bulkExcelImportCard.errorSummary', { count: result.errors.length })}
               </p>
               <ul className="flex flex-col gap-0.5 max-h-40 overflow-y-auto">
                 {result.errors.map((e, i) => (
                   <li key={i} className="text-xs text-destructive">
-                    Fila {e.row}
-                    {e.block ? ` (${e.block})` : ''}: {e.reason}
+                    {t('bulkExcelImportCard.errorRow', {
+                      row: e.row,
+                      block: e.block ? ` (${e.block})` : '',
+                      reason: e.reason,
+                    })}
                   </li>
                 ))}
               </ul>

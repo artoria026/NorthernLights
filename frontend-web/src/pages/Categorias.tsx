@@ -12,6 +12,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
@@ -21,6 +22,7 @@ import {
   CATEGORY_ICON_CHOICES,
   CATEGORY_ICON_GROUPS,
   categoryIcon,
+  categoryIconGroupLabel,
   categoryIconLabel,
   getRecentCategoryIcons,
   iconsInGroup,
@@ -53,11 +55,12 @@ type CatType = 'income' | 'expense'
  * the "selected" ring moves there) instead of staying on the inviting
  * gradient. */
 function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (color: string) => void }) {
+  const { t } = useTranslation('pages')
   const isCustom = !CATEGORY_COLOR_CHOICES.includes(value)
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs text-muted-foreground">Color</label>
+      <label className="text-xs text-muted-foreground">{t('categories.colorLabel')}</label>
       <div className="flex flex-wrap gap-2">
         {CATEGORY_COLOR_CHOICES.map((color) => (
           <button
@@ -70,7 +73,7 @@ function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (colo
               outline: !isCustom && value === color ? '2px solid var(--nl-text-primary)' : 'none',
               outlineOffset: '2px',
             }}
-            aria-label={`Color ${color}`}
+            aria-label={t('categories.colorSwatchAriaLabel', { color })}
           />
         ))}
         <label
@@ -82,7 +85,7 @@ function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (colo
             outline: isCustom ? '2px solid var(--nl-text-primary)' : 'none',
             outlineOffset: '2px',
           }}
-          title="Elegir cualquier color"
+          title={t('categories.customColorTitle')}
         >
           {!isCustom && <Pipette size={12} color="white" style={{ filter: 'drop-shadow(0 0 1px rgb(0 0 0 / 0.6))' }} />}
           <input
@@ -90,7 +93,7 @@ function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (colo
             value={isCustom ? value : '#00c9a7'}
             onChange={(e) => onChange(e.target.value)}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            aria-label="Color personalizado"
+            aria-label={t('categories.customColorAriaLabel')}
           />
         </label>
       </div>
@@ -139,6 +142,7 @@ function IconGridPicker({
   value: string | null
   onChange: (icon: string) => void
 }) {
+  const { t } = useTranslation('pages')
   const [query, setQuery] = useState('')
   const [recent] = useState(getRecentCategoryIcons)
   const searchResults = query ? CATEGORY_ICON_CHOICES.filter((name) => matchesIconSearch(name, query)) : null
@@ -151,19 +155,19 @@ function IconGridPicker({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-xs text-muted-foreground">Ícono</label>
+      <label className="text-xs text-muted-foreground">{t('categories.iconLabel')}</label>
       <div className="relative">
         <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar en las 8 categorías… ej. gasolina, café"
+          placeholder={t('categories.iconSearchPlaceholder')}
           className={`${selectClass} h-8 w-full pl-8 text-[12.5px]`}
         />
       </div>
       {!query && recent.length > 0 && (
         <>
-          <div className="text-[10.5px] text-muted-foreground mt-0.5">Usados recientemente</div>
+          <div className="text-[10.5px] text-muted-foreground mt-0.5">{t('categories.recentlyUsed')}</div>
           <div className="grid grid-cols-8 sm:grid-cols-11 gap-1.5">
             {recent.map((iconName) => (
               <IconCell key={iconName} iconName={iconName} selected={value === iconName} onSelect={handleSelect} />
@@ -185,7 +189,7 @@ function IconGridPicker({
                 className="sticky top-0 z-[1] flex items-baseline gap-1.5 py-1 text-[10.5px] font-semibold text-muted-foreground"
                 style={{ background: 'var(--nl-bg-card)' }}
               >
-                {g}
+                {categoryIconGroupLabel(g)}
                 <span className="font-normal">· {iconsInGroup(g).length}</span>
               </div>
               <div className="grid grid-cols-8 sm:grid-cols-11 gap-1.5">
@@ -198,8 +202,8 @@ function IconGridPicker({
         </div>
       )}
       <div className="text-[10.5px] text-muted-foreground">
-        {totalVisible} ícono{totalVisible === 1 ? '' : 's'}
-        {query && totalVisible === 0 ? ' — sin resultados' : ''}
+        {t('categories.iconCount', { count: totalVisible })}
+        {query && totalVisible === 0 ? t('categories.noResults') : ''}
       </div>
     </div>
   )
@@ -214,6 +218,7 @@ function NewCategoryForm({
   parentId?: string
   onDone: () => void
 }) {
+  const { t } = useTranslation('pages')
   const createCategory = useCreateCategory()
   const [name, setName] = useState('')
   const [color, setColor] = useState(CATEGORY_COLOR_CHOICES[0])
@@ -239,11 +244,11 @@ function NewCategoryForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Nombre</label>
+        <label className="text-xs text-muted-foreground">{t('categories.nameLabel')}</label>
         <input
           required
           autoFocus
-          placeholder={type === 'income' ? 'Ej: Freelance' : 'Ej: Mascotas'}
+          placeholder={type === 'income' ? t('categories.namePlaceholderIncome') : t('categories.namePlaceholderExpense')}
           value={name}
           onChange={(e) => setName(e.target.value)}
           className={`${selectClass} h-9 w-full`}
@@ -257,8 +262,10 @@ function NewCategoryForm({
       <DialogFooter>
         <DialogPrimaryButton icon={Plus} pending={createCategory.isPending}>
           {parentId
-            ? 'Crear subcategoría'
-            : `Crear categoría de ${type === 'income' ? 'ingreso' : 'gasto'}`}
+            ? t('categories.createSubcategoryButton')
+            : type === 'income'
+              ? t('categories.createIncomeCategoryButton')
+              : t('categories.createExpenseCategoryButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -266,6 +273,7 @@ function NewCategoryForm({
 }
 
 function EditCategoryForm({ category, onDone }: { category: Category; onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const updateCategory = useUpdateCategory()
   const [name, setName] = useState(category.name)
   const [color, setColor] = useState(category.color)
@@ -288,7 +296,7 @@ function EditCategoryForm({ category, onDone }: { category: Category; onDone: ()
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Nombre</label>
+        <label className="text-xs text-muted-foreground">{t('categories.nameLabel')}</label>
         <input
           required
           autoFocus
@@ -304,7 +312,7 @@ function EditCategoryForm({ category, onDone }: { category: Category; onDone: ()
       )}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={updateCategory.isPending}>
-          Guardar cambios
+          {t('categories.saveChangesButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -348,6 +356,7 @@ function SubcategoryRow({
   amount: string
   percentage: number | null
 }) {
+  const { t } = useTranslation('pages')
   const deleteCategory = useDeleteCategory()
   const confirm = useConfirmStore((s) => s.ask)
   const pushToast = useUiStore((s) => s.pushToast)
@@ -356,9 +365,9 @@ function SubcategoryRow({
 
   async function handleDelete() {
     const ok = await confirm({
-      title: 'Eliminar subcategoría',
-      message: `¿Eliminar "${category.name}"? Las transacciones que la usan se quedan sin categoría. Esta acción no se puede deshacer.`,
-      confirmLabel: 'Eliminar',
+      title: t('categories.deleteSubcategoryTitle'),
+      message: t('categories.deleteConfirmMessage', { name: category.name }),
+      confirmLabel: t('categories.deleteButton'),
       variant: 'danger',
     })
     if (!ok) return
@@ -397,7 +406,7 @@ function SubcategoryRow({
               <button
                 type="button"
                 className="w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info"
-                title="Editar subcategoría"
+                title={t('categories.editSubcategoryTitle')}
               >
                 <Pencil size={10} />
               </button>
@@ -405,7 +414,7 @@ function SubcategoryRow({
           />
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Editar subcategoría</DialogTitle>
+              <DialogTitle>{t('categories.editSubcategoryTitle')}</DialogTitle>
             </DialogHeader>
             <EditCategoryForm category={category} onDone={() => setEditOpen(false)} />
           </DialogContent>
@@ -414,7 +423,7 @@ function SubcategoryRow({
           type="button"
           onClick={handleDelete}
           className="w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          title="Eliminar subcategoría"
+          title={t('categories.deleteSubcategoryTitle')}
         >
           <Trash2 size={10} />
         </button>
@@ -427,11 +436,12 @@ function SubcategoryRow({
  * without this the bar would have an unexplained gray segment. It's a
  * calculation, not a real category: no actions or edit dialog. */
 function RemainderRow({ amount, percentage }: { amount: number; percentage: number }) {
+  const { t } = useTranslation('pages')
   return (
     <div className="relative flex items-center gap-2 py-1.5">
       <TreeTick />
       <span className="w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: 'var(--nl-bg-track)' }} />
-      <span className="text-[12px] truncate flex-1 text-muted-foreground">Sin subcategoría</span>
+      <span className="text-[12px] truncate flex-1 text-muted-foreground">{t('categories.noSubcategory')}</span>
       <span className="text-[10.5px] text-muted-foreground tabular-nums w-8 text-right flex-shrink-0">
         {percentage}%
       </span>
@@ -443,6 +453,7 @@ function RemainderRow({ amount, percentage }: { amount: number; percentage: numb
 }
 
 function AddSubcategoryRow({ parent }: { parent: Category }) {
+  const { t } = useTranslation('pages')
   const [open, setOpen] = useState(false)
   return (
     <div className="relative flex items-center py-1.5">
@@ -455,13 +466,13 @@ function AddSubcategoryRow({ parent }: { parent: Category }) {
               className="flex items-center gap-1.5 text-[12px] text-muted-foreground hover:text-foreground"
             >
               <Plus size={12} />
-              Subcategoría
+              {t('categories.addSubcategoryButton')}
             </button>
           }
         />
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Nueva subcategoría de {parent.name}</DialogTitle>
+            <DialogTitle>{t('categories.newSubcategoryTitle', { parent: parent.name })}</DialogTitle>
           </DialogHeader>
           <NewCategoryForm type={parent.type} parentId={parent.id} onDone={() => setOpen(false)} />
         </DialogContent>
@@ -485,6 +496,7 @@ function CategoryCard({
    * tour (see tours.ts) -- not a business prop. */
   tourTarget?: boolean
 }) {
+  const { t } = useTranslation('pages')
   const deleteCategory = useDeleteCategory()
   const deactivateCategory = useDeactivateCategory()
   const confirm = useConfirmStore((s) => s.ask)
@@ -524,9 +536,9 @@ function CategoryCard({
 
   async function handleDelete() {
     const ok = await confirm({
-      title: 'Eliminar categoría',
-      message: `¿Eliminar "${category.name}"? Las transacciones que la usan se quedan sin categoría. Esta acción no se puede deshacer.`,
-      confirmLabel: 'Eliminar',
+      title: t('categories.deleteCategoryTitle'),
+      message: t('categories.deleteConfirmMessage', { name: category.name }),
+      confirmLabel: t('categories.deleteButton'),
       variant: 'danger',
     })
     if (!ok) return
@@ -539,9 +551,9 @@ function CategoryCard({
 
   async function handleDeactivate() {
     const ok = await confirm({
-      title: 'Desactivar categoría',
-      message: `¿Desactivar "${category.name}" para ti? Dejará de aparecer en tu lista y tus transacciones que la usan se quedan sin categoría -- podés reactivarla cuando quieras, solo te afecta a ti.`,
-      confirmLabel: 'Desactivar',
+      title: t('categories.deactivateCategoryTitle'),
+      message: t('categories.deactivateConfirmMessage', { name: category.name }),
+      confirmLabel: t('categories.deactivateButton'),
       variant: 'danger',
     })
     if (!ok) return
@@ -570,12 +582,12 @@ function CategoryCard({
             className="flex items-center gap-2 flex-shrink-0"
             data-tour={tourTarget ? 'categories:actions' : undefined}
           >
-            <span className="text-[10px] text-muted-foreground">Sistema</span>
+            <span className="text-[10px] text-muted-foreground">{t('categories.systemLabel')}</span>
             <button
               type="button"
               onClick={handleDeactivate}
               className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              title="Desactivar para mí"
+              title={t('categories.deactivateTooltip')}
             >
               <EyeOff size={12} />
             </button>
@@ -591,7 +603,7 @@ function CategoryCard({
                   <button
                     type="button"
                     className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info"
-                    title="Editar categoría"
+                    title={t('categories.editCategoryTitle')}
                   >
                     <Pencil size={12} />
                   </button>
@@ -599,7 +611,7 @@ function CategoryCard({
               />
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Editar categoría</DialogTitle>
+                  <DialogTitle>{t('categories.editCategoryTitle')}</DialogTitle>
                 </DialogHeader>
                 <EditCategoryForm category={category} onDone={() => setEditOpen(false)} />
               </DialogContent>
@@ -608,7 +620,7 @@ function CategoryCard({
               type="button"
               onClick={handleDelete}
               className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              title="Eliminar categoría"
+              title={t('categories.deleteCategoryTitle')}
             >
               <Trash2 size={12} />
             </button>
@@ -616,7 +628,7 @@ function CategoryCard({
         )}
       </div>
       <div className="text-[11px] text-muted-foreground">
-        {category.type === 'income' ? 'Recibido' : 'Gastado'} este mes
+        {category.type === 'income' ? t('categories.receivedThisMonth') : t('categories.spentThisMonth')}
       </div>
       <div
         className="text-[15px] font-medium"
@@ -643,8 +655,8 @@ function CategoryCard({
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           {subcategoryList.length > 0
-            ? `${subcategoryList.length} subcategoría${subcategoryList.length === 1 ? '' : 's'}`
-            : 'Subcategorías'}
+            ? t('categories.subcategoryCount', { count: subcategoryList.length })
+            : t('categories.subcategoriesButton')}
         </button>
       )}
 
@@ -687,6 +699,7 @@ function CategoryCard({
 }
 
 function HiddenCategoriesSection({ type }: { type: CatType }) {
+  const { t } = useTranslation('pages')
   const { data: hidden } = useHiddenCategories(type)
   const reactivateCategory = useReactivateCategory()
   const pushToast = useUiStore((s) => s.pushToast)
@@ -704,7 +717,7 @@ function HiddenCategoriesSection({ type }: { type: CatType }) {
   return (
     <div className="mt-6 border border-dashed border-border rounded-md p-4" data-tour="categories:hidden-section">
       <p className="text-[12px] font-medium text-muted-foreground mb-3">
-        Categorías desactivadas (solo para ti)
+        {t('categories.hiddenSectionTitle')}
       </p>
       <div className="flex flex-col gap-2">
         {hidden.map((category) => {
@@ -724,10 +737,10 @@ function HiddenCategoriesSection({ type }: { type: CatType }) {
                 type="button"
                 onClick={() => handleReactivate(category.id)}
                 className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground flex-shrink-0"
-                title="Reactivar"
+                title={t('categories.reactivateButton')}
               >
                 <RotateCcw size={12} />
-                Reactivar
+                {t('categories.reactivateButton')}
               </button>
             </div>
           )
@@ -738,50 +751,30 @@ function HiddenCategoriesSection({ type }: { type: CatType }) {
 }
 
 function CategoriasHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
+      <HelpSection heading={t('categories.help.whatIsThisHeading')}>
+        <p>{t('categories.help.whatIsThisBody')}</p>
+      </HelpSection>
+      <HelpSection heading={t('categories.help.systemVsYoursHeading')}>
         <p>
-          Las categorías con las que clasificas tus ingresos y gastos. Cada tarjeta muestra cuánto llevas
-          recibido o gastado en esa categoría durante el mes actual.
+          <Trans i18nKey="categories.help.systemVsYoursBody" ns="pages" components={{ strong: <strong /> }} />
         </p>
       </HelpSection>
-      <HelpSection heading="Sistema vs. tuyas">
-        <p>
-          Las categorías marcadas <strong>Sistema</strong> vienen predefinidas y no se pueden editar ni
-          eliminar (garantizan que siempre haya dónde clasificar un movimiento), pero sí las podés{' '}
-          <strong>desactivar</strong> para ti con el ícono del ojo tachado si no las usas — dejan de
-          aparecer en tu lista y podés reactivarlas cuando quieras desde la sección de abajo; a los demás
-          usuarios no les afecta. Las que tú creas sí se pueden renombrar, cambiar de color/ícono, o
-          eliminar con la "×".
-        </p>
+      <HelpSection heading={t('categories.help.subcategoriesHeading')}>
+        <p>{t('categories.help.subcategoriesBody')}</p>
       </HelpSection>
-      <HelpSection heading="Subcategorías">
-        <p>
-          Las categorías de gasto de primer nivel pueden tener subcategorías (ej. "Restaurantes" y
-          "Supermercado" dentro de "Comida y Bebidas") — desplegá la categoría para verlas o agregar una
-          nueva. Solo se permite un nivel: una subcategoría no puede tener subcategorías propias. El
-          presupuesto mensual siempre se define en la categoría padre; lo que gastes en sus subcategorías
-          suma ahí automáticamente. La barra debajo del monto de cada tarjeta compara ese gasto directo
-          contra el de sus subcategorías, cada una con su propio color.
-        </p>
+      <HelpSection heading={t('categories.help.transactionsHeading')}>
+        <p>{t('categories.help.transactionsBody')}</p>
       </HelpSection>
-      <HelpSection heading="Qué pasa con las transacciones">
-        <p>
-          Al desactivar una categoría de sistema o eliminar una propia (ícono de basura), las
-          transacciones que la tenían asignada se quedan sin categoría (no se borran ni se bloquea la
-          acción) — podés volver a categorizarlas después si hace falta.
-        </p>
-      </HelpSection>
-      <HelpTip>
-        Nunca eliges una cuenta contable al usar una categoría en una transacción — el sistema la resuelve
-        sola por dentro. Aquí solo administras el catálogo de nombres.
-      </HelpTip>
+      <HelpTip>{t('categories.help.tip')}</HelpTip>
     </>
   )
 }
 
 export function Categorias() {
+  const { t } = useTranslation('pages')
   const [type, setType] = useState<CatType>('expense')
   const [open, setOpen] = useState(false)
   const { data: categories, isLoading } = useCategories(type)
@@ -801,7 +794,7 @@ export function Categorias() {
     <div>
       <ViewHeader
         icon={<Tag />}
-        title="Categorías"
+        title={t('categories.title')}
         help={<CategoriasHelp />}
         section={HEADER_SECTIONS.diario}
         tourKey="categories"
@@ -816,13 +809,15 @@ export function Categorias() {
                   style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
                 >
                   <Plus size={14} />
-                  Nueva categoría
+                  {t('categories.newButton')}
                 </button>
               }
             />
             <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Nueva categoría de {type === 'income' ? 'ingreso' : 'gasto'}</DialogTitle>
+                <DialogTitle>
+                  {type === 'income' ? t('categories.newIncomeTitle') : t('categories.newExpenseTitle')}
+                </DialogTitle>
               </DialogHeader>
               <NewCategoryForm type={type} onDone={() => setOpen(false)} />
             </DialogContent>
@@ -835,17 +830,17 @@ export function Categorias() {
           value={type}
           onChange={setType}
           options={[
-            { value: 'income', label: 'Ingresos' },
-            { value: 'expense', label: 'Gastos' },
+            { value: 'income', label: t('categories.incomeOption') },
+            { value: 'expense', label: t('categories.expenseOption') },
           ]}
           className="mb-5"
         />
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Cargando...</p>
+        <p className="text-sm text-muted-foreground">{t('categories.loading')}</p>
       ) : topLevel.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sin categorías todavía.</p>
+        <p className="text-sm text-muted-foreground">{t('categories.emptyState')}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {topLevel.map((c, i) => (

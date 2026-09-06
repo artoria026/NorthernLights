@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DisclaimerContent } from '@/components/DisclaimerContent'
 import { useAcceptDisclaimer, useLogout } from '@/hooks/useAuth'
@@ -15,6 +16,7 @@ import { useAuthStore } from '@/stores/authStore'
  * into this same gate (the state lives in the backend, not in this
  * component). */
 export function DisclaimerGate() {
+  const { t } = useTranslation('common')
   const user = useAuthStore((s) => s.user)
   const acceptDisclaimer = useAcceptDisclaimer()
   const logout = useLogout()
@@ -28,10 +30,10 @@ export function DisclaimerGate() {
     <Dialog open onOpenChange={() => {}}>
       <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col" showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>Actualizamos nuestro Aviso de Privacidad</DialogTitle>
+          <DialogTitle>{t('disclaimerGate.title')}</DialogTitle>
         </DialogHeader>
         <p className="text-[12.5px] text-muted-foreground -mt-2">
-          Antes de seguir usando NorthernLights, necesitamos que lo leas y lo aceptes.
+          {t('disclaimerGate.intro')}
         </p>
         <div className="overflow-y-auto pr-1 flex-1 min-h-0">
           <DisclaimerContent />
@@ -46,7 +48,7 @@ export function DisclaimerGate() {
             disabled={logout.isPending}
             className="flex-1 rounded-md border border-border py-2 text-[13px] text-muted-foreground hover:text-foreground disabled:opacity-50"
           >
-            Cerrar sesión
+            {t('disclaimerGate.logout')}
           </button>
           <button
             type="button"
@@ -55,7 +57,7 @@ export function DisclaimerGate() {
             className="flex-1 rounded-md py-2 text-[13px] font-medium disabled:opacity-50"
             style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
           >
-            {acceptDisclaimer.isPending ? 'Guardando...' : 'Aceptar y continuar'}
+            {acceptDisclaimer.isPending ? t('disclaimerGate.saving') : t('disclaimerGate.accept')}
           </button>
         </div>
       </DialogContent>

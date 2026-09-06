@@ -1,9 +1,10 @@
 import { Compass } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { HelpTrigger } from '@/components/nl/Help'
 import { WelcomeModal } from '@/components/nl/WelcomeModal'
 import { categoryColor } from '@/lib/categoryColor'
-import { TOUR_CONTENT, type ModuleKey } from '@/lib/tours'
+import { getTourContent, type ModuleKey } from '@/lib/tours'
 import { hasSeenTourWelcome, markTourWelcomeSeen } from '@/lib/tourSeen'
 import { useTourStore } from '@/stores/tourStore'
 
@@ -13,10 +14,16 @@ import { useTourStore } from '@/stores/tourStore'
  * ("Inteligencia") -- see navbar-and-font-proposals.html, Nav 02. Only
  * account or system screens (Ajustes, Notificaciones, Admin) don't belong
  * to any group and simply don't pass `section` to ViewHeader. */
+// `label` holds an i18n key (under the `primitives` namespace of the
+// `common` bundle), not the display text -- ViewHeader is the only place
+// that reads it, and it resolves it through t() so the sidebar's section
+// eyebrow follows the active UI language. Keeping the key here (rather than
+// storing already-resolved text) means this object can stay a plain module-level
+// const instead of being computed inside a component.
 export const HEADER_SECTIONS = {
-  diario: { label: 'Diario', color: 'var(--nl-accent)', ink: 'var(--nl-accent-ink)' },
-  compromisos: { label: 'Compromisos', color: 'var(--nl-blue)', ink: 'var(--nl-blue-ink)' },
-  inteligencia: { label: 'Inteligencia', color: 'var(--nl-violet)', ink: 'var(--nl-violet-ink)' },
+  diario: { label: 'primitives.sections.diario', color: 'var(--nl-accent)', ink: 'var(--nl-accent-ink)' },
+  compromisos: { label: 'primitives.sections.compromisos', color: 'var(--nl-blue)', ink: 'var(--nl-blue-ink)' },
+  inteligencia: { label: 'primitives.sections.inteligencia', color: 'var(--nl-violet)', ink: 'var(--nl-violet-ink)' },
 } as const
 
 export type HeaderSection = (typeof HEADER_SECTIONS)[keyof typeof HEADER_SECTIONS]
@@ -49,15 +56,16 @@ export function ViewHeader({
   section?: HeaderSection
   /** Optional context line below the title (e.g. the Inicio greeting). */
   subtitle?: ReactNode
-  /** Module from tours.ts -- if it has an entry in TOUR_CONTENT, shows the
+  /** Module from tours.ts -- if getTourContent() has an entry for it, shows the
    * persistent "Recorrido" button and, the first time, the welcome modal
    * (see TourHost.tsx). Modules without an entry don't change anything
    * here yet -- incremental rollout without touching types. */
   tourKey?: ModuleKey
 }) {
+  const { t } = useTranslation('common')
   const startTour = useTourStore((s) => s.start)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
-  const tourContent = tourKey ? TOUR_CONTENT[tourKey] : undefined
+  const tourContent = tourKey ? getTourContent(tourKey) : undefined
 
   useEffect(() => {
     if (tourKey && tourContent && !hasSeenTourWelcome(tourKey)) setWelcomeOpen(true)
@@ -87,7 +95,7 @@ export function ViewHeader({
               className="text-[10.5px] uppercase tracking-wide font-bold mb-0.5"
               style={{ color: section.ink }}
             >
-              {section.label}
+              {t(section.label)}
             </div>
           )}
           <div className="flex items-center gap-2.5">
@@ -97,7 +105,7 @@ export function ViewHeader({
             <h1 className="text-xl font-medium m-0">{title}</h1>
             {help && (
               <HelpTrigger
-                title={`Ayuda — ${title}`}
+                title={t('primitives.helpTitle', { title })}
                 dataTourId={tourKey ? `${tourKey}:help-button` : undefined}
               >
                 {help}
@@ -107,11 +115,11 @@ export function ViewHeader({
               <button
                 type="button"
                 onClick={() => startTour(tourKey as ModuleKey)}
-                title="Ver recorrido guiado"
+                title={t('primitives.tourButtonTitle')}
                 className="flex items-center gap-1 rounded-full border border-border px-2 py-1 text-[10.5px] font-semibold text-muted-foreground hover:text-primary hover:border-primary transition-colors flex-shrink-0"
               >
                 <Compass size={12} />
-                Recorrido
+                {t('primitives.tourButtonLabel')}
               </button>
             )}
           </div>
@@ -231,14 +239,18 @@ export function SegmentedControl<T extends string>({
   options,
   onChange,
   className,
+  'aria-label': ariaLabel,
 }: {
   value: T
-  options: { value: T; label: string }[]
+  options: { value: T; label: ReactNode; title?: string }[]
   onChange: (value: T) => void
   className?: string
+  'aria-label'?: string
 }) {
   return (
     <div
+      role="group"
+      aria-label={ariaLabel}
       className={`inline-flex rounded-md p-0.5 border border-border ${className ?? ''}`}
       style={{ background: 'var(--nl-bg-input)' }}
     >
@@ -247,6 +259,8 @@ export function SegmentedControl<T extends string>({
           key={opt.value}
           type="button"
           onClick={() => onChange(opt.value)}
+          title={opt.title}
+          aria-pressed={value === opt.value}
           className={`rounded px-3 py-1.5 text-[11px] transition-colors ${
             value === opt.value ? 'font-semibold' : 'text-muted-foreground hover:text-foreground'
           }`}

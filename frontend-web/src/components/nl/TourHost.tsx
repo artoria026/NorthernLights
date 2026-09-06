@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { useTourStore } from '@/stores/tourStore'
 
 interface Rect {
@@ -31,6 +32,7 @@ const PAD = 6
  * instead of the mockup's bounded frame, and with scrollIntoView + a guard
  * against a null selector (the mockup never needed either one). */
 export function TourHost() {
+  const { t } = useTranslation('common')
   const activeModuleKey = useTourStore((s) => s.activeModuleKey)
   const stepIndex = useTourStore((s) => s.stepIndex)
   const visibleSteps = useTourStore((s) => s.visibleSteps)
@@ -143,7 +145,7 @@ export function TourHost() {
             className="text-[10px] font-bold uppercase tracking-wide mb-1"
             style={{ color: 'var(--nl-accent-ink)' }}
           >
-            Paso {stepIndex + 1} de {total}
+            {t('tourHost.stepCounter', { current: stepIndex + 1, total })}
           </div>
           <div className="text-[13.5px] font-semibold mb-1">{step.title}</div>
           <p className="text-xs text-muted-foreground leading-relaxed">{step.text}</p>
@@ -167,7 +169,7 @@ export function TourHost() {
               onClick={() => setStep(stepIndex - 1)}
               className="text-[11.5px] font-semibold text-muted-foreground hover:text-foreground"
             >
-              Atrás
+              {t('tourHost.backButton')}
             </button>
           ) : (
             <span />
@@ -178,7 +180,7 @@ export function TourHost() {
               onClick={stop}
               className="text-[11.5px] font-semibold text-muted-foreground hover:text-foreground"
             >
-              Saltar
+              {t('tourHost.skipButton')}
             </button>
             <button
               ref={nextButtonRef}
@@ -187,7 +189,7 @@ export function TourHost() {
               className="rounded-md px-3 py-1.5 text-[11.5px] font-semibold"
               style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
             >
-              {isLast ? 'Listo' : 'Siguiente'}
+              {isLast ? t('tourHost.doneButton') : t('tourHost.nextButton')}
             </button>
           </div>
         </div>

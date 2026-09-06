@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -13,6 +14,7 @@ import type { Account } from '@/types'
  * credit cards outside the Deudas model (see redesign), this is the only
  * way to record a payment, from Cuentas or from Transacciones. */
 export function PayCreditCardForm({ account, onDone }: { account: Account; onDone: () => void }) {
+  const { t } = useTranslation('common')
   const { data: accounts } = useAccounts()
   const createTransaction = useCreateTransaction()
   const pushToast = useUiStore((s) => s.pushToast)
@@ -26,7 +28,7 @@ export function PayCreditCardForm({ account, onDone }: { account: Account; onDon
     try {
       await createTransaction.mutateAsync({
         date,
-        description: `Pago ${account.name}`,
+        description: t('payCreditCardForm.paymentDescription', { name: account.name }),
         entry_type: 'transfer',
         lines: [
           { account_id: account.id, amount, type: 'debit' },
@@ -34,9 +36,9 @@ export function PayCreditCardForm({ account, onDone }: { account: Account; onDon
         ],
       })
       pushToast(
-        <>
-          Pago a <strong className="font-bold">{account.name}</strong> registrado
-        </>,
+        <Trans i18nKey="payCreditCardForm.paymentToast" ns="common" values={{ name: account.name }}>
+          Pago a <strong className="font-bold" /> registrado
+        </Trans>,
         'success',
       )
       onDone()
@@ -47,12 +49,14 @@ export function PayCreditCardForm({ account, onDone }: { account: Account; onDon
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">Saldo actual: {formatMoney(account.balance)}</p>
+      <p className="text-sm text-muted-foreground">
+        {t('payCreditCardForm.currentBalance', { amount: formatMoney(account.balance) })}
+      </p>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Cuenta que paga</label>
+        <label className="text-xs text-muted-foreground">{t('payCreditCardForm.sourceAccountLabel')}</label>
         <Select value={sourceAccountId || null} onValueChange={(v) => setSourceAccountId(v ?? '')}>
           <SelectTrigger className="h-9 w-full">
-            <SelectValue placeholder="Selecciona una cuenta">
+            <SelectValue placeholder={t('payCreditCardForm.accountPlaceholder')}>
               {(v: string | null) => sourceAccounts.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
@@ -66,7 +70,7 @@ export function PayCreditCardForm({ account, onDone }: { account: Account; onDon
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Monto</label>
+        <label className="text-xs text-muted-foreground">{t('payCreditCardForm.amountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -77,7 +81,7 @@ export function PayCreditCardForm({ account, onDone }: { account: Account; onDon
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Fecha</label>
+        <label className="text-xs text-muted-foreground">{t('payCreditCardForm.dateLabel')}</label>
         <input
           type="date"
           required
@@ -91,7 +95,7 @@ export function PayCreditCardForm({ account, onDone }: { account: Account; onDon
       )}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={createTransaction.isPending} disabled={!sourceAccountId}>
-          Registrar pago
+          {t('payCreditCardForm.submitButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>

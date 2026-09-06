@@ -21,6 +21,24 @@ async def test_register_creates_user(client: AsyncClient):
     body = response.json()["data"]
     assert body["email"] == email
     assert body["role"] == "user"
+    # Not sent -> falls back to the column default, not None/empty.
+    assert body["locale"] == "es"
+
+
+async def test_register_with_locale_seeds_preference(client: AsyncClient):
+    email = f"{uuid.uuid4()}@example.com"
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "name": "Ada Lovelace",
+            "password": "supersecret123",
+            "accept_disclaimer": True,
+            "locale": "en",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["data"]["locale"] == "en"
 
 
 async def test_register_duplicate_email_conflicts(client: AsyncClient):
@@ -235,6 +253,7 @@ async def test_new_user_gets_default_preferences(client: AsyncClient):
     me = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
     data = me.json()["data"]
     assert data["theme"] == "dark"
+    assert data["locale"] == "es"
     assert data["pay_cycle"] == "monthly"
     assert data["email_notifications"] is True
     assert data["push_notifications"] is True
@@ -257,6 +276,33 @@ async def test_update_settings_changes_theme_and_pay_cycle(client: AsyncClient):
     assert data["pay_cycle"] == "biweekly"
     # What isn't sent doesn't change.
     assert data["email_notifications"] is True
+    assert data["locale"] == "es"
+
+
+async def test_update_settings_changes_locale(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    response = await client.put(
+        "/api/v1/auth/settings",
+        headers=headers,
+        json={"locale": "en"},
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["locale"] == "en"
+    # What isn't sent doesn't change.
+    assert data["theme"] == "dark"
+
+
+async def test_update_settings_rejects_invalid_locale(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    response = await client.put(
+        "/api/v1/auth/settings",
+        headers=headers,
+        json={"locale": "fr"},
+    )
+    assert response.status_code == 422
 
 
 async def test_update_settings_toggles_debt_trouble_mode(client: AsyncClient):

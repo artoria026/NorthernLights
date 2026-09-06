@@ -20,10 +20,10 @@ describe('apiErrorMessage', () => {
 
   it('falls back to a generic message when the response has no error field', () => {
     const error = makeAxiosError({ detail: 'algo distinto' })
-    expect(apiErrorMessage(error)).toBe('Ocurrio un error inesperado')
+    expect(apiErrorMessage(error)).toBe('Ocurrió un error inesperado')
   })
 
   it('falls back to a generic message for non-axios errors', () => {
-    expect(apiErrorMessage(new Error('boom'))).toBe('Ocurrio un error inesperado')
+    expect(apiErrorMessage(new Error('boom'))).toBe('Ocurrió un error inesperado')
   })
 })
