@@ -51,6 +51,7 @@ def build_user_out(user: User) -> UserOut:
         role=user.role,
         auth_provider=user.auth_provider,
         theme=user.preferences.theme,
+        locale=user.preferences.locale,
         email_notifications=user.preferences.email_notifications,
         push_notifications=user.preferences.push_notifications,
         pay_cycle=user.preferences.pay_cycle,
@@ -104,7 +105,10 @@ async def register(session: AsyncSession, data: RegisterRequest) -> User:
         password_hash=hash_password(data.password),
         role="user",
         auth_provider="email",
-        preferences=UserPreferences(accepted_disclaimer_version=settings.DISCLAIMER_VERSION),
+        preferences=UserPreferences(
+            accepted_disclaimer_version=settings.DISCLAIMER_VERSION,
+            **({"locale": data.locale} if data.locale else {}),
+        ),
     )
     # The cascading insert of UserPreferences (FORCE ROW LEVEL SECURITY, see
     # migration 293528f67338) needs app.current_user_id set to pass its

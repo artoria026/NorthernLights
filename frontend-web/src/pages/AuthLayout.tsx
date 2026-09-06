@@ -1,7 +1,9 @@
 import type { LucideIcon } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import logoMain from '@/assets/logos/main.png'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { Donut, GroupedBars, LineChart } from '@/lib/charts'
 // Build version, shown at the bottom of this panel -- same source of truth
 // as the sidebar footer (AppSidebar.tsx), don't hardcode the string here.
@@ -38,52 +40,64 @@ const formCardTransitionStyle: CSSProperties = {
  * chart components as the rest of the app (lib/charts.tsx) so they feel
  * part of NorthernLights, not a separate mockup invented just for this
  * screen. */
-const FEATURE_SLIDES: { title: string; subtitle: string; visual: ReactNode }[] = [
-  {
-    title: 'Tu salud financiera, mes a mes',
-    subtitle: 'Ingresos, gastos y patrimonio en una sola vista, siempre actualizada.',
-    visual: (
-      <LineChart
-        series={[8200, 9100, 8700, 10400, 11200, 12600]}
-        xLabels={['Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago']}
-        height={150}
-      />
-    ),
-  },
-  {
-    title: 'Presupuesto por categoría, sin sorpresas',
-    subtitle: 'Compará lo planeado contra lo que gastaste de verdad, categoría por categoría.',
-    visual: (
-      <GroupedBars
-        groups={[
-          { label: 'Comida', a: 3500, b: 3120 },
-          { label: 'Transporte', a: 1800, b: 1950 },
-          { label: 'Ocio', a: 1200, b: 890 },
-          { label: 'Servicios', a: 2400, b: 2400 },
-        ]}
-        height={150}
-        colorA="var(--nl-violet)"
-        colorB="var(--nl-accent)"
-      />
-    ),
-  },
-  {
-    title: 'Tus deudas, bajo control',
-    subtitle: 'Mira cuánto ya pagaste de cada una, de un vistazo.',
-    visual: (
-      <Donut
-        slices={[
-          { value: 62, color: 'var(--nl-accent)' },
-          { value: 38, color: 'var(--nl-bg-track)' },
-        ]}
-        size={140}
-        strokeWidth={18}
-        centerLabel="62%"
-        centerSub="Pagado"
-      />
-    ),
-  },
-]
+function buildFeatureSlides(
+  t: (key: string) => string,
+): { title: string; subtitle: string; visual: ReactNode }[] {
+  return [
+    {
+      title: t('auth.layout.featureSlides.financialHealth.title'),
+      subtitle: t('auth.layout.featureSlides.financialHealth.subtitle'),
+      visual: (
+        <LineChart
+          series={[8200, 9100, 8700, 10400, 11200, 12600]}
+          xLabels={['Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago']}
+          height={150}
+        />
+      ),
+    },
+    {
+      title: t('auth.layout.featureSlides.budget.title'),
+      subtitle: t('auth.layout.featureSlides.budget.subtitle'),
+      visual: (
+        <GroupedBars
+          groups={[
+            { label: t('auth.layout.featureSlides.budget.categories.food'), a: 3500, b: 3120 },
+            {
+              label: t('auth.layout.featureSlides.budget.categories.transport'),
+              a: 1800,
+              b: 1950,
+            },
+            { label: t('auth.layout.featureSlides.budget.categories.leisure'), a: 1200, b: 890 },
+            {
+              label: t('auth.layout.featureSlides.budget.categories.utilities'),
+              a: 2400,
+              b: 2400,
+            },
+          ]}
+          height={150}
+          colorA="var(--nl-violet)"
+          colorB="var(--nl-accent)"
+        />
+      ),
+    },
+    {
+      title: t('auth.layout.featureSlides.debts.title'),
+      subtitle: t('auth.layout.featureSlides.debts.subtitle'),
+      visual: (
+        <Donut
+          slices={[
+            { value: 62, color: 'var(--nl-accent)' },
+            { value: 38, color: 'var(--nl-bg-track)' },
+          ]}
+          size={140}
+          strokeWidth={18}
+          centerLabel="62%"
+          centerSub={t('auth.layout.featureSlides.debts.paidLabel')}
+        />
+      ),
+    },
+  ]
+}
 
 const SLIDE_INTERVAL_MS = 5000
 
@@ -101,7 +115,9 @@ function HeroCarousel({
   heroSubtitle: string
   valueProps: AuthValueProp[]
 }) {
-  const totalSlides = FEATURE_SLIDES.length + 1
+  const { t } = useTranslation('pages')
+  const featureSlides = buildFeatureSlides(t)
+  const totalSlides = featureSlides.length + 1
   const [index, setIndex] = useState(0)
 
   useEffect(() => {
@@ -144,17 +160,17 @@ function HeroCarousel({
           <>
             <div className="mb-6">
               <h2 className="text-[22px] font-semibold leading-tight tracking-tight mb-2">
-                {FEATURE_SLIDES[index - 1].title}
+                {featureSlides[index - 1].title}
               </h2>
               <p className="text-[14px] text-muted-foreground leading-relaxed">
-                {FEATURE_SLIDES[index - 1].subtitle}
+                {featureSlides[index - 1].subtitle}
               </p>
             </div>
             <div
               className="rounded-xl border p-5 flex items-center justify-center"
               style={{ borderColor: 'var(--nl-border)' }}
             >
-              {FEATURE_SLIDES[index - 1].visual}
+              {featureSlides[index - 1].visual}
             </div>
           </>
         )}
@@ -166,7 +182,7 @@ function HeroCarousel({
             key={i}
             type="button"
             onClick={() => setIndex(i)}
-            aria-label={`Ver pantalla ${i + 1} de ${totalSlides}`}
+            aria-label={t('auth.layout.slideAriaLabel', { current: i + 1, total: totalSlides })}
             className="h-1.5 rounded-full transition-all duration-300"
             style={{
               width: i === index ? '20px' : '6px',
@@ -192,6 +208,15 @@ export function AuthLayout({
 }) {
   return (
     <div className="min-h-screen flex" style={{ background: 'var(--nl-bg-page)' }}>
+      {/* No session yet here -- useSyncedLocale only changes the active
+          language/localStorage in this case (see its auth check), it
+          doesn't try to PUT a preference that has nowhere to be saved
+          yet. Register.tsx reads the language chosen here and sends it
+          along with the signup request so it becomes the new account's
+          saved preference from the start (see RegisterRequest.locale). */}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSwitcher />
+      </div>
       <div
         className="hidden lg:flex w-[42%] flex-col justify-between p-12 relative overflow-hidden"
         style={{

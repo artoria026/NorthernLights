@@ -1,5 +1,6 @@
 import { Combobox } from '@base-ui/react/combobox'
 import { Check, ChevronDown, Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { categoryIcon } from '@/lib/categoryIcons'
 import { cn } from '@/lib/utils'
 import type { Category } from '@/types'
@@ -45,10 +46,12 @@ export function CategorySelect({
   categories,
   value,
   onValueChange,
-  placeholder = 'Selecciona...',
+  placeholder,
   triggerClassName,
   disabled,
 }: CategorySelectProps) {
+  const { t } = useTranslation('common')
+  const resolvedPlaceholder = placeholder ?? t('categorySelect.placeholder')
   const flat = categories ?? []
   const parentById = new Map(flat.filter((c) => !c.parent_id).map((c) => [c.id, c]))
   const selected = flat.find((c) => c.id === value) ?? null
@@ -80,13 +83,13 @@ export function CategorySelect({
       disabled={disabled}
     >
       <Combobox.Trigger
-        aria-label={placeholder}
+        aria-label={resolvedPlaceholder}
         className={cn(
           'flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-placeholder:text-muted-foreground',
           triggerClassName,
         )}
       >
-        <Combobox.Value placeholder={placeholder}>
+        <Combobox.Value placeholder={resolvedPlaceholder}>
           {(cat: Category | null) =>
             cat ? (
               <span className="flex min-w-0 items-center gap-2">
@@ -94,7 +97,7 @@ export function CategorySelect({
                 <span className="truncate">{cat.name}</span>
               </span>
             ) : (
-              placeholder
+              resolvedPlaceholder
             )
           }
         </Combobox.Value>
@@ -109,7 +112,7 @@ export function CategorySelect({
             <div className="flex items-center gap-2 border-b border-border px-2.5 py-2">
               <Search size={13} className="shrink-0 text-muted-foreground" />
               <Combobox.Input
-                placeholder="Buscar categoría..."
+                placeholder={t('categorySelect.searchPlaceholder')}
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
@@ -119,7 +122,7 @@ export function CategorySelect({
                 the list even when there ARE results, because the div only
                 empties of text, it never unmounts. */}
             <Combobox.Empty className="empty:hidden px-3 py-6 text-center text-xs text-muted-foreground">
-              Sin resultados
+              {t('categorySelect.noResults')}
             </Combobox.Empty>
             <Combobox.List className="max-h-64 overflow-y-auto p-1">
               {(group: CategoryGroup) => {
@@ -153,7 +156,7 @@ export function CategorySelect({
                             <span
                               className={cn('min-w-0 flex-1 truncate', isParentRow && 'text-muted-foreground italic')}
                             >
-                              {isParentRow ? 'General' : cat.name}
+                              {isParentRow ? t('categorySelect.generalLabel') : cat.name}
                             </span>
                             <Combobox.ItemIndicator className="absolute right-2 flex items-center text-primary">
                               <Check size={14} />

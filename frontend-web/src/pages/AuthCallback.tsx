@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useUpdateSettings } from '@/hooks/useAuth'
 import { LATEST_CHANGELOG_VERSION } from '@/lib/changelog'
@@ -6,15 +7,18 @@ import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import type { ApiSuccess, User } from '@/types'
 
-const ERROR_MESSAGES: Record<string, string> = {
-  google_cancelled: 'Cancelaste el inicio de sesión con Google.',
-  invalid_state: 'La sesión expiró. Intenta de nuevo.',
-  google_exchange_failed: 'No pudimos conectar con Google. Intenta de nuevo.',
-  account_disabled: 'Esta cuenta está desactivada.',
-  server_error: 'Ocurrió un error inesperado.',
+function buildErrorMessages(t: (key: string) => string): Record<string, string> {
+  return {
+    google_cancelled: t('auth.callback.errors.googleCancelled'),
+    invalid_state: t('auth.callback.errors.invalidState'),
+    google_exchange_failed: t('auth.callback.errors.googleExchangeFailed'),
+    account_disabled: t('auth.callback.errors.accountDisabled'),
+    server_error: t('auth.callback.errors.serverError'),
+  }
 }
 
 export function AuthCallback() {
+  const { t } = useTranslation('pages')
   const navigate = useNavigate()
   const setTokens = useAuthStore((s) => s.setTokens)
   const setUser = useAuthStore((s) => s.setUser)
@@ -37,7 +41,8 @@ export function AuthCallback() {
     const isNewAccount = params.get('is_new') === '1'
 
     if (error || !accessToken || !refreshToken) {
-      const mensaje = ERROR_MESSAGES[error ?? ''] ?? 'Ocurrió un error.'
+      const errorMessages = buildErrorMessages(t)
+      const mensaje = errorMessages[error ?? ''] ?? t('auth.callback.errors.generic')
       navigate(`/login?mensaje=${encodeURIComponent(mensaje)}`, { replace: true })
       return
     }
@@ -63,14 +68,16 @@ export function AuthCallback() {
         }
         navigate('/', { replace: true })
       } catch {
-        navigate('/login?mensaje=Ocurri%C3%B3%20un%20error.', { replace: true })
+        navigate(`/login?mensaje=${encodeURIComponent(t('auth.callback.errors.generic'))}`, {
+          replace: true,
+        })
       }
     })()
-  }, [navigate, setTokens, setUser, updateSettings])
+  }, [navigate, setTokens, setUser, updateSettings, t])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-      <p className="text-muted-foreground">Iniciando sesión...</p>
+      <p className="text-muted-foreground">{t('auth.callback.loadingText')}</p>
     </div>
   )
 }

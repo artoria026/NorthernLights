@@ -1,4 +1,5 @@
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Navigate, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -13,6 +14,7 @@ import { useAuthStore } from '@/stores/authStore'
  * truth, and any future admin page added under this layout inherits it
  * for free. */
 export function AdminLayout() {
+  const { t } = useTranslation('common')
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
 
@@ -33,7 +35,7 @@ export function AdminLayout() {
             style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}
           >
             <ShieldCheck size={11} strokeWidth={2.2} />
-            Admin
+            {t('adminLayout.badge')}
           </span>
         </div>
         <button
@@ -42,7 +44,7 @@ export function AdminLayout() {
           className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-accent"
         >
           <ArrowLeft size={15} strokeWidth={2} />
-          Volver a la app
+          {t('adminLayout.backToApp')}
         </button>
       </header>
 

@@ -14,6 +14,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { EmptyState, HEADER_SECTIONS, SoftBadge, SegmentedControl, StatCard, ViewHeader } from '@/components/nl/primitives'
@@ -26,7 +27,7 @@ import {
   useReports,
 } from '@/hooks/useReports'
 import { apiErrorMessage } from '@/services/api'
-import { formatMoney as formatMoneyBase } from '@/lib/utils'
+import { activeDateLocale, formatMoney as formatMoneyBase } from '@/lib/utils'
 import { useConfirmStore } from '@/stores/confirmStore'
 import type { Report, ReportInsight, ReportInsightFlowType } from '@/types'
 
@@ -48,16 +49,17 @@ function periodLabel(report: Report): string {
   // timeZone: 'UTC' -- `period_start` is "YYYY-MM-DD" (date with no time),
   // which Date() parses as midnight UTC; formatting in the browser's local
   // timezone can shift the day/month a period back.
-  return start.toLocaleDateString('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  return start.toLocaleDateString(activeDateLocale(), { month: 'long', year: 'numeric', timeZone: 'UTC' })
 }
 
-const FLOW_BADGE: Record<
-  ReportInsightFlowType,
-  { label: string; severity: 'accent' | 'danger' | 'violet'; Icon: typeof TrendingUp }
-> = {
-  income: { label: 'Ingreso', severity: 'accent', Icon: TrendingUp },
-  expense: { label: 'Gasto', severity: 'danger', Icon: TrendingDown },
-  general: { label: 'General', severity: 'violet', Icon: Lightbulb },
+function buildFlowBadge(
+  t: (key: string) => string,
+): Record<ReportInsightFlowType, { label: string; severity: 'accent' | 'danger' | 'violet'; Icon: typeof TrendingUp }> {
+  return {
+    income: { label: t('reports.flowBadge.income'), severity: 'accent', Icon: TrendingUp },
+    expense: { label: t('reports.flowBadge.expense'), severity: 'danger', Icon: TrendingDown },
+    general: { label: t('reports.flowBadge.general'), severity: 'violet', Icon: Lightbulb },
+  }
 }
 
 /** A negative savings rate (you spend more than you earn) is a real
@@ -82,7 +84,8 @@ function dtiColor(dti: number | undefined): string | undefined {
 }
 
 function InsightRow({ insight }: { insight: ReportInsight }) {
-  const badge = FLOW_BADGE[insight.flow_type]
+  const { t } = useTranslation('pages')
+  const badge = buildFlowBadge(t)[insight.flow_type]
   const Icon = badge.Icon
   return (
     <div className="py-3 border-t border-border first:border-0">
@@ -104,56 +107,34 @@ function InsightRow({ insight }: { insight: ReportInsight }) {
 }
 
 function ReportsHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          Reportes de periodos ya cerrados (mes o año anterior) — a diferencia de Presupuesto/Dashboard,
-          que son en tiempo real, un reporte es una "foto" congelada de un periodo que ya terminó, con
-          análisis generado sobre esos números.
-        </p>
+      <HelpSection heading={t('reports.help.whatIsThisScreen.heading')}>
+        <p>{t('reports.help.whatIsThisScreen.body')}</p>
       </HelpSection>
-      <HelpSection heading="Generar mes/año anterior">
-        <p>
-          Los reportes no se crean solos — los generas cuando quieras verlos. Un reporte anual necesita
-          que ya existan los reportes mensuales de ese año.
-        </p>
+      <HelpSection heading={t('reports.help.generateMonthYear.heading')}>
+        <p>{t('reports.help.generateMonthYear.body')}</p>
       </HelpSection>
-      <HelpSection heading="Regenerar un reporte">
-        <p>
-          El ícono junto al selector de periodo recalcula desde cero el reporte que estás viendo, con tus
-          transacciones actuales — útil si generaste un reporte antes de cargar historial viejo y quedó
-          casi vacío. En un reporte anual, también recalcula los 12 meses de ese año.
-        </p>
+      <HelpSection heading={t('reports.help.regenerateReport.heading')}>
+        <p>{t('reports.help.regenerateReport.body')}</p>
       </HelpSection>
-      <HelpSection heading="Ingresos / Egresos / Todos">
-        <p>
-          Filtra tanto la categoría destacada como los "Puntos de este periodo" (observaciones generadas
-          por IA sobre ese reporte específico).
-        </p>
+      <HelpSection heading={t('reports.help.incomeExpenseAll.heading')}>
+        <p>{t('reports.help.incomeExpenseAll.body')}</p>
       </HelpSection>
-      <HelpSection heading="Patrimonio neto — histórico">
-        <p>
-          Junta todos tus reportes mensuales generados para dibujar la línea de tu patrimonio a lo largo
-          del tiempo — entre más meses generes, más completa se ve.
-        </p>
+      <HelpSection heading={t('reports.help.netWorthHistory.heading')}>
+        <p>{t('reports.help.netWorthHistory.body')}</p>
       </HelpSection>
-      <HelpSection heading="Colores de Tasa de ahorro y DTI">
-        <p>
-          Tasa de ahorro: rojo si es negativa (gastaste más de lo que ganaste), naranja por debajo del
-          10%, verde de ahí en adelante. DTI (deuda/ingreso): naranja desde 20%, rojo desde 36% — el
-          umbral clásico de zona de riesgo en finanzas personales.
-        </p>
+      <HelpSection heading={t('reports.help.savingsRateDtiColors.heading')}>
+        <p>{t('reports.help.savingsRateDtiColors.body')}</p>
       </HelpSection>
-      <HelpTip>
-        Tasa de ahorro y DTI son indicadores del reporte cerrado, no del mes en curso — para eso usa la
-        nota "Mes en curso" al final de la página.
-      </HelpTip>
+      <HelpTip>{t('reports.help.tip')}</HelpTip>
     </>
   )
 }
 
 export function Reports() {
+  const { t } = useTranslation('pages')
   const { data: current } = useCurrentMonthSummary()
   const { data: reports } = useReports(1, 48)
   const generateMonthly = useGenerateReport()
@@ -227,13 +208,12 @@ export function Reports() {
   async function regenerateCurrentReport() {
     if (!report || regenerating) return
     const ok = await confirm({
-      title: 'Regenerar reporte',
-      message:
-        `Esto va a recalcular el reporte de ${periodLabel(report)} desde cero con las ` +
-        `transacciones actuales, incluyendo los puntos de IA. ${
-          period === 'year' ? 'También recalcula los 12 meses de ese año. ' : ''
-        }¿Continuar?`,
-      confirmLabel: 'Regenerar',
+      title: t('reports.confirmRegenerate.title'),
+      message: t(
+        period === 'year' ? 'reports.confirmRegenerate.yearlyMessage' : 'reports.confirmRegenerate.monthlyMessage',
+        { period: periodLabel(report) },
+      ),
+      confirmLabel: t('reports.confirmRegenerate.confirmLabel'),
       variant: 'danger',
     })
     if (!ok) return
@@ -267,14 +247,14 @@ export function Reports() {
     .sort((a, b) => a.period_start.localeCompare(b.period_start))
   const netWorthValues = netWorthSeries.map((r) => Number(r.summary!.net_worth.end))
   const netWorthLabels = netWorthSeries.map((r) =>
-    new Date(r.period_start).toLocaleDateString('es-MX', { month: 'short', timeZone: 'UTC' }),
+    new Date(r.period_start).toLocaleDateString(activeDateLocale(), { month: 'short', timeZone: 'UTC' }),
   )
 
   return (
     <div>
       <ViewHeader
         icon={<FileBarChart />}
-        title="Reportes"
+        title={t('reports.title')}
         help={<ReportsHelp />}
         section={HEADER_SECTIONS.inteligencia}
         tourKey="reports"
@@ -288,7 +268,7 @@ export function Reports() {
               className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-60"
             >
               <FileBarChart size={14} />
-              {generateMonthly.isPending ? 'Generando...' : 'Generar mes anterior'}
+              {generateMonthly.isPending ? t('reports.generating') : t('reports.generatePreviousMonth')}
             </button>
             <button
               type="button"
@@ -298,7 +278,7 @@ export function Reports() {
               style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
             >
               <FileBarChart size={14} />
-              {generateYearly.isPending ? 'Generando...' : 'Generar año anterior'}
+              {generateYearly.isPending ? t('reports.generating') : t('reports.generatePreviousYear')}
             </button>
           </div>
         }
@@ -315,8 +295,8 @@ export function Reports() {
             value={period}
             onChange={setPeriod}
             options={[
-              { value: 'month', label: 'Mensual' },
-              { value: 'year', label: 'Anual' },
+              { value: 'month', label: t('reports.period.month') },
+              { value: 'year', label: t('reports.period.year') },
             ]}
           />
         </div>
@@ -343,7 +323,7 @@ export function Reports() {
             </button>
             <button
               type="button"
-              title="Regenerar este reporte desde cero"
+              title={t('reports.regenerateTooltip')}
               disabled={regenerating}
               onClick={() => void regenerateCurrentReport()}
               data-tour="reports:regenerate"
@@ -359,26 +339,29 @@ export function Reports() {
         <div className="bg-card border border-border rounded-md p-8 mb-4 flex flex-col items-center gap-3">
           <FileBarChart size={28} className="text-muted-foreground/40" />
           <EmptyState>
-            {period === 'month'
-              ? 'Todavía no hay reportes mensuales generados. Usa el botón "Generar mes anterior".'
-              : 'Todavía no hay reportes anuales. Genera primero los reportes mensuales del año, luego usa "Generar año anterior".'}
+            {period === 'month' ? t('reports.emptyState.month') : t('reports.emptyState.year')}
           </EmptyState>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2.5 mb-4 lg:flex lg:gap-3 lg:flex-wrap" data-tour="reports:stats">
-            <StatCard compact icon={<TrendingUp />} label="Ingresos" value={formatMoney(summary?.income.total)} />
+            <StatCard
+              compact
+              icon={<TrendingUp />}
+              label={t('reports.stats.income')}
+              value={formatMoney(summary?.income.total)}
+            />
             <StatCard
               compact
               icon={<Receipt />}
-              label="Gastos"
+              label={t('reports.stats.expenses')}
               value={formatMoney(summary?.expenses.total)}
               valueClassName="text-[color:var(--nl-warning-ink)]"
             />
             <StatCard
               compact
               icon={<PiggyBank />}
-              label="Tasa de ahorro"
+              label={t('reports.stats.savingsRate')}
               value={
                 <span style={{ color: savingsRateColor(summary?.savings_rate) }}>
                   {Math.round((summary?.savings_rate ?? 0) * 100)}%
@@ -388,7 +371,7 @@ export function Reports() {
             <StatCard
               compact
               icon={<Scale />}
-              label="DTI"
+              label={t('reports.stats.dti')}
               value={
                 <span style={{ color: dtiColor(summary?.dti) }}>
                   {Math.round((summary?.dti ?? 0) * 100)}%
@@ -398,15 +381,15 @@ export function Reports() {
             <StatCard
               compact
               icon={<HeartPulse />}
-              label="Salud financiera"
+              label={t('reports.stats.healthScore')}
               value={summary?.health_score.value ?? '—'}
               note={
                 summary?.health_score.trend === 'improved'
-                  ? '↑ mejoró vs anterior'
+                  ? t('reports.trendNote.improved')
                   : summary?.health_score.trend === 'worsened'
-                    ? '↓ empeoró vs anterior'
+                    ? t('reports.trendNote.worsened')
                     : summary?.health_score.trend === 'stable'
-                      ? '→ estable'
+                      ? t('reports.trendNote.stable')
                       : undefined
               }
             />
@@ -420,21 +403,33 @@ export function Reports() {
             >
               <RefreshCcw size={16} className="text-muted-foreground flex-shrink-0" />
               <span className="text-[13px] flex-1">
-                <strong>{summary.adjustments.count}</strong> ajuste{summary.adjustments.count === 1 ? '' : 's'} de
-                saldo este período — entradas {formatMoney(summary.adjustments.total_in)}, salidas{' '}
-                {formatMoney(summary.adjustments.total_out)}, neto{' '}
-                <span
-                  style={{
-                    color:
-                      Number(summary.adjustments.net) >= 0 ? 'var(--nl-accent-ink)' : 'var(--nl-danger-ink)',
+                <Trans
+                  i18nKey="reports.adjustmentsNote"
+                  ns="pages"
+                  count={summary.adjustments.count}
+                  values={{
+                    count: summary.adjustments.count,
+                    in: formatMoney(summary.adjustments.total_in),
+                    out: formatMoney(summary.adjustments.total_out),
+                    net: formatMoney(summary.adjustments.net),
                   }}
-                >
-                  {formatMoney(summary.adjustments.net)}
-                </span>
-                .
+                  components={{
+                    strong: <strong />,
+                    net: (
+                      <span
+                        style={{
+                          color:
+                            Number(summary.adjustments.net) >= 0
+                              ? 'var(--nl-accent-ink)'
+                              : 'var(--nl-danger-ink)',
+                        }}
+                      />
+                    ),
+                  }}
+                />
               </span>
               <Link to="/transactions" className="text-xs text-muted-foreground hover:text-foreground">
-                Ver en Transacciones →
+                {t('reports.viewInTransactions')}
               </Link>
             </div>
           )}
@@ -444,9 +439,9 @@ export function Reports() {
               value={flow}
               onChange={setFlow}
               options={[
-                { value: 'all', label: 'Todos' },
-                { value: 'income', label: 'Ingresos' },
-                { value: 'expense', label: 'Egresos' },
+                { value: 'all', label: t('reports.flow.all') },
+                { value: 'income', label: t('reports.flow.income') },
+                { value: 'expense', label: t('reports.flow.expense') },
               ]}
             />
           </div>
@@ -456,7 +451,7 @@ export function Reports() {
               <div className="flex items-center gap-2 mb-2">
                 <PieChart size={15} className="text-muted-foreground" />
                 <div className="text-[15px] font-medium">
-                  Categorías de {categorySide === 'income' ? 'ingreso' : 'gasto'}
+                  {categorySide === 'income' ? t('reports.incomeCategoriesHeading') : t('reports.expenseCategoriesHeading')}
                 </div>
               </div>
               {categories.length >= 3 ? (
@@ -593,20 +588,20 @@ export function Reports() {
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Sin movimientos en esta categoría.</p>
+                <p className="text-sm text-muted-foreground">{t('reports.noCategoryMovements')}</p>
               )}
             </div>
 
             <div className="bg-card border border-border rounded-md p-4">
               <div className="flex items-center gap-2 mb-1">
                 <Lightbulb size={15} className="text-muted-foreground" />
-                <div className="text-[15px] font-medium">Puntos de este periodo</div>
+                <div className="text-[15px] font-medium">{t('reports.periodPointsHeading')}</div>
               </div>
-              <p className="text-[11px] text-muted-foreground mb-2">Generados por IA a partir del resumen ya cerrado.</p>
+              <p className="text-[11px] text-muted-foreground mb-2">{t('reports.periodPointsSubtitle')}</p>
               {insights.length > 0 ? (
                 insights.map((i) => <InsightRow key={i.id} insight={i} />)
               ) : (
-                <p className="text-sm text-muted-foreground py-4">Sin puntos para este filtro.</p>
+                <p className="text-sm text-muted-foreground py-4">{t('reports.noPointsForFilter')}</p>
               )}
             </div>
           </div>
@@ -620,15 +615,13 @@ export function Reports() {
           >
             <summary className="flex items-center gap-2 text-[15px] font-medium cursor-pointer select-none">
               <TrendingUp size={15} className="text-muted-foreground" />
-              Patrimonio neto — histórico
+              {t('reports.netWorthHeading')}
             </summary>
             <div className="mt-4">
               {netWorthValues.length >= 2 ? (
                 <LineChart series={netWorthValues} xLabels={netWorthLabels} height={220} />
               ) : (
-                <p className="text-sm text-muted-foreground py-6 text-center">
-                  Genera reportes de meses anteriores para ver el histórico de patrimonio neto aquí.
-                </p>
+                <p className="text-sm text-muted-foreground py-6 text-center">{t('reports.netWorthEmpty')}</p>
               )}
             </div>
           </details>
@@ -637,8 +630,10 @@ export function Reports() {
 
       {current && (
         <p className="text-[11px] text-muted-foreground mt-4">
-          Mes en curso (sin cerrar): ingresos {formatMoney(current.income.total)}, gastos{' '}
-          {formatMoney(current.expenses.total)}.
+          {t('reports.currentMonthNote', {
+            income: formatMoney(current.income.total),
+            expenses: formatMoney(current.expenses.total),
+          })}
         </p>
       )}
     </div>

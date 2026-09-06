@@ -39,6 +39,7 @@ describe('authStore', () => {
       role: 'user',
       auth_provider: 'email',
       theme: 'dark',
+      locale: 'es',
       email_notifications: true,
       push_notifications: true,
       pay_cycle: 'monthly',

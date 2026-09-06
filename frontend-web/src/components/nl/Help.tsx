@@ -1,5 +1,6 @@
 import { ArrowRight, CircleHelp } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 /** "?" button that goes in each screen's header (see ViewHeader in
@@ -17,13 +18,14 @@ export function HelpTrigger({
    * TourHost.tsx) -- ViewHeader passes it as `<tourKey>:help-button`. */
   dataTourId?: string
 }) {
+  const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Ayuda de esta pantalla"
+        title={t('help.thisScreenHelpTitle')}
         data-tour={dataTourId}
         className="p-1 rounded-md text-muted-foreground/50 hover:text-foreground hover:bg-accent transition-colors flex-shrink-0"
       >

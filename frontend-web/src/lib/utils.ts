@@ -1,9 +1,18 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import i18n from "./i18n"
 import type { Transaction } from "@/types"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+/** BCP-47 locale to use for weekday/month names (Intl.*, toLocaleDateString)
+ * -- follows the active UI language, not the currency (MXN amounts always
+ * format as "es-MX" regardless, see formatMoney below: the currency is a
+ * data fact, not a language preference). */
+export function activeDateLocale(): string {
+  return i18n.language === "en" ? "en-US" : "es-MX"
 }
 
 /** Amounts from the backend usually arrive as a string (serialized
@@ -49,23 +58,11 @@ export const selectClass =
 
 /** Spanish label for entry_type -- used as a fallback when a transaction
  * has no category_name (transfers/loans don't carry a category). */
-const ENTRY_TYPE_LABELS: Record<string, string> = {
-  expense: "Gasto",
-  income: "Ingreso",
-  transfer: "Transferencia",
-  loan_received: "Préstamo recibido",
-  loan_repayment: "Pago de préstamo",
-  loan_given: "Préstamo otorgado",
-  loan_collection: "Cobro de préstamo",
-  // Same label for both directions on purpose (chosen with the user) --
-  // the amount's color already distinguishes in/out, see
-  // isPositiveEntryType.
-  adjustment_in: "Ajuste de saldo",
-  adjustment_out: "Ajuste de saldo",
-}
-
+// adjustment_in/adjustment_out share the same label on purpose (chosen with
+// the user) -- the amount's color already distinguishes in/out, see
+// isPositiveEntryType.
 export function entryTypeLabel(entryType: string): string {
-  return ENTRY_TYPE_LABELS[entryType] ?? entryType
+  return i18n.t(`entryTypeLabels.${entryType}`, { ns: "common", defaultValue: entryType })
 }
 
 /** entry_types that add to the account balance (shown in green) -- used
@@ -87,53 +84,23 @@ export function isTransactionEditable(tx: Transaction): boolean {
   )
 }
 
-/** Spanish label for an account's subtype/type (AccountCreate.subtype in
- * the backend) -- same pattern as ENTRY_TYPE_LABELS above. */
-const ACCOUNT_SUBTYPE_LABELS: Record<string, string> = {
-  cash: "Efectivo",
-  checking: "Cuenta de débito",
-  savings: "Cuenta de ahorro",
-  credit_card: "Tarjeta de crédito",
-  payroll_loan: "Crédito de nómina",
-  personal_loan: "Préstamo personal",
-  store_credit: "Crédito departamental",
-  informal_debt: "Deuda informal",
-  loan_payable: "Préstamo por pagar",
-  loan_receivable: "Préstamo por cobrar",
-  installment: "Meses sin intereses",
-  civic: "Crédito cívico",
-}
-
+/** Translated label for an account's subtype/type (AccountCreate.subtype in
+ * the backend) -- same pattern as entryTypeLabel above. */
 export function accountSubtypeLabel(subtype: string | null | undefined): string {
   if (!subtype) return ""
-  return ACCOUNT_SUBTYPE_LABELS[subtype] ?? subtype
+  return i18n.t(`accountSubtypeLabels.${subtype}`, { ns: "common", defaultValue: subtype })
 }
 
-/** Spanish label for Debt.type -- same pattern as ACCOUNT_SUBTYPE_LABELS. */
-const DEBT_TYPE_LABELS: Record<string, string> = {
-  personal_loan: "Préstamo personal",
-  payroll_loan: "Crédito de nómina",
-  informal: "Préstamo informal",
-  civic: "Crédito cívico",
-  loan_received: "Préstamo recibido",
-}
-
+/** Translated label for Debt.type -- same pattern as accountSubtypeLabel. */
 export function debtTypeLabel(type: string): string {
-  return DEBT_TYPE_LABELS[type] ?? type
+  return i18n.t(`debtTypeLabels.${type}`, { ns: "common", defaultValue: type })
 }
 
-/** Spanish label for PaymentFrequency (debts) -- different from
+/** Translated label for PaymentFrequency (debts) -- different from
  * FREQUENCY_LABELS in lib/recurring.ts because it includes "irregular" and
  * not "bimonthly"/"annual" (those are only for recurring items, not debts). */
-const PAYMENT_FREQUENCY_LABELS: Record<string, string> = {
-  weekly: "Semanal",
-  biweekly: "Quincenal",
-  monthly: "Mensual",
-  irregular: "Irregular",
-}
-
 export function paymentFrequencyLabel(frequency: string): string {
-  return PAYMENT_FREQUENCY_LABELS[frequency] ?? frequency
+  return i18n.t(`paymentFrequencyLabels.${frequency}`, { ns: "common", defaultValue: frequency })
 }
 
 /** "2026-08-25" -> "25 ago" -- for narrow columns where the full ISO date
@@ -143,7 +110,7 @@ export function paymentFrequencyLabel(frequency: string): string {
  * 'UTC' because the input string carries no time -- without this, in
  * negative time zones (UTC-N) the shown day shifts one day back. */
 export function formatShortDate(value: string): string {
-  return new Date(value).toLocaleDateString("es-MX", {
+  return new Date(value).toLocaleDateString(activeDateLocale(), {
     day: "numeric",
     month: "short",
     timeZone: "UTC",

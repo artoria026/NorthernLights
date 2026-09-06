@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link } from 'react-router-dom'
@@ -24,7 +25,7 @@ import { HEADER_SECTIONS, ViewHeader } from '@/components/nl/primitives'
 import { useAiHistory, useAiUsage, useChatStream, useClearAiHistory } from '@/hooks/useAiChat'
 import { useFinancialSnapshot } from '@/hooks/useEngine'
 import { useTransactions } from '@/hooks/useTransactions'
-import { EXPORT_PROMPT } from '@/lib/importPrompt'
+import { getExportPrompt } from '@/lib/importPrompt'
 import { amountColor, formatMoney, isPositiveEntryType } from '@/lib/utils'
 
 /** Same thresholds already used by health_score in other screens: 70+ is
@@ -134,6 +135,7 @@ function ActionCard({
   onConfirm?: () => void
   onCancel?: () => void
 }) {
+  const { t } = useTranslation('pages')
   const isPending = variant === 'pending'
   const headerBg = isPending ? 'var(--nl-violet-soft-bg)' : 'var(--nl-accent-soft-bg)'
   const headerInk = isPending ? 'var(--nl-violet-ink)' : 'var(--nl-accent-ink)'
@@ -144,7 +146,7 @@ function ActionCard({
         style={{ background: headerBg, color: headerInk }}
       >
         {isPending ? <Receipt size={13} className="flex-shrink-0" /> : <CheckCircle2 size={13} className="flex-shrink-0" />}
-        {isPending ? 'Confirmar acción' : 'Acción registrada'}
+        {isPending ? t('advisor.actionCard.confirmTitle') : t('advisor.actionCard.doneTitle')}
       </div>
       <div className="px-3.5 py-3 flex flex-col gap-2">
         {summary && <p className="text-[12.5px]">{summary}</p>}
@@ -176,7 +178,7 @@ function ActionCard({
             style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
           >
             <Check size={13} />
-            Confirmar
+            {t('advisor.actionCard.confirmButton')}
           </button>
           <button
             type="button"
@@ -185,13 +187,13 @@ function ActionCard({
             className="flex-1 rounded-md py-2 text-[12.5px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 flex items-center justify-center gap-1.5"
           >
             <X size={13} />
-            Cancelar
+            {t('advisor.actionCard.cancelButton')}
           </button>
         </div>
       )}
       {isPending && !actionable && (
         <div className="px-3.5 py-2 text-[11px] text-muted-foreground border-t border-border">
-          Esta propuesta ya no está activa.
+          {t('advisor.actionCard.inactiveNotice')}
         </div>
       )}
     </div>
@@ -203,8 +205,9 @@ function ActionCard({
  * animation-delay, same visual pattern as the "Conectado" dot (pulseDot)
  * in the header. */
 function TypingIndicator() {
+  const { t } = useTranslation('pages')
   return (
-    <div className="flex items-center gap-1 py-1" aria-label="El asesor está escribiendo">
+    <div className="flex items-center gap-1 py-1" aria-label={t('advisor.typingLabel')}>
       {[0, 1, 2].map((i) => (
         <span
           key={i}
@@ -220,64 +223,42 @@ function TypingIndicator() {
   )
 }
 
-const SUGGESTIONS = [
-  '¿Cómo va mi presupuesto?',
-  '¿Qué deuda debería pagar primero?',
-  '¿Estoy ahorrando lo suficiente?',
-  'Resume mis finanzas',
-  'Registra un gasto de $200 en comida hoy',
-]
+function buildSuggestions(t: (key: string) => string): string[] {
+  return [
+    t('advisor.suggestions.budget'),
+    t('advisor.suggestions.debtPriority'),
+    t('advisor.suggestions.savings'),
+    t('advisor.suggestions.summary'),
+    t('advisor.suggestions.logExpense'),
+  ]
+}
 
 function AdvisorHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          Un chat con IA que ve tu situación financiera real (cuentas, deudas, presupuesto, transacciones
-          recientes) y responde con eso como contexto — no son respuestas genéricas.
-        </p>
+      <HelpSection heading={t('advisor.help.whatIsThisScreen.heading')}>
+        <p>{t('advisor.help.whatIsThisScreen.body')}</p>
       </HelpSection>
-      <HelpSection heading="Sugerencias">
-        <p>
-          Los botones de preguntas comunes son solo un punto de partida — puedes preguntar lo que quieras
-          en el cuadro de texto de abajo.
-        </p>
+      <HelpSection heading={t('advisor.help.suggestions.heading')}>
+        <p>{t('advisor.help.suggestions.body')}</p>
       </HelpSection>
-      <HelpSection heading="Limpiar historial">
-        <p>
-          El ícono de basura borra la conversación guardada — útil para empezar de cero, no afecta tus
-          datos financieros, solo el chat.
-        </p>
+      <HelpSection heading={t('advisor.help.clearHistory.heading')}>
+        <p>{t('advisor.help.clearHistory.body')}</p>
       </HelpSection>
-      <HelpSection heading="Consultas restantes hoy">
-        <p>
-          Hay un límite diario de preguntas para controlar el costo de la IA. El número junto a "Conectado"
-          te dice cuántas te quedan — se reinicia cada día.
-        </p>
+      <HelpSection heading={t('advisor.help.remainingQueriesToday.heading')}>
+        <p>{t('advisor.help.remainingQueriesToday.body')}</p>
       </HelpSection>
-      <HelpSection heading="Traer datos históricos">
-        <p>
-          El 📎 junto al mensaje adjunta estados de cuenta en PDF (funciona aunque tengan contraseña,
-          escríbela una sola vez para todo el lote) — el asistente registra los cargos normales y las
-          compras a meses (MSI) por su monto total una sola vez, sin duplicar cuando esa misma mensualidad
-          reaparece en los estados siguientes. Marcar una compra como MSI para ver su progreso en Cuentas
-          es un paso aparte que haces tú al revisar la transacción, el asistente no lo hace solo. El "+"
-          tiene dos formas más: cargar un Excel prellenado, o copiar un prompt para pegarlo en otra IA
-          (ChatGPT, Gemini) y traer de vuelta un resumen ya estructurado.
-        </p>
+      <HelpSection heading={t('advisor.help.historicalData.heading')}>
+        <p>{t('advisor.help.historicalData.body')}</p>
       </HelpSection>
-      <HelpTip>
-        Si le pides que guarde un plan o recomendación, lo crea como un Insight que puedes ver después en
-        esa sección (te avisamos ahí mismo en el chat cuando pasa). También puede crear cuentas, deudas,
-        recurrentes o registrar transacciones si le dictas los datos o le adjuntas un PDF — siempre te
-        resume qué va a guardar y espera tu confirmación antes de hacerlo. No puede editar ni borrar nada
-        ya existente.
-      </HelpTip>
+      <HelpTip>{t('advisor.help.tip')}</HelpTip>
     </>
   )
 }
 
 export function Advisor() {
+  const { t } = useTranslation('pages')
   const { data: snapshot } = useFinancialSnapshot()
   const { data: history } = useAiHistory(1, 20)
   const { data: recentTx } = useTransactions({ per_page: 5 })
@@ -301,6 +282,7 @@ export function Advisor() {
   // what they just sent). Otherwise, the "new message" notice lights up.
   const isNearBottomRef = useRef(true)
   const [showJumpButton, setShowJumpButton] = useState(false)
+  const suggestions = buildSuggestions(t)
 
   useEffect(() => {
     if (seeded.current || !history || messages.length > 0) return
@@ -351,7 +333,7 @@ export function Advisor() {
   }
 
   async function copyPrompt() {
-    await navigator.clipboard.writeText(EXPORT_PROMPT)
+    await navigator.clipboard.writeText(getExportPrompt())
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -405,7 +387,7 @@ export function Advisor() {
     <div className="flex flex-col lg:flex-1 lg:min-h-0">
       <ViewHeader
         icon={<Bot />}
-        title="Asesor IA"
+        title={t('advisor.title')}
         help={<AdvisorHelp />}
         section={HEADER_SECTIONS.inteligencia}
         tourKey="advisor"
@@ -419,16 +401,16 @@ export function Advisor() {
                 className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                 style={{ background: 'var(--nl-accent-ink)', animation: 'pulseDot 1.6s ease-in-out infinite' }}
               />
-              Conectado
+              {t('advisor.header.connected')}
             </span>
             {usage && usage.unlimited && (
               <span
                 data-tour="advisor:usage"
                 className="rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap"
                 style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}
-                title="Cuenta admin: sin limite diario de consultas"
+                title={t('advisor.header.unlimitedTitle')}
               >
-                Ilimitado
+                {t('advisor.header.unlimited')}
               </span>
             )}
             {usage && !usage.unlimited && (
@@ -439,9 +421,9 @@ export function Advisor() {
                   background: usage.remaining_today <= 5 ? 'var(--nl-warning-soft-bg)' : 'var(--nl-bg-input)',
                   color: usage.remaining_today <= 5 ? 'var(--nl-warning-ink)' : 'var(--nl-text-secondary)',
                 }}
-                title={`${usage.used_today} de ${usage.limit_per_day} consultas usadas hoy`}
+                title={t('advisor.header.usageTitle', { used: usage.used_today, limit: usage.limit_per_day })}
               >
-                {usage.remaining_today}/{usage.limit_per_day} hoy
+                {t('advisor.header.usageToday', { remaining: usage.remaining_today, limit: usage.limit_per_day })}
               </span>
             )}
             <span
@@ -453,7 +435,7 @@ export function Advisor() {
             </span>
             <button
               type="button"
-              title="Limpiar historial"
+              title={t('advisor.header.clearHistoryTitle')}
               onClick={handleClear}
               className="rounded-full p-2 text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
             >
@@ -473,11 +455,7 @@ export function Advisor() {
             {messages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
                 <Sparkles size={32} className="text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground max-w-xs">
-                  Pregúntame sobre tu situación financiera, si puedes pagar algo, o pídeme que te
-                  arme un plan de ahorro. También puedo registrar cuentas, deudas y movimientos por
-                  ti si me los dictas.
-                </p>
+                <p className="text-sm text-muted-foreground max-w-xs">{t('advisor.emptyState')}</p>
               </div>
             ) : (
               messages.map((message, i) => {
@@ -585,9 +563,9 @@ export function Advisor() {
                 style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}
               >
                 <CheckCircle2 size={14} className="flex-shrink-0" />
-                <span>Insight guardado: {savedInsight.title}</span>
+                <span>{t('advisor.insightSaved', { title: savedInsight.title })}</span>
                 <Link to="/insights" className="underline hover:no-underline">
-                  Verlo →
+                  {t('advisor.viewIt')}
                 </Link>
               </div>
             )}
@@ -601,7 +579,7 @@ export function Advisor() {
                     className="flex items-center gap-1 rounded px-2 py-1 text-xs border border-border text-muted-foreground hover:text-foreground flex-shrink-0"
                   >
                     <RotateCcw size={12} />
-                    Reintentar
+                    {t('advisor.retryButton')}
                   </button>
                 )}
               </div>
@@ -616,7 +594,7 @@ export function Advisor() {
               style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
             >
               <ChevronDown size={13} />
-              Nuevo mensaje
+              {t('advisor.newMessageButton')}
             </button>
           )}
 
@@ -634,7 +612,7 @@ export function Advisor() {
                       type="button"
                       onClick={() => removeAttachedFile(i)}
                       className="text-muted-foreground hover:text-destructive"
-                      aria-label={`Quitar ${file.name}`}
+                      aria-label={t('advisor.removeAttachment', { name: file.name })}
                     >
                       <X size={12} />
                     </button>
@@ -648,7 +626,7 @@ export function Advisor() {
                 value={pdfPassword}
                 onChange={(e) => setPdfPassword(e.target.value)}
                 disabled={isStreaming}
-                placeholder="Contraseña de los PDF (si tienen, misma para todos)"
+                placeholder={t('advisor.pdfPasswordPlaceholder')}
                 className="w-full rounded-md border border-border p-2.5 text-sm outline-none focus:border-ring disabled:text-muted-foreground mb-2"
                 style={{ background: 'var(--nl-bg-input)' }}
               />
@@ -666,7 +644,7 @@ export function Advisor() {
                 type="button"
                 onClick={() => pdfInputRef.current?.click()}
                 disabled={isStreaming}
-                title="Adjuntar estados de cuenta en PDF"
+                title={t('advisor.attachTitle')}
                 data-tour="advisor:attach"
                 className="flex-shrink-0 w-11 h-11 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40"
               >
@@ -676,7 +654,7 @@ export function Advisor() {
                 type="button"
                 onClick={() => setMoreOpen(true)}
                 disabled={isStreaming}
-                title="Más formas de traer datos (Excel, prompt para otra IA)"
+                title={t('advisor.moreOptionsTitle')}
                 data-tour="advisor:more"
                 className="flex-shrink-0 w-11 h-11 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40"
               >
@@ -689,8 +667,8 @@ export function Advisor() {
                   disabled={isStreaming}
                   placeholder={
                     attachedFiles.length > 0
-                      ? 'Algo de contexto (ej. "son 3 meses de mi TDC Platino")...'
-                      : 'Escribe tu pregunta...'
+                      ? t('advisor.inputPlaceholderWithAttachment')
+                      : t('advisor.inputPlaceholder')
                   }
                   className="w-full h-11 rounded-md border border-border pl-4 pr-11 text-sm outline-none focus:border-ring disabled:text-muted-foreground"
                   style={{ background: 'var(--nl-bg-input)' }}
@@ -711,7 +689,7 @@ export function Advisor() {
                 from the history. */}
             {messages.length === 0 && (
               <div className="flex gap-2 flex-wrap" data-tour="advisor:suggestions">
-                {SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -740,16 +718,16 @@ export function Advisor() {
           data-tour="advisor:context"
         >
           <div className="text-[11px] tracking-wide text-muted-foreground font-semibold mb-2">
-            RESUMEN FINANCIERO
+            {t('advisor.sidebar.financialSummary')}
           </div>
           <div className="text-[26px] font-light mb-1" style={{ color: amountColor(snapshot?.net_worth.net_worth) }}>
             {formatMoney(snapshot?.net_worth.net_worth)}
           </div>
-          <div className="text-xs text-muted-foreground mb-3">Patrimonio neto</div>
+          <div className="text-xs text-muted-foreground mb-3">{t('advisor.sidebar.netWorth')}</div>
 
           <div className="flex flex-col mb-4">
             <div className="flex justify-between items-center py-2 border-t border-border text-[13px]">
-              <span className="text-muted-foreground">Salud financiera</span>
+              <span className="text-muted-foreground">{t('advisor.sidebar.financialHealth')}</span>
               <span
                 className="rounded-full px-2 py-0.5 text-[11px] font-medium"
                 style={
@@ -765,17 +743,17 @@ export function Advisor() {
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-t border-border text-[13px]">
-              <span className="text-muted-foreground">Comprometido / mes</span>
+              <span className="text-muted-foreground">{t('advisor.sidebar.committedMonthly')}</span>
               <span>{formatMoney(snapshot?.committed_monthly)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-t border-border text-[13px]">
-              <span className="text-muted-foreground">Disponible esta semana</span>
+              <span className="text-muted-foreground">{t('advisor.sidebar.availableThisWeek')}</span>
               <span style={{ color: amountColor(snapshot?.available_this_week.available) }}>
                 {formatMoney(snapshot?.available_this_week.available)}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-t border-border text-[13px]">
-              <span className="text-muted-foreground">Runway</span>
+              <span className="text-muted-foreground">{t('advisor.sidebar.runway')}</span>
               <span style={{ color: snapshot ? runwayColor(snapshot.runway.months) : undefined }}>
                 {snapshot?.runway.label ?? '—'}
               </span>
@@ -784,10 +762,10 @@ export function Advisor() {
 
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] tracking-wide text-muted-foreground font-semibold">
-              TRANSACCIONES RECIENTES
+              {t('advisor.sidebar.recentTransactions')}
             </span>
             <Link to="/transactions" className="text-[11px] text-muted-foreground hover:text-foreground">
-              Ver todas →
+              {t('advisor.sidebar.viewAll')}
             </Link>
           </div>
           <div className="flex flex-col">
@@ -807,37 +785,30 @@ export function Advisor() {
             })}
           </div>
 
-          <p className="text-[11px] text-muted-foreground italic mt-4">
-            El asesor usa este mismo snapshot financiero y varias herramientas para responder con tus
-            datos reales, y puede crear cuentas, deudas, recurrentes o transacciones si le pides que
-            los registre (siempre te va a confirmar antes de guardar algo).
-          </p>
+          <p className="text-[11px] text-muted-foreground italic mt-4">{t('advisor.sidebar.disclaimer')}</p>
         </div>
       </div>
 
       <Dialog open={moreOpen} onOpenChange={setMoreOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Más formas de traer datos</DialogTitle>
+            <DialogTitle>{t('advisor.dialog.title')}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-5">
             <div>
-              <div className="text-[15px] font-semibold mb-1">Carga masiva desde Excel</div>
+              <div className="text-[15px] font-semibold mb-1">{t('advisor.dialog.bulkExcelHeading')}</div>
               <BulkExcelImportCard />
             </div>
             <div className="pt-4 border-t border-border">
-              <div className="text-[15px] font-semibold mb-1">Prompt para tu otro chat</div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Cópialo y pégalo en la conversación donde llevabas el registro de tus finanzas (ChatGPT,
-                Gemini, etc.). Esa IA te devolverá un resumen que puedes pegar aquí en el chat.
-              </p>
+              <div className="text-[15px] font-semibold mb-1">{t('advisor.dialog.promptHeading')}</div>
+              <p className="text-sm text-muted-foreground mb-3">{t('advisor.dialog.promptDescription')}</p>
               <button
                 type="button"
                 onClick={copyPrompt}
                 className="w-full flex items-center justify-center gap-1.5 rounded-md border border-border py-2 text-sm hover:bg-muted"
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? 'Copiado' : 'Copiar prompt'}
+                {copied ? t('advisor.dialog.copiedButton') : t('advisor.dialog.copyButton')}
               </button>
             </div>
           </div>

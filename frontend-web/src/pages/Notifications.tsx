@@ -1,4 +1,5 @@
 import { Bell, CreditCard, FileText, Lightbulb, PiggyBank } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { SoftBadge, ViewHeader } from '@/components/nl/primitives'
 import {
@@ -21,17 +22,18 @@ const TYPE_META: Record<NotificationType, { icon: React.ReactNode; severity: 'ac
   loan_overdue: { icon: <CreditCard size={14} />, severity: 'danger' },
 }
 
-function timeAgo(isoDate: string): string {
+function timeAgo(isoDate: string, t: (key: string, opts?: Record<string, unknown>) => string): string {
   const diffMs = Date.now() - new Date(isoDate).getTime()
   const minutes = Math.floor(diffMs / 60_000)
-  if (minutes < 1) return 'ahora'
-  if (minutes < 60) return `hace ${minutes} min`
+  if (minutes < 1) return t('notifications.timeAgo.now')
+  if (minutes < 60) return t('notifications.timeAgo.minutes', { count: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `hace ${hours} h`
-  return `hace ${Math.floor(hours / 24)} d`
+  if (hours < 24) return t('notifications.timeAgo.hours', { count: hours })
+  return t('notifications.timeAgo.days', { count: Math.floor(hours / 24) })
 }
 
 function NotificationRow({ notification }: { notification: Notification }) {
+  const { t } = useTranslation('pages')
   const markRead = useMarkNotificationRead()
   const meta = TYPE_META[notification.type]
 
@@ -59,36 +61,29 @@ function NotificationRow({ notification }: { notification: Notification }) {
         {notification.body && <p className="text-xs text-muted-foreground mt-0.5">{notification.body}</p>}
       </div>
       <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-        {timeAgo(notification.created_at)}
+        {timeAgo(notification.created_at, t)}
       </span>
     </div>
   )
 }
 
 function NotificationsHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          Todos los avisos que te ha generado la app: reportes listos, insights nuevos, alertas de
-          presupuesto o deuda, tarjetas por vencer y recordatorios de pagos pendientes.
-        </p>
+      <HelpSection heading={t('notifications.help.whatIsThisScreen.heading')}>
+        <p>{t('notifications.help.whatIsThisScreen.body')}</p>
       </HelpSection>
-      <HelpSection heading="Leer notificaciones">
-        <p>
-          Un punto de color marca lo que no has leído. Click en una notificación la marca como leída;
-          "Marcar todo como leído" lo hace de una vez para todas.
-        </p>
+      <HelpSection heading={t('notifications.help.readingNotifications.heading')}>
+        <p>{t('notifications.help.readingNotifications.body')}</p>
       </HelpSection>
-      <HelpTip>
-        El icono y el color de cada notificación indican su tipo (deuda, presupuesto, reporte, insight) —
-        no hace falta abrirla para saber de qué se trata.
-      </HelpTip>
+      <HelpTip>{t('notifications.help.tip')}</HelpTip>
     </>
   )
 }
 
 export function Notifications() {
+  const { t } = useTranslation('pages')
   const { data, isLoading } = useNotifications(1, 50)
   const markAllRead = useMarkAllNotificationsRead()
 
@@ -96,7 +91,7 @@ export function Notifications() {
     <div>
       <ViewHeader
         icon={<Bell />}
-        title="Notificaciones"
+        title={t('notifications.title')}
         help={<NotificationsHelp />}
         tourKey="notifications"
         actions={
@@ -107,22 +102,22 @@ export function Notifications() {
             data-tour="notifications:mark-all"
             className="rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground"
           >
-            Marcar todo como leído
+            {t('notifications.markAllRead')}
           </button>
         }
       />
       <div className="bg-card border border-border rounded-md overflow-hidden" data-tour="notifications:list">
         {isLoading ? (
-          <p className="text-sm text-muted-foreground p-6">Cargando...</p>
+          <p className="text-sm text-muted-foreground p-6">{t('notifications.loading')}</p>
         ) : !data || data.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground p-6 text-center">Sin notificaciones.</p>
+          <p className="text-sm text-muted-foreground p-6 text-center">{t('notifications.empty')}</p>
         ) : (
           data.items.map((n) => <NotificationRow key={n.id} notification={n} />)
         )}
       </div>
       {data && data.meta && data.meta.total > 0 && (
         <div className="mt-3 flex justify-end" data-tour="notifications:total-badge">
-          <SoftBadge severity="accent">{data.meta.total} en total</SoftBadge>
+          <SoftBadge severity="accent">{t('notifications.totalBadge', { total: data.meta.total })}</SoftBadge>
         </div>
       )}
     </div>

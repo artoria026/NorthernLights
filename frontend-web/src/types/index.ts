@@ -1,5 +1,6 @@
 export type PayCycle = 'weekly' | 'biweekly' | 'monthly'
 export type Theme = 'dark' | 'light'
+export type Locale = 'es' | 'en'
 
 export interface User {
   id: string
@@ -9,6 +10,7 @@ export interface User {
   role: string
   auth_provider: string
   theme: Theme
+  locale: Locale
   email_notifications: boolean
   push_notifications: boolean
   pay_cycle: PayCycle

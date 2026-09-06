@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import type { TourContent } from '@/lib/tours'
 
@@ -19,6 +20,7 @@ export function WelcomeModal({
   onStartTour: () => void
   onDismiss: () => void
 }) {
+  const { t } = useTranslation('common')
   return (
     <Dialog
       open={open}
@@ -34,7 +36,7 @@ export function WelcomeModal({
         >
           {icon}
         </div>
-        <h3 className="text-base font-bold mb-2">Bienvenido a {title}</h3>
+        <h3 className="text-base font-bold mb-2">{t('welcomeModal.heading', { title })}</h3>
         <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-3">{content.description}</p>
         <ul className="flex flex-col gap-1.5 mb-5">
           {content.bullets.map((bullet, i) => (
@@ -53,14 +55,14 @@ export function WelcomeModal({
             className="rounded-md py-2.5 text-[12.5px] font-bold"
             style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
           >
-            Iniciar recorrido guiado →
+            {t('welcomeModal.startTourButton')}
           </button>
           <button
             type="button"
             onClick={onDismiss}
             className="py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
-            Explorar por mi cuenta
+            {t('welcomeModal.exploreOnMyOwnButton')}
           </button>
         </div>
       </DialogContent>

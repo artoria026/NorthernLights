@@ -11,33 +11,38 @@ import {
   User,
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DisclaimerContent } from '@/components/DisclaimerContent'
 import { useLogin, useRegister, useUpdateSettings } from '@/hooks/useAuth'
 import { LATEST_CHANGELOG_VERSION } from '@/lib/changelog'
 import { apiErrorMessage } from '@/services/api'
+import type { Locale } from '@/types'
 import { AuthLayout, type AuthValueProp } from './AuthLayout'
 
-const VALUE_PROPS: AuthValueProp[] = [
-  {
-    icon: Rocket,
-    title: 'Arrancá en minutos',
-    text: 'Creá tu cuenta y empezá a cargar movimientos, sin configuración compleja.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Privado desde el día uno',
-    text: 'Tus cuentas y transacciones quedan aisladas — solo vos accedés a tus datos.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Un asesor que te acompaña',
-    text: 'Preguntale a la IA por tus gastos apenas cargues tus primeros movimientos.',
-  },
-]
+function buildValueProps(t: (key: string) => string): AuthValueProp[] {
+  return [
+    {
+      icon: Rocket,
+      title: t('auth.register.valueProps.quickStart.title'),
+      text: t('auth.register.valueProps.quickStart.text'),
+    },
+    {
+      icon: ShieldCheck,
+      title: t('auth.register.valueProps.privacy.title'),
+      text: t('auth.register.valueProps.privacy.text'),
+    },
+    {
+      icon: Sparkles,
+      title: t('auth.register.valueProps.advisor.title'),
+      text: t('auth.register.valueProps.advisor.text'),
+    },
+  ]
+}
 
 export function Register() {
+  const { t, i18n } = useTranslation('pages')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -53,7 +58,13 @@ export function Register() {
     event.preventDefault()
     if (!acceptDisclaimer) return
     try {
-      await register.mutateAsync({ email, name, password, accept_disclaimer: true })
+      await register.mutateAsync({
+        email,
+        name,
+        password,
+        accept_disclaimer: true,
+        locale: i18n.language as Locale,
+      })
       await login.mutateAsync({ email, password })
       // Newly created account: hasn't seen any release yet, so there's no
       // point showing it "Novedades" with features it never used -- it's
@@ -75,22 +86,23 @@ export function Register() {
   const error = register.error ?? login.error
   const errorMessage = error ? apiErrorMessage(error) : null
   const isPending = register.isPending || login.isPending
+  const valueProps = buildValueProps(t)
 
   return (
     <AuthLayout
-      heroTitle="Tu dinero, por fin ordenado."
-      heroSubtitle="Creá tu cuenta gratis y empezá a ver tus finanzas con claridad desde el primer día."
-      valueProps={VALUE_PROPS}
+      heroTitle={t('auth.register.heroTitle')}
+      heroSubtitle={t('auth.register.heroSubtitle')}
+      valueProps={valueProps}
     >
-      <h2 className="text-[22px] font-semibold tracking-tight mb-1.5">Creá tu cuenta</h2>
-      <p className="text-[13px] text-muted-foreground mb-7">
-        Empezá a organizar tus finanzas en un solo lugar.
-      </p>
+      <h2 className="text-[22px] font-semibold tracking-tight mb-1.5">
+        {t('auth.register.title')}
+      </h2>
+      <p className="text-[13px] text-muted-foreground mb-7">{t('auth.register.subtitle')}</p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="name" className="text-[12px] font-medium text-muted-foreground">
-            Nombre
+            {t('auth.register.nameLabel')}
           </label>
           <div className="relative">
             <User
@@ -105,7 +117,7 @@ export function Register() {
               autoComplete="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Tu nombre"
+              placeholder={t('auth.register.namePlaceholder')}
               className="w-full h-11 rounded-lg border border-border pl-9 pr-3 text-[14px] outline-none transition-colors focus:border-[var(--nl-accent)]"
               style={{ background: 'var(--nl-bg-input)' }}
             />
@@ -114,7 +126,7 @@ export function Register() {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="email" className="text-[12px] font-medium text-muted-foreground">
-            Correo electrónico
+            {t('auth.register.emailLabel')}
           </label>
           <div className="relative">
             <Mail
@@ -129,7 +141,7 @@ export function Register() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@correo.com"
+              placeholder={t('auth.register.emailPlaceholder')}
               className="w-full h-11 rounded-lg border border-border pl-9 pr-3 text-[14px] outline-none transition-colors focus:border-[var(--nl-accent)]"
               style={{ background: 'var(--nl-bg-input)' }}
             />
@@ -138,7 +150,7 @@ export function Register() {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor="password" className="text-[12px] font-medium text-muted-foreground">
-            Contraseña
+            {t('auth.register.passwordLabel')}
           </label>
           <div className="relative">
             <Lock
@@ -154,7 +166,7 @@ export function Register() {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder={t('auth.register.passwordPlaceholder')}
               className="w-full h-11 rounded-lg border border-border pl-9 pr-9 text-[14px] outline-none transition-colors focus:border-[var(--nl-accent)]"
               style={{ background: 'var(--nl-bg-input)' }}
             />
@@ -162,7 +174,11 @@ export function Register() {
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword((v) => !v)}
-              title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              title={
+                showPassword
+                  ? t('auth.register.hidePasswordTitle')
+                  : t('auth.register.showPasswordTitle')
+              }
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -189,14 +205,14 @@ export function Register() {
             className="mt-0.5 flex-shrink-0"
           />
           <span>
-            Acepto el{' '}
+            {t('auth.register.acceptDisclaimerPrefix')}{' '}
             <button
               type="button"
               onClick={() => setDisclaimerOpen(true)}
               className="font-medium underline hover:no-underline"
               style={{ color: 'var(--nl-accent-ink)' }}
             >
-              Aviso de Privacidad
+              {t('auth.register.privacyNotice')}
             </button>
             .
           </span>
@@ -209,10 +225,10 @@ export function Register() {
           style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
         >
           {isPending ? (
-            'Creando...'
+            t('auth.register.submitPending')
           ) : (
             <>
-              Crear cuenta
+              {t('auth.register.submitCta')}
               <ArrowRight
                 size={15}
                 strokeWidth={2}
@@ -223,14 +239,14 @@ export function Register() {
         </button>
 
         <p className="text-[13px] text-center text-muted-foreground mt-2">
-          ¿Ya tienes cuenta?{' '}
+          {t('auth.register.haveAccountText')}{' '}
           <Link
             to="/login"
             viewTransition
             className="font-medium"
             style={{ color: 'var(--nl-accent-ink)' }}
           >
-            Inicia sesión
+            {t('auth.register.loginLink')}
           </Link>
         </p>
       </form>
@@ -238,7 +254,7 @@ export function Register() {
       <Dialog open={disclaimerOpen} onOpenChange={setDisclaimerOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Aviso de Privacidad</DialogTitle>
+            <DialogTitle>{t('auth.register.privacyNotice')}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto pr-1">
             <DisclaimerContent />

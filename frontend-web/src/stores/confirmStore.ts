@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import { create } from 'zustand'
+import i18n from '@/lib/i18n'
 
 interface ConfirmOptions {
   title?: string
@@ -40,10 +41,10 @@ export const useConfirmStore = create<ConfirmState>((set, get) => ({
       set({
         request: {
           id: nextId++,
-          title: options.title ?? 'Confirmar',
+          title: options.title ?? i18n.t('confirmStore.defaultTitle', { ns: 'common' }),
           message: options.message,
-          confirmLabel: options.confirmLabel ?? 'Confirmar',
-          cancelLabel: options.cancelLabel ?? 'Cancelar',
+          confirmLabel: options.confirmLabel ?? i18n.t('confirmStore.defaultConfirmLabel', { ns: 'common' }),
+          cancelLabel: options.cancelLabel ?? i18n.t('confirmStore.defaultCancelLabel', { ns: 'common' }),
           variant: options.variant ?? 'default',
           icon: options.icon,
           resolve,

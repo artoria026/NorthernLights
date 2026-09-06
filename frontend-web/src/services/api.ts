@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import i18n from '@/lib/i18n'
 import { useAuthStore } from '@/stores/authStore'
 import type { ApiSuccess, TokenPair } from '@/types'
 
@@ -18,7 +19,7 @@ let refreshPromise: Promise<string> | null = null
 
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = useAuthStore.getState().refreshToken
-  if (!refreshToken) throw new Error('No hay refresh token')
+  if (!refreshToken) throw new Error(i18n.t('api.noRefreshToken', { ns: 'common' }))
 
   const response = await axios.post<ApiSuccess<TokenPair>>(
     `${api.defaults.baseURL}/auth/refresh`,
@@ -66,5 +67,5 @@ export function apiErrorMessage(error: unknown): string {
     const data = error.response?.data as { error?: string } | undefined
     if (data?.error) return data.error
   }
-  return 'Ocurrio un error inesperado'
+  return i18n.t('api.unexpectedError', { ns: 'common' })
 }

@@ -1,8 +1,17 @@
 import { AlertTriangle, Calendar, Droplet, Grid2x2, Home, Clock, TrendingDown, TrendingUp } from 'lucide-react'
 import { useMemo } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Link } from 'react-router-dom'
 import { GroupedBars, LineChart } from '@/lib/charts'
-import { accountSubtypeLabel, entryTypeLabel, formatMoney as formatMoneyBase, formatShortDate, isPositiveEntryType } from '@/lib/utils'
+import {
+  accountSubtypeLabel,
+  activeDateLocale,
+  entryTypeLabel,
+  formatMoney as formatMoneyBase,
+  formatShortDate,
+  isPositiveEntryType,
+} from '@/lib/utils'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { CategoryBadge, HEADER_SECTIONS, Legend, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { useAccounts } from '@/hooks/useAccounts'
@@ -20,11 +29,11 @@ function formatMoney(value: string | number | undefined) {
   return formatMoneyBase(value, { maximumFractionDigits: 0 })
 }
 
-function greeting(): string {
+function greeting(t: (key: string) => string): string {
   const hour = new Date().getHours()
-  if (hour < 12) return 'Buenos días'
-  if (hour < 19) return 'Buenas tardes'
-  return 'Buenas noches'
+  if (hour < 12) return t('dashboard.greeting.morning')
+  if (hour < 19) return t('dashboard.greeting.afternoon')
+  return t('dashboard.greeting.evening')
 }
 
 function capitalize(text: string): string {
@@ -33,55 +42,46 @@ function capitalize(text: string): string {
 
 function todayLabel(): string {
   return capitalize(
-    new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+    new Date().toLocaleDateString(activeDateLocale(), {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }),
   )
 }
 
-const WEEKDAY = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb']
+function weekdayShort(t: TFunction, dayIndex: number): string {
+  return (t('dashboard.weekdayShort', { returnObjects: true }) as string[])[dayIndex]
+}
 
 function DashboardHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
+      <HelpSection heading={t('dashboard.help.whatIsThisScreen.heading')}>
+        <p>{t('dashboard.help.whatIsThisScreen.body')}</p>
+      </HelpSection>
+      <HelpSection heading={t('dashboard.help.cardsAbove.heading')}>
         <p>
-          Un resumen del estado general de tus finanzas: cuánto dinero líquido tienes, cuánto debes en
-          tarjetas, qué tan cerca estás de tu límite de presupuesto y qué pagos se acercan.
+          <Trans i18nKey="dashboard.help.cardsAbove.body" ns="pages">
+            <strong>Liquidity</strong> adds up the balance of your cash/bank-type accounts (not credit cards). <strong>Revolving debt</strong> is what you owe on active credit cards, with its average APR. <strong>Month budget</strong> and <strong>week budget</strong> show what percentage you've spent against what was budgeted — the color changes from green to orange to red depending on how close you are to the limit. As soon as you generate the current month's report (Reports → Generate), two more cards appear: <strong>Month income</strong> and <strong>Month expenses</strong>, each compared against the previous month.
+          </Trans>
         </p>
       </HelpSection>
-      <HelpSection heading="Las tarjetas de arriba">
-        <p>
-          <strong>Liquidez</strong> suma el saldo de tus cuentas tipo efectivo/banco (no tarjetas de
-          crédito). <strong>Deuda revolvente</strong> es lo que debes en tarjetas de crédito activas, con
-          su TAE promedio. <strong>Presupuesto del mes</strong> y <strong>de la semana</strong> muestran
-          qué porcentaje llevas gastado contra lo presupuestado — el color cambia de verde a naranja a
-          rojo según qué tan cerca estás del límite. En cuanto generes el reporte del mes en curso
-          (Reportes → Generar), aparecen dos tarjetas más: <strong>Ingresos del mes</strong> y{' '}
-          <strong>Gastos del mes</strong>, cada una comparada contra el mes anterior.
-        </p>
+      <HelpSection heading={t('dashboard.help.upcomingPayments.heading')}>
+        <p>{t('dashboard.help.upcomingPayments.body')}</p>
       </HelpSection>
-      <HelpSection heading="Próximos pagos">
-        <p>
-          Junta tus gastos recurrentes activos (Netflix, renta, etc.) con los pagos de deudas que vencen
-          en los próximos 7 días. Si algo vence en 3 días o menos, aparece como aviso arriba de las
-          tarjetas.
-        </p>
+      <HelpSection heading={t('dashboard.help.netWorthAndDebts.heading')}>
+        <p>{t('dashboard.help.netWorthAndDebts.body')}</p>
       </HelpSection>
-      <HelpSection heading="Patrimonio neto y deudas activas">
-        <p>
-          La línea de patrimonio neto usa tus reportes mensuales generados (Reportes → Generar); si un mes
-          no tiene reporte, no aparece un punto para él. El progreso de cada deuda compara el saldo actual
-          contra el monto original — no distingue capital de intereses, es una referencia visual rápida.
-        </p>
-      </HelpSection>
-      <HelpTip>
-        Esta pantalla es de solo lectura — para registrar movimientos usa Transacciones, y para ver el
-        detalle de cada rubro entra a su página específica (los enlaces "Ver todas →" te llevan directo).
-      </HelpTip>
+      <HelpTip>{t('dashboard.help.readOnlyTip')}</HelpTip>
     </>
   )
 }
 
 export function Dashboard() {
+  const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
   const { data: snapshot, isLoading: loadingSnapshot } = useFinancialSnapshot()
   const { data: accounts } = useAccounts()
@@ -140,7 +140,7 @@ export function Dashboard() {
   )
   const netWorthValues = monthlyReports.map((r) => Number(r.summary!.net_worth.end))
   const netWorthLabels = monthlyReports.map((r) =>
-    new Date(r.period_start).toLocaleDateString('es-MX', { month: 'short', timeZone: 'UTC' }),
+    new Date(r.period_start).toLocaleDateString(activeDateLocale(), { month: 'short', timeZone: 'UTC' }),
   )
   const [prevMonthReport, currentMonthReport] = monthlyReports.slice(-2).length === 2
     ? monthlyReports.slice(-2)
@@ -228,7 +228,7 @@ export function Dashboard() {
     const expense = dayTx
       .filter((tx) => tx.entry_type === 'expense')
       .reduce((s, tx) => s + Number(tx.amount ?? 0), 0)
-    return { label: WEEKDAY[day.getDay()], a: income, b: expense }
+    return { label: weekdayShort(t, day.getDay()), a: income, b: expense }
   })
 
   const topInsights = (insights ?? [])
@@ -240,15 +240,14 @@ export function Dashboard() {
     <div>
       <ViewHeader
         icon={<Home />}
-        title="Inicio"
+        title={t('dashboard.title')}
         help={<DashboardHelp />}
         section={HEADER_SECTIONS.diario}
         tourKey="dashboard"
         subtitle={
-          <>
-            {greeting()}
-            {user?.name ? `, ${user.name.split(' ')[0]}` : ''} — aquí tienes el resumen de tus finanzas.
-          </>
+          user?.name
+            ? t('dashboard.subtitleWithName', { greeting: greeting(t), name: user.name.split(' ')[0] })
+            : t('dashboard.subtitle', { greeting: greeting(t) })
         }
         actions={
           <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
@@ -263,7 +262,7 @@ export function Dashboard() {
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={15} className="text-muted-foreground flex-shrink-0" />
             <span className="text-[13px] font-medium">
-              {dueSoonItems.length} pago{dueSoonItems.length === 1 ? '' : 's'} en los próximos 3 días
+              {t('dashboard.upcomingPaymentsCount', { count: dueSoonItems.length })}
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -290,23 +289,23 @@ export function Dashboard() {
         <StatCard
           compact
           icon={<Droplet />}
-          label="Liquidez"
+          label={t('dashboard.stats.liquidity')}
           value={loadingSnapshot ? '—' : formatMoney(snapshot?.available_this_week.liquid_balance)}
-          note={`${liquidAccounts.length} cuenta${liquidAccounts.length === 1 ? '' : 's'}`}
+          note={t('dashboard.stats.accountsCount', { count: liquidAccounts.length })}
           dataTour="dashboard:liquidity"
         />
         <StatCard
           compact
           icon={<CreditCardIcon />}
-          label="Deuda revolvente"
+          label={t('dashboard.stats.revolvingDebt')}
           value={formatMoney(revolvingTotal)}
           valueClassName="text-[color:var(--nl-danger-ink)]"
-          note={avgApr > 0 ? `TAE promedio ${(avgApr * 100).toFixed(1)}%` : 'Sin TDC activas'}
+          note={avgApr > 0 ? t('dashboard.stats.avgApr', { pct: (avgApr * 100).toFixed(1) }) : t('dashboard.stats.noActiveCards')}
         />
         <StatCard
           compact
           icon={<Grid2x2 />}
-          label="Presupuesto del mes"
+          label={t('dashboard.stats.monthBudget')}
           value={<span style={{ color: pctColor(monthPct) }}>{monthPct}%</span>}
           note={formatMoney(budgetCurrent?.variable_total_spent)}
           dataTour="dashboard:budget"
@@ -314,7 +313,7 @@ export function Dashboard() {
         <StatCard
           compact
           icon={<Clock />}
-          label="Presupuesto de la semana"
+          label={t('dashboard.stats.weekBudget')}
           value={<span style={{ color: pctColor(weekPct) }}>{weekPct}%</span>}
           note={formatMoney(currentWeekSpent)}
         />
@@ -323,7 +322,7 @@ export function Dashboard() {
             <StatCard
               compact
               icon={<TrendingUp />}
-              label="Ingresos del mes"
+              label={t('dashboard.stats.monthIncome')}
               value={formatMoney(monthIncome)}
               note={<MonthDelta pct={incomeDelta} goodDirection="up" />}
               dataTour="dashboard:month-summary"
@@ -331,7 +330,7 @@ export function Dashboard() {
             <StatCard
               compact
               icon={<TrendingDown />}
-              label="Gastos del mes"
+              label={t('dashboard.stats.monthExpenses')}
               value={formatMoney(monthExpenses)}
               note={<MonthDelta pct={expensesDelta} goodDirection="down" />}
             />
@@ -347,16 +346,16 @@ export function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4 items-start">
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[15px] font-medium">Transacciones recientes</span>
+            <span className="text-[15px] font-medium">{t('dashboard.recentTransactions.heading')}</span>
             <Link to="/transactions" className="text-xs text-muted-foreground hover:text-foreground">
-              Ver todas las transacciones →
+              {t('dashboard.recentTransactions.viewAll')}
             </Link>
           </div>
           <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground pb-2">
-            <span>Nombre</span>
-            <span className="text-right">Monto</span>
-            <span>Categoría</span>
-            <span>Fecha</span>
+            <span>{t('dashboard.recentTransactions.columns.name')}</span>
+            <span className="text-right">{t('dashboard.recentTransactions.columns.amount')}</span>
+            <span>{t('dashboard.recentTransactions.columns.category')}</span>
+            <span>{t('dashboard.recentTransactions.columns.date')}</span>
           </div>
           {(recentTx?.data ?? []).slice(0, 6).map((tx) => (
             <div key={tx.id}>
@@ -395,12 +394,12 @@ export function Dashboard() {
             </div>
           ))}
           {(recentTx?.data ?? []).length === 0 && (
-            <p className="text-sm text-muted-foreground py-4">Aún no hay transacciones.</p>
+            <p className="text-sm text-muted-foreground py-4">{t('dashboard.recentTransactions.empty')}</p>
           )}
         </div>
 
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4" data-tour="dashboard:upcoming">
-          <div className="text-[15px] font-medium mb-2">Próximos pagos</div>
+          <div className="text-[15px] font-medium mb-2">{t('dashboard.upcomingPayments.heading')}</div>
           <div className="flex flex-col">
             {upcoming.map((bill) => (
               <div key={bill.key} className="flex items-center gap-2.5 py-2 border-t border-border first:border-0">
@@ -412,20 +411,24 @@ export function Dashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] truncate">{bill.name}</div>
-                  <div className="text-[11px] text-muted-foreground">Vence {formatShortDate(bill.due)}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {t('dashboard.upcomingPayments.dueDate', { date: formatShortDate(bill.due) })}
+                  </div>
                 </div>
                 <div className="text-[13px] font-medium">{formatMoney(bill.amount)}</div>
               </div>
             ))}
-            {upcoming.length === 0 && <p className="text-sm text-muted-foreground">No hay pagos próximos.</p>}
+            {upcoming.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t('dashboard.upcomingPayments.empty')}</p>
+            )}
           </div>
         </div>
 
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[15px] font-medium">Cuentas</span>
+            <span className="text-[15px] font-medium">{t('dashboard.accounts.heading')}</span>
             <Link to="/accounts" className="text-xs text-muted-foreground hover:text-foreground">
-              Ver todas →
+              {t('dashboard.accounts.viewAll')}
             </Link>
           </div>
           <div className="flex flex-col">
@@ -439,15 +442,17 @@ export function Dashboard() {
                 <div className="text-[13px] font-medium">{formatMoney(a.balance)}</div>
               </div>
             ))}
-            {liquidAccounts.length === 0 && <p className="text-sm text-muted-foreground">Sin cuentas.</p>}
+            {liquidAccounts.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t('dashboard.accounts.empty')}</p>
+            )}
           </div>
         </div>
 
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[15px] font-medium">Deudas activas</span>
+            <span className="text-[15px] font-medium">{t('dashboard.activeDebts.heading')}</span>
             <Link to="/debts" className="text-xs text-muted-foreground hover:text-foreground">
-              Ver todas →
+              {t('dashboard.activeDebts.viewAll')}
             </Link>
           </div>
           <div className="flex flex-col">
@@ -470,41 +475,45 @@ export function Dashboard() {
                   />
                 </div>
                 <div className="text-[11px] text-muted-foreground mt-1">
-                  {formatMoney(d.current_balance)} {d.direction === 'owed_to_me' ? 'por cobrar' : 'pendiente'} de{' '}
-                  {formatMoney(d.total_amount)}
+                  {t(
+                    d.direction === 'owed_to_me'
+                      ? 'dashboard.activeDebts.progressOwedToMe'
+                      : 'dashboard.activeDebts.progressOwedByMe',
+                    { balance: formatMoney(d.current_balance), total: formatMoney(d.total_amount) },
+                  )}
                 </div>
               </div>
             ))}
-            {activeDebts.length === 0 && <p className="text-sm text-muted-foreground">Sin deudas activas.</p>}
+            {activeDebts.length === 0 && (
+              <p className="text-sm text-muted-foreground">{t('dashboard.activeDebts.empty')}</p>
+            )}
           </div>
         </div>
 
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4" data-tour="dashboard:cashflow">
-          <div className="text-[15px] font-medium mb-1">Flujo de caja de la semana</div>
-          <p className="text-xs text-muted-foreground mb-2">Ingresos vs. gastos, últimos 7 días</p>
+          <div className="text-[15px] font-medium mb-1">{t('dashboard.cashflow.heading')}</div>
+          <p className="text-xs text-muted-foreground mb-2">{t('dashboard.cashflow.subtitle')}</p>
           <GroupedBars groups={weeklyBars} height={110} />
           <Legend
             items={[
-              { label: 'Ingresos', color: 'var(--nl-accent)' },
-              { label: 'Gastos', color: 'var(--nl-danger)' },
+              { label: t('dashboard.cashflow.income'), color: 'var(--nl-accent)' },
+              { label: t('dashboard.cashflow.expenses'), color: 'var(--nl-danger)' },
             ]}
           />
         </div>
 
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4" data-tour="dashboard:networth">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[15px] font-medium">Patrimonio neto</span>
+            <span className="text-[15px] font-medium">{t('dashboard.netWorth.heading')}</span>
             <Link to="/reports" className="text-xs text-muted-foreground hover:text-foreground">
-              Ver reportes →
+              {t('dashboard.netWorth.viewReports')}
             </Link>
           </div>
-          <p className="text-xs text-muted-foreground mb-2">Al cierre de cada mes con reporte generado</p>
+          <p className="text-xs text-muted-foreground mb-2">{t('dashboard.netWorth.subtitle')}</p>
           {netWorthValues.length >= 2 ? (
             <LineChart series={netWorthValues} xLabels={netWorthLabels} height={110} />
           ) : (
-            <p className="text-sm text-muted-foreground py-6 text-center">
-              Genera reportes de al menos 2 meses (en Reportes) para ver la tendencia aquí.
-            </p>
+            <p className="text-sm text-muted-foreground py-6 text-center">{t('dashboard.netWorth.empty')}</p>
           )}
         </div>
 
@@ -527,8 +536,9 @@ export function Dashboard() {
 }
 
 function MonthDelta({ pct, goodDirection }: { pct: number | null; goodDirection: 'up' | 'down' }) {
+  const { t } = useTranslation('pages')
   if (pct === null) {
-    return <span className="text-muted-foreground">Se compara al cerrar el mes</span>
+    return <span className="text-muted-foreground">{t('dashboard.monthDelta.comparesAtMonthEnd')}</span>
   }
   const isUp = pct >= 0
   const isGood = goodDirection === 'up' ? isUp : !isUp
@@ -539,7 +549,7 @@ function MonthDelta({ pct, goodDirection }: { pct: number | null; goodDirection:
       style={{ color: isGood ? 'var(--nl-accent-ink)' : 'var(--nl-danger-ink)' }}
     >
       <Icon size={12} strokeWidth={2} />
-      {Math.abs(pct).toFixed(1)}% vs mes anterior
+      {t('dashboard.monthDelta.vsPreviousMonth', { pct: Math.abs(pct).toFixed(1) })}
     </span>
   )
 }

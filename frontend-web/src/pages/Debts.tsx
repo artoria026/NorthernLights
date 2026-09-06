@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -45,11 +46,6 @@ import { useConfirmStore } from '@/stores/confirmStore'
 import { useUiStore } from '@/stores/uiStore'
 import type { Debt, DebtDirection, DebtType, PaymentFrequency, UnplannedDebt } from '@/types'
 
-const DIRECTION_LABEL: Record<DebtDirection, string> = {
-  owed_by_me: 'Yo debo',
-  owed_to_me: 'Me deben',
-}
-
 const DEBT_TYPES: DebtType[] = [
   'personal_loan',
   'payroll_loan',
@@ -62,7 +58,7 @@ const FREQUENCIES: PaymentFrequency[] = ['weekly', 'biweekly', 'monthly', 'irreg
 
 /** Icon + color per type -- purely categorical (identifies at a glance,
  * doesn't imply risk/status; that's already covered by DebtCard's red
- * border when the APR goes over 25%). "Me deben" is always informal, but
+ * border when the APR goes over 25%). "Owed to me" is always informal, but
  * uses its own icon (people who owe you, not your loan) via isReceivable
  * instead of this map. */
 const DEBT_TYPE_ICONS: Record<DebtType, LucideIcon> = {
@@ -87,6 +83,7 @@ function NewUnplannedDebtForm({
   direction: DebtDirection
   onDone: () => void
 }) {
+  const { t } = useTranslation('pages')
   const createUnplanned = useCreateUnplannedDebt()
   const [form, setForm] = useState<CreateUnplannedDebtInput>({
     name: '',
@@ -109,18 +106,18 @@ function NewUnplannedDebtForm({
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
-          {direction === 'owed_to_me' ? '¿Quién te debe?' : '¿Quién te prestó?'}
+          {direction === 'owed_to_me' ? t('debts.newUnplannedForm.whoOwesYouLabel') : t('debts.newUnplannedForm.whoLentLabel')}
         </label>
         <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={`${selectClass} h-9 w-full`} />
       </div>
       {direction === 'owed_by_me' && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-muted-foreground">Acreedor (opcional)</label>
+          <label className="text-xs text-muted-foreground">{t('debts.newUnplannedForm.creditorLabel')}</label>
           <input value={form.creditor} onChange={(e) => setForm({ ...form, creditor: e.target.value })} className={`${selectClass} h-9 w-full`} />
         </div>
       )}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Monto estimado</label>
+        <label className="text-xs text-muted-foreground">{t('debts.newUnplannedForm.amountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -133,7 +130,7 @@ function NewUnplannedDebtForm({
       {createUnplanned.isError && <p className="text-sm text-destructive">{apiErrorMessage(createUnplanned.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton icon={Plus} pending={createUnplanned.isPending}>
-          Registrar
+          {t('debts.newUnplannedForm.submitButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -141,6 +138,7 @@ function NewUnplannedDebtForm({
 }
 
 function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const { data: accounts } = useAccounts()
   const activate = useActivateUnplannedDebt()
   const [form, setForm] = useState<ActivateDebtInput>({
@@ -171,10 +169,10 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Monto original: {formatMoney(debt.amount)}. Deja "monto acordado" vacío si no hubo quita.
+        {t('debts.activateForm.originalAmountNote', { amount: formatMoney(debt.amount) })}
       </p>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Monto acordado (si hubo quita)</label>
+        <label className="text-xs text-muted-foreground">{t('debts.activateForm.agreedAmountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -184,7 +182,7 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Cuota</label>
+        <label className="text-xs text-muted-foreground">{t('debts.activateForm.paymentAmountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -195,7 +193,7 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Frecuencia</label>
+        <label className="text-xs text-muted-foreground">{t('debts.activateForm.frequencyLabel')}</label>
         <Select
           value={form.payment_frequency}
           onValueChange={(v) => setForm({ ...form, payment_frequency: (v as PaymentFrequency) ?? 'monthly' })}
@@ -215,20 +213,20 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
           {debt.direction === 'owed_to_me'
-            ? '¿De cuál cuenta salió el dinero? (opcional)'
-            : '¿A cuál cuenta entró el dinero? (opcional)'}
+            ? t('debts.activateForm.fundingAccountFromLabel')
+            : t('debts.activateForm.fundingAccountToLabel')}
         </label>
         <Select
           value={form.funding_account_id || null}
           onValueChange={(v) => setForm({ ...form, funding_account_id: v ?? '' })}
         >
           <SelectTrigger className="h-9 w-full">
-            <SelectValue placeholder="Ninguna, ya lo traía antes de usar la app">
+            <SelectValue placeholder={t('debts.activateForm.fundingAccountPlaceholder')}>
               {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Ninguna</SelectItem>
+            <SelectItem value="">{t('debts.activateForm.noneOption')}</SelectItem>
             {accounts?.map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 {a.name}
@@ -238,7 +236,7 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Fecha de inicio</label>
+        <label className="text-xs text-muted-foreground">{t('debts.activateForm.startDateLabel')}</label>
         <input
           type="date"
           required
@@ -249,8 +247,8 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
       </div>
       {activate.isError && <p className="text-sm text-destructive">{apiErrorMessage(activate.error)}</p>}
       <DialogFooter>
-        <DialogPrimaryButton icon={Zap} pending={activate.isPending} pendingLabel="Activando...">
-          Activar deuda
+        <DialogPrimaryButton icon={Zap} pending={activate.isPending} pendingLabel={t('debts.activateForm.pendingLabel')}>
+          {t('debts.activateForm.submitButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -258,6 +256,7 @@ function ActivateDebtForm({ debt, onDone }: { debt: UnplannedDebt; onDone: () =>
 }
 
 function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const { data: accounts } = useAccounts()
   const createDebt = useCreateDebt()
   const isReceivable = direction === 'owed_to_me'
@@ -289,21 +288,21 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
-          {isReceivable ? '¿A quién le prestas?' : 'Nombre'}
+          {isReceivable ? t('debts.newDebtForm.nameLabelReceivable') : t('debts.newDebtForm.nameLabel')}
         </label>
         <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={`${selectClass} h-9 w-full`} />
       </div>
       {!isReceivable && (
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs text-muted-foreground">Tipo</label>
+          <label className="text-xs text-muted-foreground">{t('debts.newDebtForm.typeLabel')}</label>
           <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: (v as DebtType) ?? 'personal_loan' })}>
             <SelectTrigger className="h-9 w-full">
               <SelectValue>{(v: DebtType) => debtTypeLabel(v)}</SelectValue>
             </SelectTrigger>
             <SelectContent>
-              {DEBT_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {debtTypeLabel(t)}
+              {DEBT_TYPES.map((dt) => (
+                <SelectItem key={dt} value={dt}>
+                  {debtTypeLabel(dt)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -311,7 +310,7 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
         </div>
       )}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Monto total</label>
+        <label className="text-xs text-muted-foreground">{t('debts.newDebtForm.totalAmountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -322,7 +321,7 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Cuota (opcional)</label>
+        <label className="text-xs text-muted-foreground">{t('debts.newDebtForm.paymentAmountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -332,7 +331,7 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Frecuencia</label>
+        <label className="text-xs text-muted-foreground">{t('debts.newDebtForm.frequencyLabel')}</label>
         <Select
           value={form.payment_frequency}
           onValueChange={(v) => setForm({ ...form, payment_frequency: (v as PaymentFrequency) ?? 'monthly' })}
@@ -352,20 +351,20 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
           {isReceivable
-            ? '¿De cuál cuenta sale el dinero? (opcional)'
-            : '¿A cuál cuenta entró el dinero? (opcional)'}
+            ? t('debts.newDebtForm.fundingAccountFromLabel')
+            : t('debts.newDebtForm.fundingAccountToLabel')}
         </label>
         <Select
           value={form.funding_account_id || null}
           onValueChange={(v) => setForm({ ...form, funding_account_id: v ?? '' })}
         >
           <SelectTrigger className="h-9 w-full">
-            <SelectValue placeholder="Ninguna, ya lo traía antes de usar la app">
+            <SelectValue placeholder={t('debts.newDebtForm.fundingAccountPlaceholder')}>
               {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Ninguna</SelectItem>
+            <SelectItem value="">{t('debts.newDebtForm.noneOption')}</SelectItem>
             {accounts?.map((a) => (
               <SelectItem key={a.id} value={a.id}>
                 {a.name}
@@ -378,7 +377,7 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
       {createDebt.isError && <p className="text-sm text-destructive">{apiErrorMessage(createDebt.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={createDebt.isPending}>
-          Crear deuda
+          {t('debts.newDebtForm.submitButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -386,6 +385,7 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
 }
 
 function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const { data: accounts } = useAccounts()
   const registerPayment = useRegisterDebtPayment()
   const isReceivable = debt.direction === 'owed_to_me'
@@ -406,15 +406,17 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        {isReceivable ? 'Te debe' : 'Saldo actual'}: {formatMoney(debt.current_balance)}
+        {isReceivable
+          ? t('debts.registerPaymentForm.oweYouNote', { amount: formatMoney(debt.current_balance) })
+          : t('debts.registerPaymentForm.currentBalanceNote', { amount: formatMoney(debt.current_balance) })}
       </p>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">
-          {isReceivable ? 'Cuenta a la que entra el dinero' : 'Cuenta que paga'}
+          {isReceivable ? t('debts.registerPaymentForm.accountToLabel') : t('debts.registerPaymentForm.accountFromLabel')}
         </label>
         <Select value={accountId || null} onValueChange={(v) => setAccountId(v ?? '')}>
           <SelectTrigger className="h-9 w-full">
-            <SelectValue placeholder="Selecciona una cuenta">
+            <SelectValue placeholder={t('debts.registerPaymentForm.accountPlaceholder')}>
               {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
@@ -428,17 +430,17 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Monto</label>
+        <label className="text-xs text-muted-foreground">{t('debts.registerPaymentForm.amountLabel')}</label>
         <input type="number" step="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} className={`${selectClass} h-9 w-full`} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Fecha</label>
+        <label className="text-xs text-muted-foreground">{t('debts.registerPaymentForm.dateLabel')}</label>
         <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={`${selectClass} h-9 w-full`} />
       </div>
       {registerPayment.isError && <p className="text-sm text-destructive">{apiErrorMessage(registerPayment.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={registerPayment.isPending}>
-          {isReceivable ? 'Registrar cobro' : 'Registrar pago'}
+          {isReceivable ? t('debts.registerPaymentForm.registerCollectionButton') : t('debts.registerPaymentForm.registerPaymentButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -452,6 +454,7 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
  * balance is corrected to what it really is today. Doesn't touch any
  * already registered payment. */
 function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const updateDebt = useUpdateDebt()
   const confirm = useConfirmStore((s) => s.ask)
   const pushToast = useUiStore((s) => s.pushToast)
@@ -462,21 +465,22 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
     event.preventDefault()
     if (Number(balance) === Number(debt.current_balance)) return onDone()
     const ok = await confirm({
-      title: 'Corregir saldo',
-      message:
-        `Vas a cambiar el saldo de "${debt.name}" de ${formatMoney(debt.current_balance)} a ` +
-        `${formatMoney(balance)} directamente -- no registra ningún pago ni modifica los que ya ` +
-        `existen, solo ajusta el número. ¿Continuar?`,
-      confirmLabel: 'Corregir saldo',
+      title: t('debts.correctBalanceForm.confirmTitle'),
+      message: t('debts.correctBalanceForm.confirmMessage', {
+        name: debt.name,
+        from: formatMoney(debt.current_balance),
+        to: formatMoney(balance),
+      }),
+      confirmLabel: t('debts.correctBalanceForm.confirmLabel'),
       variant: 'danger',
     })
     if (!ok) return
     try {
       await updateDebt.mutateAsync({ id: debt.id, input: { current_balance: balance } })
       pushToast(
-        <>
-          Saldo de <strong className="font-bold">{debt.name}</strong> actualizado
-        </>,
+        <Trans i18nKey="debts.toast.balanceUpdated" ns="pages" values={{ name: debt.name }}>
+          Saldo de <strong className="font-bold" /> actualizado
+        </Trans>,
         'success',
       )
       onDone()
@@ -488,10 +492,12 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        {isReceivable ? 'Te debe' : 'Saldo actual'}: {formatMoney(debt.current_balance)}
+        {isReceivable
+          ? t('debts.correctBalanceForm.oweYouNote', { amount: formatMoney(debt.current_balance) })
+          : t('debts.correctBalanceForm.currentBalanceNote', { amount: formatMoney(debt.current_balance) })}
       </p>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Saldo correcto</label>
+        <label className="text-xs text-muted-foreground">{t('debts.correctBalanceForm.balanceLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -507,7 +513,7 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
       )}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={updateDebt.isPending}>
-          Guardar
+          {t('debts.correctBalanceForm.submitButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -515,6 +521,7 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
 }
 
 function DebtCard({ debt }: { debt: Debt }) {
+  const { t } = useTranslation('pages')
   const [payOpen, setPayOpen] = useState(false)
   const [correctOpen, setCorrectOpen] = useState(false)
   const isReceivable = debt.direction === 'owed_to_me'
@@ -549,7 +556,7 @@ function DebtCard({ debt }: { debt: Debt }) {
           className="rounded-full px-2 py-0.5 text-[9px] flex-shrink-0"
           style={{ background: typeColor.bg, color: typeColor.ink }}
         >
-          {isReceivable ? 'te debe' : debtTypeLabel(debt.type)}
+          {isReceivable ? t('debts.card.receivableBadge') : debtTypeLabel(debt.type)}
         </span>
       </div>
       <div className="flex items-center gap-3 mb-2">
@@ -565,7 +572,7 @@ function DebtCard({ debt }: { debt: Debt }) {
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] text-muted-foreground">{isReceivable ? 'Cobrado' : 'TAE'}</span>
+            <span className="text-[10px] text-muted-foreground">{isReceivable ? t('debts.card.collectedLabel') : t('debts.card.aprLabel')}</span>
             <span
               className="text-[13px] font-medium"
               style={{ color: !isReceivable && apr > 25 ? 'var(--nl-danger-ink)' : undefined }}
@@ -574,7 +581,7 @@ function DebtCard({ debt }: { debt: Debt }) {
             </span>
           </div>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] text-muted-foreground">{isReceivable ? 'Te debe' : 'Saldo'}</span>
+            <span className="text-[10px] text-muted-foreground">{isReceivable ? t('debts.card.oweYouLabel') : t('debts.card.balanceLabel')}</span>
             <span className="text-[13px] font-medium" style={{ color: balanceColor }}>
               {formatMoney(debt.current_balance)}
             </span>
@@ -583,7 +590,9 @@ function DebtCard({ debt }: { debt: Debt }) {
       </div>
       <div className="flex items-center justify-between pt-1.5 border-t border-border">
         <div className="text-[10px] text-muted-foreground truncate">
-          {debt.status === 'completed' ? 'Liquidada' : `Próximo: ${debt.next_payment_date ?? '—'}`}
+          {debt.status === 'completed'
+            ? t('debts.card.completed')
+            : t('debts.card.nextPayment', { date: debt.next_payment_date ?? '—' })}
         </div>
         {debt.status === 'active' && (
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -596,13 +605,13 @@ function DebtCard({ debt }: { debt: Debt }) {
                     className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
                   >
                     <Scale size={11} />
-                    Corregir
+                    {t('debts.card.correctButton')}
                   </button>
                 }
               />
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Corregir saldo — {debt.name}</DialogTitle>
+                  <DialogTitle>{t('debts.card.correctDialogTitle', { name: debt.name })}</DialogTitle>
                 </DialogHeader>
                 <CorrectBalanceForm debt={debt} onDone={() => setCorrectOpen(false)} />
               </DialogContent>
@@ -615,14 +624,16 @@ function DebtCard({ debt }: { debt: Debt }) {
                     className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
                   >
                     <Check size={11} />
-                    {isReceivable ? 'Cobrar' : 'Pagar'}
+                    {isReceivable ? t('debts.card.collectButton') : t('debts.card.payButton')}
                   </button>
                 }
               />
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>
-                    {isReceivable ? 'Cobro' : 'Pago'} — {debt.name}
+                    {isReceivable
+                      ? t('debts.card.collectionDialogTitle', { name: debt.name })
+                      : t('debts.card.paymentDialogTitle', { name: debt.name })}
                   </DialogTitle>
                 </DialogHeader>
                 <RegisterPaymentForm debt={debt} onDone={() => setPayOpen(false)} />
@@ -632,7 +643,7 @@ function DebtCard({ debt }: { debt: Debt }) {
         )}
         {debt.status === 'completed' && (
           <span className="rounded-full px-2 py-0.5 text-[9px]" style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}>
-            Liquidada
+            {t('debts.card.completed')}
           </span>
         )}
       </div>
@@ -641,6 +652,7 @@ function DebtCard({ debt }: { debt: Debt }) {
 }
 
 function UnplannedDebtRow({ unplanned }: { unplanned: UnplannedDebt }) {
+  const { t } = useTranslation('pages')
   const [activateOpen, setActivateOpen] = useState(false)
   const isDesktop = useIsDesktop()
 
@@ -658,13 +670,13 @@ function UnplannedDebtRow({ unplanned }: { unplanned: UnplannedDebt }) {
             style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
           >
             <Zap size={12} />
-            Activar
+            {t('debts.unplannedRow.activateButton')}
           </button>
         }
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Activar — {unplanned.name}</DialogTitle>
+          <DialogTitle>{t('debts.unplannedRow.activateDialogTitle', { name: unplanned.name })}</DialogTitle>
         </DialogHeader>
         <ActivateDebtForm debt={unplanned} onDone={() => setActivateOpen(false)} />
       </DialogContent>
@@ -696,62 +708,35 @@ function UnplannedDebtRow({ unplanned }: { unplanned: UnplannedDebt }) {
 }
 
 function DebtsHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
+      <HelpSection heading={t('debts.help.whatIsThisScreen.heading')}>
         <p>
-          Todo lo que involucra deber dinero, en cualquier dirección: préstamos personales, nómina,
-          crédito de tienda, o algo tan informal como que le prestaste $100 a un amigo o tu abuelo te
-          prestó $100,000. Las tarjetas de crédito no viven aquí -- se pagan y se ve el progreso de tus
-          compras a meses desde Cuentas. La pestaña de arriba cambia entre <strong>Yo debo</strong> y{' '}
-          <strong>Me deben</strong> — mismo modelo, misma pantalla, solo cambia quién le debe a quién.
+          <Trans i18nKey="debts.help.whatIsThisScreen.body" ns="pages">
+            Everything that involves owing money, in either direction: personal loans, payroll loans,
+            store credit, or something as informal as lending a friend $100 or your grandfather lending
+            you $100,000. Credit cards don't live here -- they're paid off and you see the progress of
+            your installment purchases from Accounts. The tab above switches between <strong>I owe</strong>{' '}
+            and <strong>Owed to me</strong> — same model, same screen, only who owes whom changes.
+          </Trans>
         </p>
       </HelpSection>
-      <HelpSection heading="Agregar deuda">
-        <p>
-          Registra una deuda con su plan completo: monto, frecuencia de pago y, opcionalmente, de/a qué
-          cuenta se movió el efectivo cuando se originó. En "Yo debo" también eliges el tipo (préstamo
-          personal, informal, etc.) — en "Me deben" siempre es un préstamo informal.
-        </p>
+      <HelpSection heading={t('debts.help.addDebt.heading')}>
+        <p>{t('debts.help.addDebt.body')}</p>
       </HelpSection>
-      <HelpSection heading="Deuda sin plan">
-        <p>
-          Para cuando todavía no tienes el detalle claro — solo nombre y monto. Nunca mueve dinero de
-          ninguna cuenta. Cuando ya sepas cómo se va a pagar, la "activas" con un plan (y ahí sí puedes
-          decir de qué cuenta salió/entró el efectivo, si aplica).
-        </p>
-        <p>
-          Esta sección está apagada por default — solo aparece si activas "Tengo una deuda con problemas
-          de pago" en Ajustes. Al activarla, el asesor de IA también puede ver estas deudas y ayudarte a
-          analizar cómo pagarlas.
-        </p>
-        <DemoSteps
-          steps={[
-            'Deuda sin plan: guarda el nombre y el monto, sin más detalle.',
-            'Cuando decidas cómo pagarla, la activas con monto/frecuencia/cuenta.',
-            'A partir de ahí se comporta como cualquier otra deuda.',
-          ]}
-        />
+      <HelpSection heading={t('debts.help.unplannedDebt.heading')}>
+        <p>{t('debts.help.unplannedDebt.body1')}</p>
+        <p>{t('debts.help.unplannedDebt.body2')}</p>
+        <DemoSteps steps={t('debts.help.unplannedDebt.steps', { returnObjects: true }) as string[]} />
       </HelpSection>
-      <HelpSection heading="Registrar pago / cobro">
-        <p>
-          Baja el saldo pendiente y mueve dinero real de/hacia la cuenta que elijas — es una transacción
-          real, no solo un número que cambia. En "Me deben" se llama "Registrar cobro" (te están
-          pagando), en "Yo debo" es "Registrar pago".
-        </p>
+      <HelpSection heading={t('debts.help.registerPayment.heading')}>
+        <p>{t('debts.help.registerPayment.body')}</p>
       </HelpSection>
-      <HelpSection heading="Corregir saldo">
-        <p>
-          Ajusta el saldo pendiente directamente a lo que de verdad es hoy, sin registrar pago por pago —
-          pensado para cuando estás cargando historial viejo y solo necesitas dejar el número correcto al
-          final. A diferencia de "Registrar pago", no mueve dinero de ninguna cuenta ni afecta pagos ya
-          registrados.
-        </p>
+      <HelpSection heading={t('debts.help.correctBalance.heading')}>
+        <p>{t('debts.help.correctBalance.body')}</p>
       </HelpSection>
-      <HelpTip>
-        Prestar o que te presten no es un gasto ni un ingreso — tu patrimonio total no cambia, solo se
-        mueve de una cuenta a otra (o a esta lista, si todavía no tiene cuenta asociada).
-      </HelpTip>
+      <HelpTip>{t('debts.help.tip')}</HelpTip>
     </>
   )
 }
@@ -784,6 +769,7 @@ function MiniStat({
 }
 
 export function Debts() {
+  const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
   const debtTroubleMode = user?.debt_trouble_mode ?? false
   const [direction, setDirection] = useState<DebtDirection>('owed_by_me')
@@ -801,11 +787,16 @@ export function Debts() {
   // feature, it doesn't hide data the user already registered.
   const showUnplannedSection = debtTroubleMode || unplanned.length > 0
 
+  const directionLabel: Record<DebtDirection, string> = {
+    owed_by_me: t('debts.directions.owedByMe'),
+    owed_to_me: t('debts.directions.owedToMe'),
+  }
+
   return (
     <div>
       <ViewHeader
         icon={<Coins />}
-        title="Deudas"
+        title={t('debts.title')}
         help={<DebtsHelp />}
         section={HEADER_SECTIONS.compromisos}
         tourKey="debts"
@@ -821,13 +812,13 @@ export function Debts() {
                       className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground"
                     >
                       <Plus size={14} />
-                      Deuda sin plan
+                      {t('debts.header.unplannedButton')}
                     </button>
                   }
                 />
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Registrar deuda sin plan</DialogTitle>
+                    <DialogTitle>{t('debts.header.unplannedDialogTitle')}</DialogTitle>
                   </DialogHeader>
                   <NewUnplannedDebtForm direction={direction} onDone={() => setUnplannedOpen(false)} />
                 </DialogContent>
@@ -843,13 +834,13 @@ export function Debts() {
                     style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
                   >
                     <Plus size={14} />
-                    Agregar deuda
+                    {t('debts.header.newDebtButton')}
                   </button>
                 }
               />
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Nueva deuda</DialogTitle>
+                  <DialogTitle>{t('debts.header.newDebtDialogTitle')}</DialogTitle>
                 </DialogHeader>
                 <NewDebtForm direction={direction} onDone={() => setDebtOpen(false)} />
               </DialogContent>
@@ -864,7 +855,7 @@ export function Debts() {
           onChange={setDirection}
           options={(['owed_by_me', 'owed_to_me'] as DebtDirection[]).map((d) => ({
             value: d,
-            label: DIRECTION_LABEL[d],
+            label: directionLabel[d],
           }))}
           className="mb-5"
         />
@@ -875,14 +866,14 @@ export function Debts() {
           <>
             <MiniStat
               icon={TrendingUp}
-              label="Me deben en total"
+              label={t('debts.stats.totalOwedToMe')}
               value={formatMoney(summary?.total_owed_to_me ?? '0')}
               valueClassName="text-[color:var(--nl-accent-ink)]"
             />
             {debtTroubleMode && (
               <MiniStat
                 icon={AlertTriangle}
-                label="Sin plan"
+                label={t('debts.stats.unplanned')}
                 value={formatMoney(summary?.unplanned_owed_to_me ?? '0')}
                 valueClassName="text-[color:var(--nl-warning-ink)]"
               />
@@ -892,19 +883,19 @@ export function Debts() {
           <>
             <MiniStat
               icon={TrendingDown}
-              label="Debo en total"
+              label={t('debts.stats.totalOwedByMe')}
               value={formatMoney(summary?.total_owed_by_me ?? '0')}
               valueClassName="text-[color:var(--nl-danger-ink)]"
             />
             <MiniStat
               icon={Calendar}
-              label="Compromiso / mes"
+              label={t('debts.stats.monthlyCommitment')}
               value={formatMoney(summary?.monthly_committed ?? '0')}
             />
             {debtTroubleMode && (
               <MiniStat
                 icon={AlertTriangle}
-                label="Sin plan"
+                label={t('debts.stats.unplanned')}
                 value={formatMoney(summary?.unplanned_owed_by_me ?? '0')}
                 valueClassName="text-[color:var(--nl-warning-ink)]"
               />
@@ -919,18 +910,18 @@ export function Debts() {
           className="flex items-center gap-2 text-[12px] text-muted-foreground hover:text-foreground mb-4 -mt-1"
         >
           <AlertTriangle size={13} className="flex-shrink-0" />
-          ¿Tienes una deuda vencida o con problemas de pago? Actívalo en Ajustes.
+          {t('debts.troubleModeCta')}
         </Link>
       )}
 
       {!loadingUnplanned && showUnplannedSection && unplanned.length > 0 && (
         <div className="bg-card border border-border rounded-md p-3 mb-3">
-          <div className="text-[13.5px] font-medium mb-1">Sin plan de pago</div>
+          <div className="text-[13.5px] font-medium mb-1">{t('debts.unplannedSection.heading')}</div>
           <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_100px] gap-2 text-[10.5px] uppercase tracking-wide text-muted-foreground mt-2">
-            <span>Nombre</span>
-            <span>Acreedor</span>
-            <span className="text-right">Monto</span>
-            <span className="text-right">Acción</span>
+            <span>{t('debts.unplannedSection.nameHeader')}</span>
+            <span>{t('debts.unplannedSection.creditorHeader')}</span>
+            <span className="text-right">{t('debts.unplannedSection.amountHeader')}</span>
+            <span className="text-right">{t('debts.unplannedSection.actionHeader')}</span>
           </div>
           {unplanned.map((u) => (
             <UnplannedDebtRow key={u.id} unplanned={u} />
@@ -938,9 +929,9 @@ export function Debts() {
         </div>
       )}
 
-      <div className="text-sm font-semibold mb-2">Con plan activo</div>
+      <div className="text-sm font-semibold mb-2">{t('debts.activeSection.heading')}</div>
       {loadingDebts ? (
-        <p className="text-sm text-muted-foreground">Cargando...</p>
+        <p className="text-sm text-muted-foreground">{t('debts.activeSection.loading')}</p>
       ) : activeDebts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {activeDebts.map((debt) => (
@@ -949,9 +940,7 @@ export function Debts() {
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          {isReceivable
-            ? 'Nadie te debe dinero con un plan activo.'
-            : 'No tienes deudas con plan de pago activo.'}
+          {isReceivable ? t('debts.activeSection.emptyReceivable') : t('debts.activeSection.emptyPayable')}
         </p>
       )}
     </div>

@@ -13,6 +13,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
@@ -50,14 +52,14 @@ function monthsSince(dateStr: string): number {
   return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth())
 }
 
-function activeSinceLabel(dateStr: string): string {
+function activeSinceLabel(dateStr: string, t: TFunction): string {
   const months = monthsSince(dateStr)
-  if (months <= 0) return 'Activa este mes'
-  if (months === 1) return 'Activa desde hace 1 mes'
-  return `Activa desde hace ${months} meses`
+  if (months <= 0) return t('subscriptions.activeSinceThisMonth')
+  return t('subscriptions.activeSince', { count: months })
 }
 
 function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const { data: accounts } = useAccounts()
   const { data: categories } = useCategories('expense')
   const createItem = useCreateRecurringItem()
@@ -87,18 +89,18 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Nombre</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.nameLabel')}</label>
         <input
           required
           autoFocus
-          placeholder="Ej: Spotify, Netflix, Claude Pro"
+          placeholder={t('subscriptions.form.namePlaceholder')}
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           className={`${selectClass} h-9 w-full`}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Monto</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.amountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -109,7 +111,7 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Frecuencia de cobro</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.frequencyLabel')}</label>
         <Select
           value={form.frequency}
           onValueChange={(v) => setForm({ ...form, frequency: (v as RecurringFrequency) ?? 'monthly' })}
@@ -127,25 +129,27 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
         </Select>
         {form.amount && (
           <p className="text-xs text-muted-foreground">
-            ≈ {formatMoney(monthlyEquivalent(form.amount, form.frequency))} / mes
+            {t('subscriptions.form.monthlyEquivalentNote', {
+              amount: formatMoney(monthlyEquivalent(form.amount, form.frequency)),
+            })}
           </p>
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Categoría</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.categoryLabel')}</label>
         <CategorySelect
           categories={categories}
           value={form.category_id}
           onValueChange={(v) => setForm({ ...form, category_id: v })}
-          placeholder="Selecciona categoría"
+          placeholder={t('subscriptions.form.categoryPlaceholder')}
           triggerClassName={selectClass}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Cuenta que paga (banco/TDC)</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.accountLabel')}</label>
         <Select value={form.account_id || null} onValueChange={(v) => setForm({ ...form, account_id: v ?? '' })}>
           <SelectTrigger className={selectClass}>
-            <SelectValue placeholder="Selecciona cuenta">
+            <SelectValue placeholder={t('subscriptions.form.accountPlaceholder')}>
               {(v: string | null) => payingAccounts?.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
@@ -159,7 +163,7 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Próximo cobro</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.nextDateLabel')}</label>
         <input
           type="date"
           required
@@ -173,7 +177,7 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
       )}
       <DialogFooter>
         <DialogPrimaryButton icon={Plus} pending={createItem.isPending}>
-          Crear suscripción
+          {t('subscriptions.newItemForm.submitButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -181,6 +185,7 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
 }
 
 function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const { data: accounts } = useAccounts()
   const { data: categories } = useCategories('expense')
   const payingAccounts = accounts?.filter((a) => a.type === 'asset' || a.type === 'liability')
@@ -208,7 +213,7 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Nombre</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.nameLabel')}</label>
         <input
           required
           autoFocus
@@ -218,7 +223,7 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Monto</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.amountLabel')}</label>
         <input
           type="number"
           step="0.01"
@@ -229,7 +234,7 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Frecuencia de cobro</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.frequencyLabel')}</label>
         <Select
           value={form.frequency}
           onValueChange={(v) => setForm({ ...form, frequency: (v as RecurringFrequency) ?? 'monthly' })}
@@ -247,25 +252,27 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
         </Select>
         {form.amount && form.frequency && (
           <p className="text-xs text-muted-foreground">
-            ≈ {formatMoney(monthlyEquivalent(form.amount, form.frequency))} / mes
+            {t('subscriptions.form.monthlyEquivalentNote', {
+              amount: formatMoney(monthlyEquivalent(form.amount, form.frequency)),
+            })}
           </p>
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Categoría</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.categoryLabel')}</label>
         <CategorySelect
           categories={categories}
           value={form.category_id}
           onValueChange={(v) => setForm({ ...form, category_id: v })}
-          placeholder="Selecciona categoría"
+          placeholder={t('subscriptions.form.categoryPlaceholder')}
           triggerClassName={selectClass}
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Cuenta que paga (banco/TDC)</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.accountLabel')}</label>
         <Select value={form.account_id || null} onValueChange={(v) => setForm({ ...form, account_id: v ?? '' })}>
           <SelectTrigger className={selectClass}>
-            <SelectValue placeholder="Selecciona cuenta">
+            <SelectValue placeholder={t('subscriptions.form.accountPlaceholder')}>
               {(v: string | null) => payingAccounts?.find((a) => a.id === v)?.name}
             </SelectValue>
           </SelectTrigger>
@@ -279,7 +286,7 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs text-muted-foreground">Próximo cobro</label>
+        <label className="text-xs text-muted-foreground">{t('subscriptions.form.nextDateLabel')}</label>
         <input
           type="date"
           required
@@ -291,7 +298,7 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
       {updateItem.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateItem.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={updateItem.isPending}>
-          Guardar cambios
+          {t('subscriptions.editItemForm.submitButton')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -305,6 +312,7 @@ const STATUS_SEVERITY: Record<RecurringItem['status'], 'accent' | 'warning' | 'd
 }
 
 function SubscriptionRow({ item, categoryName, categoryColor }: { item: RecurringItem; categoryName: string; categoryColor: string }) {
+  const { t } = useTranslation('pages')
   const pause = usePauseRecurringItem()
   const cancel = useCancelRecurringItem()
   const resume = useResumeRecurringItem()
@@ -325,7 +333,7 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
             <button
               type="button"
               disabled={busy}
-              title="Editar"
+              title={t('subscriptions.itemActions.editTitle')}
               className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info disabled:opacity-40"
             >
               <Pencil size={13} />
@@ -334,7 +342,7 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
         />
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar — {item.name}</DialogTitle>
+            <DialogTitle>{t('subscriptions.itemActions.editDialogTitle', { name: item.name })}</DialogTitle>
           </DialogHeader>
           <EditSubscriptionForm item={item} onDone={() => setEditOpen(false)} />
         </DialogContent>
@@ -345,7 +353,7 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
             type="button"
             disabled={busy}
             onClick={() => pause.mutate(item.id)}
-            title="Pausar"
+            title={t('subscriptions.itemActions.pauseTitle')}
             className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-warning/10 hover:text-warning disabled:opacity-40"
           >
             <Pause size={13} />
@@ -354,7 +362,7 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
             type="button"
             disabled={busy}
             onClick={() => cancel.mutate(item.id)}
-            title="Cancelar"
+            title={t('subscriptions.itemActions.cancelTitle')}
             className="w-7 h-7 rounded-full flex items-center justify-center text-destructive hover:bg-destructive/10 disabled:opacity-40"
           >
             <X size={13} />
@@ -369,7 +377,7 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
           style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
         >
           <RotateCcw size={12} />
-          Reactivar
+          {t('subscriptions.itemActions.resumeButton')}
         </button>
       )}
     </>
@@ -383,8 +391,8 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
       </span>
       {item.status === 'active' && (
         <span style={oldEnough ? { color: 'var(--nl-warning-ink)' } : undefined}>
-          {activeSinceLabel(item.created_at)}
-          {oldEnough ? ' — ¿la sigues usando?' : ''}
+          {activeSinceLabel(item.created_at, t)}
+          {oldEnough ? t('subscriptions.stillUsingSuffix') : ''}
         </span>
       )}
     </div>
@@ -398,7 +406,11 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
           <span className="text-muted-foreground">
             {formatMoney(item.amount)} · {FREQUENCY_LABELS[item.frequency]}
           </span>
-          <span className="text-right">≈ {formatMoney(monthlyEquivalent(item.amount, item.frequency))}/mes</span>
+          <span className="text-right">
+            {t('subscriptions.monthlyEquivalentSuffix', {
+              amount: formatMoney(monthlyEquivalent(item.amount, item.frequency)),
+            })}
+          </span>
           <span className="text-right text-muted-foreground">{item.next_date}</span>
           <span className="flex justify-end items-center gap-1.5" data-tour="subscriptions:item-actions">
             {actions}
@@ -414,7 +426,9 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium truncate">{item.name}</span>
         <span className="flex-shrink-0">
-          ≈ {formatMoney(monthlyEquivalent(item.amount, item.frequency))}/mes
+          {t('subscriptions.monthlyEquivalentSuffix', {
+            amount: formatMoney(monthlyEquivalent(item.amount, item.frequency)),
+          })}
         </span>
       </div>
       <div className="flex items-center justify-between gap-2 text-[12px] text-muted-foreground">
@@ -430,42 +444,25 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
 }
 
 function SubscriptionsHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          Tus suscripciones (streaming, software, membresías) por separado de otros recurrentes — así
-          puedes ver de un vistazo cuánto te cuestan al mes en total, sin mezclarlas con renta o servicios.
-        </p>
+      <HelpSection heading={t('subscriptions.help.whatIsThisScreen.heading')}>
+        <p>{t('subscriptions.help.whatIsThisScreen.body')}</p>
       </HelpSection>
-      <HelpSection heading="Comprometido mensual">
-        <p>
-          Como no todas cobran cada mes (algunas son anuales o quincenales), el total convierte cada
-          frecuencia a su equivalente mensual para que la suma tenga sentido.
-        </p>
+      <HelpSection heading={t('subscriptions.help.monthlyCommitment.heading')}>
+        <p>{t('subscriptions.help.monthlyCommitment.body')}</p>
       </HelpSection>
-      <HelpSection heading="Editar / Pausar / Cancelar / Reanudar">
-        <p>
-          Editar cambia monto, frecuencia, cuenta, categoría o próximo cobro sin perder el historial —
-          úsalo cuando te suban el precio (pasa seguido con streaming y software). Pausar detiene el
-          cobro automático sin perder la configuración. Cancelar es definitivo. Ambas se pueden revertir.
-        </p>
+      <HelpSection heading={t('subscriptions.help.editPauseCancel.heading')}>
+        <p>{t('subscriptions.help.editPauseCancel.body')}</p>
       </HelpSection>
-      <HelpSection heading="Activa desde hace N meses">
-        <p>
-          Un recordatorio pasivo de cuánto tiempo lleva una suscripción activa — a partir de 12 meses te
-          lo señala, para que de vez en cuando te preguntes si de verdad la sigues usando.
-        </p>
+      <HelpSection heading={t('subscriptions.help.activeSince.heading')}>
+        <p>{t('subscriptions.help.activeSince.body')}</p>
       </HelpSection>
-      <HelpSection heading="Próximas renovaciones">
-        <p>
-          Las que se cobran en los siguientes 7 días, para que ningún cargo te agarre desprevenido.
-        </p>
+      <HelpSection heading={t('subscriptions.help.upcomingRenewals.heading')}>
+        <p>{t('subscriptions.help.upcomingRenewals.body')}</p>
       </HelpSection>
-      <HelpTip>
-        El monto se registra automáticamente en Transacciones cuando llega la fecha de cobro — te aparece
-        primero como pendiente de confirmar en Recurrentes.
-      </HelpTip>
+      <HelpTip>{t('subscriptions.help.tip')}</HelpTip>
     </>
   )
 }
@@ -473,6 +470,7 @@ function SubscriptionsHelp() {
 const FALLBACK_CATEGORY_COLOR = 'var(--nl-text-muted)'
 
 export function Subscriptions() {
+  const { t } = useTranslation('pages')
   const { data: items, isLoading } = useRecurringItems({ item_type: 'subscription' })
   const { data: categories } = useCategories('expense')
   const { data: upcoming } = useUpcomingRecurring(7)
@@ -491,7 +489,7 @@ export function Subscriptions() {
     <div>
       <ViewHeader
         icon={<Repeat />}
-        title="Suscripciones"
+        title={t('subscriptions.title')}
         help={<SubscriptionsHelp />}
         section={HEADER_SECTIONS.compromisos}
         tourKey="subscriptions"
@@ -506,13 +504,13 @@ export function Subscriptions() {
                   style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
                 >
                   <Plus size={14} />
-                  Nueva suscripción
+                  {t('subscriptions.header.addButton')}
                 </button>
               }
             />
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nueva suscripción</DialogTitle>
+                <DialogTitle>{t('subscriptions.newItemDialogTitle')}</DialogTitle>
               </DialogHeader>
               <NewSubscriptionForm onDone={() => setOpen(false)} />
             </DialogContent>
@@ -524,32 +522,32 @@ export function Subscriptions() {
         <StatCard
           compact
           icon={<Lock />}
-          label="Comprometido en suscripciones / mes"
+          label={t('subscriptions.stats.committedMonthly')}
           value={formatMoney(committedMonthly)}
-          note={`≈ ${formatMoney(committedMonthly * 12)} / año`}
+          note={t('subscriptions.stats.committedMonthlyNote', { amount: formatMoney(committedMonthly * 12) })}
           dataTour="subscriptions:committed"
         />
-        <StatCard compact icon={<CheckCircle2 />} label="Activas" value={String(active.length)} />
+        <StatCard compact icon={<CheckCircle2 />} label={t('subscriptions.stats.active')} value={String(active.length)} />
         <StatCard
           compact
           icon={<PauseCircle />}
-          label="Pausadas"
+          label={t('subscriptions.stats.paused')}
           value={String(paused.length)}
           valueClassName="text-[color:var(--nl-warning-ink)]"
         />
         <StatCard
           compact
           icon={<XCircle />}
-          label="Canceladas"
+          label={t('subscriptions.stats.cancelled')}
           value={String(cancelled.length)}
           valueClassName="text-muted-foreground"
         />
       </div>
 
       <div className="bg-card border border-border rounded-md p-4 mb-4" data-tour="subscriptions:renewals">
-        <div className="text-[15px] font-medium mb-2">Próximas renovaciones (7 días)</div>
+        <div className="text-[15px] font-medium mb-2">{t('subscriptions.renewalsSection.heading')}</div>
         {upcomingRenewals.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nada por renovarse en los próximos 7 días.</p>
+          <p className="text-sm text-muted-foreground">{t('subscriptions.renewalsSection.empty')}</p>
         ) : (
           upcomingRenewals.map((item) => (
             <div key={item.id} className="flex items-center gap-2 lg:gap-3 py-2 border-t border-border first:border-0">
@@ -566,37 +564,41 @@ export function Subscriptions() {
 
       <div className="bg-card border border-border rounded-md p-4">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
-          <div className="text-[15px] font-medium">Todas tus suscripciones</div>
+          <div className="text-[15px] font-medium">{t('subscriptions.listSection.heading')}</div>
           <div data-tour="subscriptions:status-filter">
             <SegmentedControl
               value={status}
               onChange={setStatus}
               options={[
-                { value: 'active', label: 'Activas' },
-                { value: 'paused', label: 'Pausadas' },
-                { value: 'cancelled', label: 'Canceladas' },
-                { value: 'all', label: 'Todas' },
+                { value: 'active', label: t('subscriptions.listSection.filter.active') },
+                { value: 'paused', label: t('subscriptions.listSection.filter.paused') },
+                { value: 'cancelled', label: t('subscriptions.listSection.filter.cancelled') },
+                { value: 'all', label: t('subscriptions.listSection.filter.all') },
               ]}
             />
           </div>
         </div>
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Cargando...</p>
+          <p className="text-sm text-muted-foreground">{t('subscriptions.listSection.loading')}</p>
         ) : visible.length === 0 ? (
           <EmptyState>
             {status === 'active'
-              ? 'No tienes suscripciones activas.'
-              : `No tienes suscripciones ${STATUS_LABELS[status as RecurringItem['status']]?.toLowerCase() ?? ''}.`}
+              ? t('subscriptions.listSection.emptyActive')
+              : status === 'paused'
+                ? t('subscriptions.listSection.emptyPaused')
+                : status === 'cancelled'
+                  ? t('subscriptions.listSection.emptyCancelled')
+                  : t('subscriptions.listSection.emptyAll')}
           </EmptyState>
         ) : (
           <>
             <div className="hidden lg:grid grid-cols-[2fr_1.2fr_1fr_1fr_230px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-              <span>Nombre</span>
-              <span>Cobro</span>
-              <span className="text-right">Equivalente mensual</span>
-              <span className="text-right">Próximo cobro</span>
-              <span className="text-right">Estado / Acción</span>
+              <span>{t('subscriptions.listSection.table.name')}</span>
+              <span>{t('subscriptions.listSection.table.charge')}</span>
+              <span className="text-right">{t('subscriptions.listSection.table.monthlyEquivalent')}</span>
+              <span className="text-right">{t('subscriptions.listSection.table.nextDate')}</span>
+              <span className="text-right">{t('subscriptions.listSection.table.statusAction')}</span>
             </div>
             {visible.map((item) => {
               const category = categories?.find((c) => c.id === item.category_id)
@@ -604,7 +606,7 @@ export function Subscriptions() {
                 <SubscriptionRow
                   key={item.id}
                   item={item}
-                  categoryName={category?.name ?? 'Sin categoría'}
+                  categoryName={category?.name ?? t('subscriptions.fallbackCategoryName')}
                   categoryColor={category?.color ?? FALLBACK_CATEGORY_COLOR}
                 />
               )

@@ -1,0 +1,304 @@
+{
+  "adminLayout": {
+    "badge": "Admin",
+    "backToApp": "Volver a la app"
+  },
+  "appSidebar": {
+    "nav": {
+      "home": "Inicio",
+      "accounts": "Cuentas",
+      "transactions": "Transacciones",
+      "budget": "Presupuesto",
+      "advisor": "Asesor IA",
+      "debts": "Deudas",
+      "recurring": "Recurrentes",
+      "subscriptions": "Suscripciones",
+      "insights": "Insights",
+      "categories": "Categorías",
+      "goals": "Metas"
+    },
+    "sections": {
+      "main": "Principal",
+      "commitments": "Compromisos",
+      "intelligence": "Inteligencia",
+      "more": "MÁS",
+      "reports": "REPORTES"
+    },
+    "reports": {
+      "netWorthHistory": "Historial de patrimonio",
+      "expenseBreakdown": "Desglose de gastos"
+    },
+    "aria": {
+      "openMenu": "Abrir menú",
+      "closeMenu": "Cerrar menú",
+      "notifications": "Notificaciones",
+      "settings": "Configuración",
+      "logout": "Cerrar sesión"
+    },
+    "theme": {
+      "toLight": "Cambiar a modo claro",
+      "toDark": "Cambiar a modo oscuro"
+    },
+    "logoutConfirm": {
+      "title": "Cerrar sesión",
+      "message": "¿Seguro que quieres cerrar sesión?",
+      "confirmLabel": "Cerrar sesión"
+    },
+    "fallbackUserName": "Usuario"
+  },
+  "changelogButton": {
+    "trigger": "Novedades",
+    "dialogTitle": "Novedades",
+    "empty": "Recién estamos empezando — todavía no hay novedades que mostrar. Vuelve por aquí después de la próxima actualización.",
+    "acknowledge": "Entendido",
+    "feedback": {
+      "prompt": "¿Encontraste un bug o tenés una idea para mejorar la app?",
+      "tabBug": "Reportar un bug",
+      "tabFeature": "Sugerir una función",
+      "placeholderBug": "Contanos qué pasó y en qué pantalla...",
+      "placeholderFeature": "Contanos tu idea...",
+      "sending": "Enviando...",
+      "send": "Enviar",
+      "toastBug": "Gracias, ya lo reportamos.",
+      "toastFeature": "Gracias por la idea, la vamos a revisar."
+    }
+  },
+  "disclaimerGate": {
+    "title": "Actualizamos nuestro Aviso de Privacidad",
+    "intro": "Antes de seguir usando NorthernLights, necesitamos que lo leas y lo aceptes.",
+    "logout": "Cerrar sesión",
+    "saving": "Guardando...",
+    "accept": "Aceptar y continuar"
+  },
+  "layout": {
+    "quickAdd": "Agregar rápido"
+  },
+  "passwordInput": {
+    "hide": "Ocultar contraseña",
+    "show": "Mostrar contraseña"
+  },
+  "payCreditCardForm": {
+    "paymentDescription": "Pago {{name}}",
+    "paymentToast": "Pago a <0>{{name}}</0> registrado",
+    "currentBalance": "Saldo actual: {{amount}}",
+    "sourceAccountLabel": "Cuenta que paga",
+    "accountPlaceholder": "Selecciona una cuenta",
+    "amountLabel": "Monto",
+    "dateLabel": "Fecha",
+    "submitButton": "Registrar pago"
+  },
+  "categorySelect": {
+    "placeholder": "Selecciona...",
+    "searchPlaceholder": "Buscar categoría...",
+    "noResults": "Sin resultados",
+    "generalLabel": "General"
+  },
+  "dialogActions": {
+    "submitHint": "para guardar",
+    "savingPending": "Guardando...",
+    "cancel": "Cancelar"
+  },
+  "primitives": {
+    "sections": {
+      "diario": "Diario",
+      "compromisos": "Compromisos",
+      "inteligencia": "Inteligencia"
+    },
+    "helpTitle": "Ayuda — {{title}}",
+    "tourButtonTitle": "Ver recorrido guiado",
+    "tourButtonLabel": "Recorrido"
+  },
+  "transactionModals": {
+    "quickAddTitle": "Agregar rápido",
+    "newTransactionTitle": "Nueva transacción",
+    "type": {
+      "expense": "Gasto",
+      "income": "Ingreso",
+      "transfer": "Transferencia"
+    },
+    "defaultDescription": {
+      "transfer": "Transferencia",
+      "expense": "Gasto",
+      "income": "Ingreso"
+    },
+    "amountPlaceholder": "$0.00",
+    "descriptionPlaceholder": "Descripción",
+    "descriptionPlaceholderExample": "Ej. Cena con amigos",
+    "categoryPlaceholder": "Categoría",
+    "accountPlaceholder": "Cuenta",
+    "selectPlaceholder": "Selecciona...",
+    "switchToDetailed": "Detallar →",
+    "saveButton": "Guardar",
+    "categoryFieldLabel": "Categoría",
+    "accountFieldLabel": "Cuenta",
+    "destinationAccountFieldLabel": "Cuenta destino",
+    "dateFieldLabel": "Fecha",
+    "statusFieldLabel": "Estado",
+    "status": {
+      "confirmed": "Completado",
+      "draft": "Pendiente"
+    },
+    "notesFieldLabel": "Notas (opcional)",
+    "msiCheckboxLabel": "¿A meses sin intereses?",
+    "installmentsFieldLabel": "¿A cuántos meses?",
+    "transferDestinationWarning": "Ojo: para transferencias, elige la cuenta destino arriba.",
+    "createTransactionButton": "Crear transacción"
+  },
+  "editTransactionModal": {
+    "title": "Editar transacción",
+    "amountPlaceholder": "$0.00",
+    "descriptionPlaceholder": "Descripción",
+    "categoryFieldLabel": "Categoría",
+    "sourceAccountFieldLabel": "Cuenta origen",
+    "accountFieldLabel": "Cuenta",
+    "selectPlaceholder": "Selecciona...",
+    "destinationAccountFieldLabel": "Cuenta destino",
+    "dateFieldLabel": "Fecha",
+    "notesFieldLabel": "Notas (opcional)",
+    "saveButton": "Guardar"
+  },
+  "bulkExcelImportCard": {
+    "intro": "¿Llevas días sin registrar nada pero tienes todo anotado de forma burda? Descarga la plantilla, llénala (ya trae tus cuentas y categorías como listas desplegables) y súbela.",
+    "generatingButton": "Generando...",
+    "downloadTemplateButton": "Descargar plantilla",
+    "uploadingButton": "Cargando...",
+    "uploadFileButton": "Cargar archivo",
+    "lastFile": "Último archivo: {{fileName}}",
+    "resultSummary_one": "Se registraron {{count}} movimiento.",
+    "resultSummary_other": "Se registraron {{count}} movimientos.",
+    "errorSummary_one": "{{count}} fila con problemas:",
+    "errorSummary_other": "{{count}} filas con problemas:",
+    "errorRow": "Fila {{row}}{{block}}: {{reason}}"
+  },
+  "help": {
+    "thisScreenHelpTitle": "Ayuda de esta pantalla"
+  },
+  "transactionsCalendar": {
+    "weekdays": [
+      "L",
+      "M",
+      "X",
+      "J",
+      "V",
+      "S",
+      "D"
+    ],
+    "tooltip": {
+      "income": "+{{amount}} ingresos",
+      "expense": "-{{amount}} gastos",
+      "other": "{{amount}} otros movimientos",
+      "upcoming": "{{label}} (próximo, {{amount}})"
+    },
+    "legend": {
+      "income": "Ingreso",
+      "expense": "Gasto",
+      "upcoming": "Próximo"
+    },
+    "clearDateFilterButton": "Quitar filtro de fecha"
+  },
+  "welcomeModal": {
+    "heading": "Bienvenido a {{title}}",
+    "startTourButton": "Iniciar recorrido guiado →",
+    "exploreOnMyOwnButton": "Explorar por mi cuenta"
+  },
+  "tourHost": {
+    "stepCounter": "Paso {{current}} de {{total}}",
+    "backButton": "Atrás",
+    "skipButton": "Saltar",
+    "nextButton": "Siguiente",
+    "doneButton": "Listo"
+  },
+  "entryTypeLabels": {
+    "expense": "Gasto",
+    "income": "Ingreso",
+    "transfer": "Transferencia",
+    "loan_received": "Préstamo recibido",
+    "loan_repayment": "Pago de préstamo",
+    "loan_given": "Préstamo otorgado",
+    "loan_collection": "Cobro de préstamo",
+    "adjustment_in": "Ajuste de saldo",
+    "adjustment_out": "Ajuste de saldo"
+  },
+  "accountSubtypeLabels": {
+    "cash": "Efectivo",
+    "checking": "Cuenta de débito",
+    "savings": "Cuenta de ahorro",
+    "credit_card": "Tarjeta de crédito",
+    "payroll_loan": "Crédito de nómina",
+    "personal_loan": "Préstamo personal",
+    "store_credit": "Crédito departamental",
+    "informal_debt": "Deuda informal",
+    "loan_payable": "Préstamo por pagar",
+    "loan_receivable": "Préstamo por cobrar",
+    "installment": "Meses sin intereses",
+    "civic": "Crédito cívico"
+  },
+  "debtTypeLabels": {
+    "personal_loan": "Préstamo personal",
+    "payroll_loan": "Crédito de nómina",
+    "informal": "Préstamo informal",
+    "civic": "Crédito cívico",
+    "loan_received": "Préstamo recibido"
+  },
+  "paymentFrequencyLabels": {
+    "weekly": "Semanal",
+    "biweekly": "Quincenal",
+    "monthly": "Mensual",
+    "irregular": "Irregular"
+  },
+  "itemTypeLabels": {
+    "subscription": "Suscripción",
+    "service": "Servicio",
+    "utility": "Servicio esencial",
+    "income": "Ingreso"
+  },
+  "frequencyLabels": {
+    "weekly": "Semanal",
+    "biweekly": "Quincenal",
+    "monthly": "Mensual",
+    "bimonthly": "Bimestral",
+    "annual": "Anual"
+  },
+  "statusLabels": {
+    "active": "Activa",
+    "paused": "Pausada",
+    "cancelled": "Cancelada"
+  },
+  "urgencyLabels": {
+    "normal": "Normal",
+    "high": "Alta",
+    "critical": "Crítica"
+  },
+  "importPrompt": {
+    "template": "A partir de todo nuestro historial de conversación sobre mis finanzas, genera\nun resumen en Markdown que voy a importar a mi app de finanzas personales.\nNo inventes cifras que no hayamos discutido — si algo no está claro o no lo\nmencioné, dilo explícitamente en vez de adivinar. Sigue esta estructura:\n\n## Cuentas\nPara cada cuenta bancaria, de ahorro, efectivo o tarjeta de crédito:\n- Nombre, institución, tipo (débito/ahorro/efectivo/tarjeta de crédito)\n- Saldo actual (lo que tengo, o lo que debo hoy si es tarjeta)\n- Si es tarjeta de crédito: límite de crédito, tasa de interés anual,\n  día de corte, día límite de pago\n\n## Deudas con plan de pago activo\nDeudas que estoy pagando regularmente:\n- Nombre, acreedor, saldo actual, monto original (si cambió por quita/descuento)\n- Cuota, frecuencia (semanal/quincenal/mensual), día de pago\n- Cuotas totales y pagadas si aplica, tasa de interés si aplica\n\n## Deudas sin plan de pago\nDeudas que existen pero no tienen pagos organizados todavía:\n- Nombre, acreedor, saldo actual, notas relevantes\n\n## Gastos recurrentes, suscripciones e ingresos fijos\nCosas que se cobran o reciben periódicamente y no son una deuda con saldo:\n- Nombre, monto, frecuencia, cuenta desde/hacia la que se mueve\n- Categoría más parecida de esta lista: {{categories}}\n\n## Notas y dudas\nCualquier cosa ambigua o que discutimos sin llegar a una cifra clara.\n\nSi no tienes información para alguna sección, escribe \"Sin datos\" en vez de\nomitirla. No agregues explicaciones fuera de estas secciones."
+  },
+  "image": {
+    "couldNotReadImage": "No se pudo leer la imagen",
+    "couldNotProcessImage": "No se pudo procesar la imagen",
+    "selectValidImage": "Selecciona una imagen (PNG, JPG o WebP).",
+    "imageTooLarge": "La imagen es muy pesada (máx. 8 MB)."
+  },
+  "api": {
+    "noRefreshToken": "No hay refresh token",
+    "unexpectedError": "Ocurrió un error inesperado"
+  },
+  "useAiChat": {
+    "defaultAttachmentMessage": "Aquí están mis estados de cuenta.",
+    "attachmentSuffix": "adjunto: {{names}}",
+    "streamingNotSupported": "El servidor no soporta streaming",
+    "couldNotSendMessage": "No se pudo enviar el mensaje",
+    "connectionError": "Error de conexión con el asesor"
+  },
+  "confirmStore": {
+    "defaultTitle": "Confirmar",
+    "defaultConfirmLabel": "Confirmar",
+    "defaultCancelLabel": "Cancelar"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Idioma",
+    "options": {
+      "es": "Español",
+      "en": "English"
+    }
+  }
+}

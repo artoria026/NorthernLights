@@ -1,31 +1,26 @@
+import i18n from './i18n'
 import type { AlertUrgency, RecurringFrequency, RecurringItem, RecurringItemType } from '@/types'
 
-export const ITEM_TYPE_LABELS: Record<RecurringItemType, string> = {
-  subscription: 'Suscripción',
-  service: 'Servicio',
-  utility: 'Servicio esencial',
-  income: 'Ingreso',
+/** Translated on access via a Proxy (instead of a function) so existing
+ * bracket-access call sites (`FREQUENCY_LABELS[f]`) across the app keep
+ * working unchanged and stay reactive to the active language. Not
+ * enumerable -- nothing in this codebase iterates these with Object.keys,
+ * callers use their own ITEM_TYPES/FREQUENCIES arrays for that. */
+function labelProxy(nsKey: string): Record<string, string> {
+  return new Proxy(
+    {},
+    {
+      get(_target, prop: string) {
+        return i18n.t(`${nsKey}.${prop}`, { ns: 'common', defaultValue: prop })
+      },
+    },
+  )
 }
 
-export const FREQUENCY_LABELS: Record<RecurringFrequency, string> = {
-  weekly: 'Semanal',
-  biweekly: 'Quincenal',
-  monthly: 'Mensual',
-  bimonthly: 'Bimestral',
-  annual: 'Anual',
-}
-
-export const STATUS_LABELS: Record<RecurringItem['status'], string> = {
-  active: 'Activa',
-  paused: 'Pausada',
-  cancelled: 'Cancelada',
-}
-
-export const URGENCY_LABELS: Record<AlertUrgency, string> = {
-  normal: 'Normal',
-  high: 'Alta',
-  critical: 'Crítica',
-}
+export const ITEM_TYPE_LABELS: Record<RecurringItemType, string> = labelProxy('itemTypeLabels')
+export const FREQUENCY_LABELS: Record<RecurringFrequency, string> = labelProxy('frequencyLabels')
+export const STATUS_LABELS: Record<RecurringItem['status'], string> = labelProxy('statusLabels')
+export const URGENCY_LABELS: Record<AlertUrgency, string> = labelProxy('urgencyLabels')
 
 const FREQUENCY_FACTORS: Record<RecurringFrequency, number> = {
   weekly: 52 / 12,

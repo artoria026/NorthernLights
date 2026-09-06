@@ -1,5 +1,6 @@
 import { Building2, Check, CreditCard, Landmark, Layers, Pencil, PiggyBank, Plus, Scale, Trash2, Wallet } from 'lucide-react'
 import { type FormEvent, type ReactNode, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -57,8 +58,6 @@ const RECONCILABLE_SUBTYPES = new Set(['cash', 'checking', 'savings'])
 const ACCOUNT_KINDS = [
   {
     kind: 'checking' as const,
-    label: 'Cuenta bancaria',
-    sublabel: 'de débito',
     icon: Landmark,
     type: 'asset' as const,
     subtype: 'checking',
@@ -66,8 +65,6 @@ const ACCOUNT_KINDS = [
   },
   {
     kind: 'savings' as const,
-    label: 'Cuenta de ahorro',
-    sublabel: '',
     icon: PiggyBank,
     type: 'asset' as const,
     subtype: 'savings',
@@ -75,8 +72,6 @@ const ACCOUNT_KINDS = [
   },
   {
     kind: 'cash' as const,
-    label: 'Efectivo',
-    sublabel: '',
     icon: Wallet,
     type: 'asset' as const,
     subtype: 'cash',
@@ -84,8 +79,6 @@ const ACCOUNT_KINDS = [
   },
   {
     kind: 'credit_card' as const,
-    label: 'Tarjeta de',
-    sublabel: 'crédito',
     icon: CreditCard,
     type: 'liability' as const,
     subtype: 'credit_card',
@@ -116,10 +109,11 @@ function Field({ label, tip, children }: { label: string; tip?: string; children
 }
 
 function DaySelect({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const { t } = useTranslation('pages')
   return (
     <Select value={value || null} onValueChange={(v) => onChange(v ?? '')}>
       <SelectTrigger className="h-9 w-full">
-        <SelectValue placeholder="Selecciona..." />
+        <SelectValue placeholder={t('accounts.form.daySelectPlaceholder')} />
       </SelectTrigger>
       <SelectContent>
         {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
@@ -147,6 +141,7 @@ function CurrencySelect({ value, onChange }: { value: string; onChange: (value: 
 }
 
 function LogoField({ value, onChange }: { value: string | null; onChange: (value: string | null) => void }) {
+  const { t } = useTranslation('pages')
   const [error, setError] = useState('')
 
   async function handleFile(file: File | undefined) {
@@ -160,12 +155,12 @@ function LogoField({ value, onChange }: { value: string | null; onChange: (value
     try {
       onChange(await fileToNormalizedDataUrl(file))
     } catch {
-      setError('No se pudo procesar la imagen.')
+      setError(t('accounts.form.logo.processError'))
     }
   }
 
   return (
-    <Field label="Logo (opcional)" tip="Es tuyo y bajo tu propio criterio — la app no incluye ni redistribuye logos de bancos.">
+    <Field label={t('accounts.form.logo.label')} tip={t('accounts.form.logo.tip')}>
       <div className="flex items-center gap-3">
         {value ? (
           <img src={value} alt="" className="w-10 h-10 rounded-md object-cover border border-border" />
@@ -173,7 +168,7 @@ function LogoField({ value, onChange }: { value: string | null; onChange: (value
           <div className="w-10 h-10 rounded-md border border-dashed border-border" />
         )}
         <label className="text-[12px] text-muted-foreground hover:text-foreground cursor-pointer underline underline-offset-2">
-          {value ? 'Cambiar' : 'Subir imagen'}
+          {value ? t('accounts.form.logo.change') : t('accounts.form.logo.upload')}
           <input
             type="file"
             accept="image/png,image/jpeg,image/webp"
@@ -190,7 +185,7 @@ function LogoField({ value, onChange }: { value: string | null; onChange: (value
             onClick={() => onChange(null)}
             className="text-[12px] text-muted-foreground hover:text-destructive"
           >
-            Quitar
+            {t('accounts.form.logo.remove')}
           </button>
         )}
       </div>
@@ -299,6 +294,7 @@ function defaultWizardState(kind: AccountKind = 'checking'): WizardState {
 }
 
 function NewAccountForm({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const createAccount = useCreateAccount()
   const pushToast = useUiStore((s) => s.pushToast)
   const [form, setForm] = useState<WizardState>(defaultWizardState())
@@ -351,9 +347,12 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
     try {
       await createAccount.mutateAsync(payload)
       pushToast(
-        <>
-          Cuenta <strong className="font-bold">{payload.name}</strong> agregada
-        </>,
+        <Trans
+          i18nKey="accounts.toast.accountAdded"
+          ns="pages"
+          values={{ name: payload.name }}
+          components={{ strong: <strong className="font-bold" /> }}
+        />,
         'success',
       )
       onDone()
@@ -365,10 +364,11 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="text-xs text-muted-foreground mb-1.5 block">¿Qué tipo de cuenta?</label>
+        <label className="text-xs text-muted-foreground mb-1.5 block">{t('accounts.form.accountTypeLabel')}</label>
         <div className="grid grid-cols-2 gap-2">
-          {ACCOUNT_KINDS.map(({ kind, label, sublabel, icon: Icon }) => {
+          {ACCOUNT_KINDS.map(({ kind, icon: Icon }) => {
             const selected = form.kind === kind
+            const sublabel = t(`accounts.kinds.${kind}.sublabel`)
             return (
               <button
                 key={kind}
@@ -379,7 +379,7 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
               >
                 <Icon size={18} />
                 <span className="text-[12px] leading-tight">
-                  {label}
+                  {t(`accounts.kinds.${kind}.label`)}
                   {sublabel && (
                     <>
                       <br />
@@ -393,10 +393,10 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
-      <Field label="Nombre">
+      <Field label={t('accounts.form.name')}>
         <input
           required
-          placeholder={isCreditCard ? 'Ej: Stori Mastercard' : 'Ej: BBVA Nómina'}
+          placeholder={isCreditCard ? t('accounts.form.namePlaceholderCard') : t('accounts.form.namePlaceholderBank')}
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           className={`${selectClass} h-9 w-full`}
@@ -406,7 +406,7 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
       {isCreditCard ? (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Límite de crédito">
+            <Field label={t('accounts.form.creditLimit')}>
               <input
                 type="number"
                 step="0.01"
@@ -418,8 +418,8 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
               />
             </Field>
             <Field
-              label="¿Cuánto debes hoy?"
-              tip="Lo que debes hoy en esta tarjeta, no el límite. Si no sabes exacto, pon un aproximado."
+              label={t('accounts.form.balanceTodayLabel')}
+              tip={t('accounts.form.balanceTodayTip')}
             >
               <input
                 type="number"
@@ -433,48 +433,50 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
             </Field>
           </div>
           <Field
-            label="Tasa de interés anual (%)"
-            tip="El CAT o tasa anual que cobra tu banco. Lo encuentras en tu contrato o app. Ej: 47.5"
+            label={t('accounts.form.interestRateLabel')}
+            tip={t('accounts.form.interestRateTipNew')}
           >
             <input
               type="number"
               step="0.01"
               min="0"
               required
-              placeholder="Ej: 47.5"
+              placeholder={t('accounts.form.interestRatePlaceholder')}
               value={form.interestRatePct}
               onChange={(e) => setForm({ ...form, interestRatePct: e.target.value })}
               className={`${selectClass} h-9 w-full`}
             />
             {form.interestRatePct !== '' && !rateLooksLikeDecimal && (
-              <p className="text-[11px] text-muted-foreground">= {form.interestRatePct}% anual</p>
+              <p className="text-[11px] text-muted-foreground">
+                {t('accounts.form.rateAsPercentSuffix', { rate: form.interestRatePct })}
+              </p>
             )}
             {rateLooksLikeDecimal && (
-              <p className="text-[11px] text-warning">¿Quisiste decir {rateNum * 100}%?</p>
+              <p className="text-[11px] text-warning">
+                {t('accounts.form.rateDecimalWarning', { rate: rateNum * 100 })}
+              </p>
             )}
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field
-              label="¿Qué día te cortan?"
-              tip="El día del mes en que tu banco genera tu estado de cuenta. Ej: si es el 27, escribe 27."
+              label={t('accounts.form.billingDayLabel')}
+              tip={t('accounts.form.billingDayTip')}
             >
               <DaySelect value={form.billingDay} onChange={(v) => setForm({ ...form, billingDay: v })} />
             </Field>
             <Field
-              label="¿Día límite para pagar?"
-              tip="El día del mes en que vence tu pago para no generar intereses moratorios."
+              label={t('accounts.form.dueDayLabel')}
+              tip={t('accounts.form.dueDayTip')}
             >
               <DaySelect value={form.dueDay} onChange={(v) => setForm({ ...form, dueDay: v })} />
             </Field>
           </div>
           {sameDay && (
-            <p className="text-[11px] text-warning">
-              El día de corte y el día límite de pago son el mismo — revisa que sea correcto.
-            </p>
+            <p className="text-[11px] text-warning">{t('accounts.form.sameDayWarning')}</p>
           )}
         </>
       ) : (
-        <Field label="¿Cuánto tienes hoy?">
+        <Field label={t('accounts.form.balanceTodayLabelSimple')}>
           <input
             type="number"
             step="0.01"
@@ -486,20 +488,20 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
           />
         </Field>
       )}
-      {balanceInvalid && <p className="text-[11px] text-destructive">El saldo no puede ser negativo.</p>}
+      {balanceInvalid && <p className="text-[11px] text-destructive">{t('accounts.form.balanceNegative')}</p>}
 
       <button
         type="button"
         onClick={() => setShowOptional((v) => !v)}
         className="text-[12px] text-muted-foreground hover:text-foreground text-left"
       >
-        {showOptional ? '− Menos detalles' : '+ Más detalles (opcional)'}
+        {showOptional ? t('accounts.form.showLessDetails') : t('accounts.form.showMoreDetails')}
       </button>
 
       {showOptional && (
         <div className="flex flex-col gap-3 rounded-md border border-dashed border-border p-3">
           {form.kind !== 'cash' && (
-            <Field label="Últimos 4 dígitos">
+            <Field label={t('accounts.form.last4')}>
               <input
                 maxLength={4}
                 inputMode="numeric"
@@ -511,10 +513,10 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
           )}
           <LogoField value={form.logo} onChange={(v) => setForm({ ...form, logo: v })} />
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Moneda">
+            <Field label={t('accounts.form.currency')}>
               <CurrencySelect value={form.currency} onChange={(v) => setForm({ ...form, currency: v })} />
             </Field>
-            <Field label="Color">
+            <Field label={t('accounts.form.color')}>
               <input
                 type="color"
                 value={form.color}
@@ -523,7 +525,7 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
               />
             </Field>
           </div>
-          <Field label="Notas">
+          <Field label={t('accounts.form.notes')}>
             <textarea
               rows={2}
               value={form.notes}
@@ -537,7 +539,7 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
       {createAccount.isError && <p className="text-sm text-destructive">{apiErrorMessage(createAccount.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton pending={createAccount.isPending} disabled={!canSubmit}>
-          Crear cuenta
+          {t('accounts.form.submitCreate')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -545,6 +547,7 @@ function NewAccountForm({ onDone }: { onDone: () => void }) {
 }
 
 function EditAccountForm({ account, onDone }: { account: Account; onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const updateAccount = useUpdateAccount()
   const pushToast = useUiStore((s) => s.pushToast)
   const confirm = useConfirmStore((s) => s.ask)
@@ -577,13 +580,14 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       const newBalance =
         Number(account.balance) + (Number(form.initialBalance) - Number(account.initial_balance))
       const ok = await confirm({
-        title: 'Cambiar saldo inicial',
-        message:
-          `Esta cuenta ya tiene transacciones registradas. Cambiar el saldo inicial de ` +
-          `${formatMoney(account.initial_balance)} a ${formatMoney(form.initialBalance)} recalculará ` +
-          `el saldo actual de ${formatMoney(account.balance)} a ${formatMoney(String(newBalance))} ` +
-          `-- ninguna transacción existente se modifica. ¿Continuar?`,
-        confirmLabel: 'Cambiar saldo inicial',
+        title: t('accounts.confirmInitialBalance.title'),
+        message: t('accounts.confirmInitialBalance.message', {
+          oldBalance: formatMoney(account.initial_balance),
+          newBalance: formatMoney(form.initialBalance),
+          currentBalance: formatMoney(account.balance),
+          recalculatedBalance: formatMoney(String(newBalance)),
+        }),
+        confirmLabel: t('accounts.confirmInitialBalance.title'),
         variant: 'danger',
       })
       if (!ok) return
@@ -610,9 +614,12 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
     try {
       await updateAccount.mutateAsync({ id: account.id, input: payload })
       pushToast(
-        <>
-          Cuenta <strong className="font-bold">{payload.name}</strong> actualizada
-        </>,
+        <Trans
+          i18nKey="accounts.toast.accountUpdated"
+          ns="pages"
+          values={{ name: payload.name }}
+          components={{ strong: <strong className="font-bold" /> }}
+        />,
         'success',
       )
       onDone()
@@ -623,7 +630,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <Field label="Nombre">
+      <Field label={t('accounts.form.name')}>
         <input
           required
           value={form.name}
@@ -633,12 +640,8 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       </Field>
 
       <Field
-        label={isCreditCard ? 'Saldo inicial (crédito usado)' : 'Saldo inicial'}
-        tip={
-          isCreditCard
-            ? 'El crédito que ya tenías usado en esta tarjeta cuando la registraste -- no el límite de crédito. Cambiarlo no toca ninguna transacción, solo desplaza el saldo actual por la misma diferencia.'
-            : 'El dinero que ya tenías en esta cuenta cuando la registraste. Cambiarlo no toca ninguna transacción, solo desplaza el saldo actual por la misma diferencia.'
-        }
+        label={isCreditCard ? t('accounts.form.initialBalanceLabelCard') : t('accounts.form.initialBalanceLabel')}
+        tip={isCreditCard ? t('accounts.form.initialBalanceTipCard') : t('accounts.form.initialBalanceTip')}
       >
         <input
           type="number"
@@ -649,8 +652,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
         />
         {hasTransactions && (
           <p className="text-xs mt-1" style={{ color: 'var(--nl-warning-ink)' }}>
-            Esta cuenta ya tiene transacciones. Cambiar este valor recalculará el saldo actual (te
-            pediremos confirmar antes de guardar).
+            {t('accounts.form.hasTransactionsWarning')}
           </p>
         )}
       </Field>
@@ -658,7 +660,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       {isCreditCard && (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Límite de crédito">
+            <Field label={t('accounts.form.creditLimit')}>
               <input
                 type="number"
                 step="0.01"
@@ -669,8 +671,8 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
               />
             </Field>
             <Field
-              label="Tasa de interés anual (%)"
-              tip="El CAT o tasa anual que cobra tu banco. Ej: 47.5"
+              label={t('accounts.form.interestRateLabel')}
+              tip={t('accounts.form.interestRateTipEdit')}
             >
               <input
                 type="number"
@@ -683,10 +685,10 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="¿Qué día te cortan?">
+            <Field label={t('accounts.form.billingDayLabel')}>
               <DaySelect value={form.billingDay} onChange={(v) => setForm({ ...form, billingDay: v })} />
             </Field>
-            <Field label="¿Día límite para pagar?">
+            <Field label={t('accounts.form.dueDayLabel')}>
               <DaySelect value={form.dueDay} onChange={(v) => setForm({ ...form, dueDay: v })} />
             </Field>
           </div>
@@ -694,7 +696,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       )}
 
       {account.subtype !== 'cash' && (
-        <Field label="Últimos 4 dígitos">
+        <Field label={t('accounts.form.last4')}>
           <input
             maxLength={4}
             inputMode="numeric"
@@ -706,10 +708,10 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       )}
       <LogoField value={form.logo} onChange={(v) => setForm({ ...form, logo: v })} />
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Moneda">
+        <Field label={t('accounts.form.currency')}>
           <CurrencySelect value={form.currency} onChange={(v) => setForm({ ...form, currency: v })} />
         </Field>
-        <Field label="Color">
+        <Field label={t('accounts.form.color')}>
           <input
             type="color"
             value={form.color}
@@ -718,7 +720,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
           />
         </Field>
       </div>
-      <Field label="Notas">
+      <Field label={t('accounts.form.notes')}>
         <textarea
           rows={2}
           value={form.notes}
@@ -730,7 +732,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
       {updateAccount.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateAccount.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={updateAccount.isPending}>
-          Guardar cambios
+          {t('accounts.form.submitSave')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -738,6 +740,7 @@ function EditAccountForm({ account, onDone }: { account: Account; onDone: () => 
 }
 
 function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: () => void }) {
+  const { t } = useTranslation('pages')
   const reconcile = useReconcileAccount()
   const pushToast = useUiStore((s) => s.pushToast)
   const [realBalance, setRealBalance] = useState(account.balance)
@@ -757,8 +760,14 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
         input: { real_balance: realBalance, notes: notes.trim() || undefined },
       })
       if (result.adjusted) {
-        const kind = Number(result.delta) > 0 ? 'Entrada' : 'Salida'
-        pushToast(`${kind} de ajuste registrada: ${formatMoney(String(Math.abs(Number(result.delta))))}`, 'success')
+        const isEntry = Number(result.delta) > 0
+        const amount = formatMoney(String(Math.abs(Number(result.delta))))
+        pushToast(
+          t(isEntry ? 'accounts.toast.adjustmentEntryRegistered' : 'accounts.toast.adjustmentExitRegistered', {
+            amount,
+          }),
+          'success',
+        )
       }
       onDone()
     } catch {
@@ -766,13 +775,20 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
     }
   }
 
+  const currentBalance = formatMoney(account.balance)
+  const pendingAmount = formatMoney(String(Math.abs(delta)))
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
       <p className="text-[12px] text-muted-foreground">
-        Cuenta actual: <strong>{formatMoney(account.balance)}</strong>. Escribe lo que de verdad tienes
-        (contado o del estado de cuenta) y el resto se ajusta solo.
+        <Trans
+          i18nKey="accounts.reconcile.currentBalanceIntro"
+          ns="pages"
+          values={{ balance: currentBalance }}
+          components={{ strong: <strong /> }}
+        />
       </p>
-      <Field label="Saldo real">
+      <Field label={t('accounts.reconcile.realBalanceLabel')}>
         <input
           type="number"
           step="0.01"
@@ -782,10 +798,10 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
           className={`${selectClass} h-9 w-full`}
         />
       </Field>
-      <Field label="Nota (opcional)" tip="Con el tiempo estas notas te dicen qué es lo que no estás registrando.">
+      <Field label={t('accounts.reconcile.noteLabel')} tip={t('accounts.reconcile.noteTip')}>
         <textarea
           rows={2}
-          placeholder="ej. conté mi cartera y tenía menos, seguro fueron los tacos del viernes"
+          placeholder={t('accounts.reconcile.notePlaceholder')}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           className={`${selectClass} w-full py-2 resize-none`}
@@ -800,17 +816,25 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
             color: delta > 0 ? 'var(--nl-accent-ink)' : 'var(--nl-danger-ink)',
           }}
         >
-          Esto va a crear una {delta > 0 ? 'entrada' : 'salida'} de ajuste de{' '}
-          <strong>{formatMoney(String(Math.abs(delta)))}</strong>.
+          <Trans
+            i18nKey={delta > 0 ? 'accounts.reconcile.pendingEntry' : 'accounts.reconcile.pendingExit'}
+            ns="pages"
+            values={{ amount: pendingAmount }}
+            components={{ strong: <strong /> }}
+          />
         </p>
       ) : (
-        <p className="text-[12.5px] text-muted-foreground">Tu saldo ya coincide, no hace falta ajustar.</p>
+        <p className="text-[12.5px] text-muted-foreground">{t('accounts.reconcile.noAdjustmentNeeded')}</p>
       )}
 
       {reconcile.isError && <p className="text-sm text-destructive">{apiErrorMessage(reconcile.error)}</p>}
       <DialogFooter>
-        <DialogPrimaryButton pending={reconcile.isPending} pendingLabel="Conciliando..." disabled={!hasDelta}>
-          Conciliar saldo
+        <DialogPrimaryButton
+          pending={reconcile.isPending}
+          pendingLabel={t('accounts.reconcile.pendingLabel')}
+          disabled={!hasDelta}
+        >
+          {t('accounts.reconcile.title')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -818,6 +842,7 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
 }
 
 function TdcCycleCard({ accountId }: { accountId: string }) {
+  const { t } = useTranslation('pages')
   const { data: cycle, isLoading } = useTdcCycle(accountId, true)
   if (isLoading || !cycle) return null
 
@@ -827,24 +852,28 @@ function TdcCycleCard({ accountId }: { accountId: string }) {
       data-tour="accounts:tdc-cycle"
     >
       <div>
-        <div className="text-[10px] tracking-wider text-muted-foreground">DÍA DE CORTE</div>
+        <div className="text-[10px] tracking-wider text-muted-foreground">{t('accounts.tdcCycle.billingDay')}</div>
         <div className="text-[15px] font-medium">{cycle.billing_cycle_day ?? '—'}</div>
       </div>
       <div>
-        <div className="text-[10px] tracking-wider text-muted-foreground">LÍMITE DE PAGO</div>
+        <div className="text-[10px] tracking-wider text-muted-foreground">{t('accounts.tdcCycle.paymentLimit')}</div>
         <div className="text-[15px] font-medium">
           {cycle.payment_due_day ?? '—'}
           {cycle.days_until_due != null && (
-            <span className="text-[11px] text-muted-foreground ml-1">({cycle.days_until_due}d)</span>
+            <span className="text-[11px] text-muted-foreground ml-1">
+              {t('accounts.tdcCycle.daysUntilDue', { days: cycle.days_until_due })}
+            </span>
           )}
         </div>
       </div>
       <div>
-        <div className="text-[10px] tracking-wider text-muted-foreground">SALDO DEL CICLO</div>
+        <div className="text-[10px] tracking-wider text-muted-foreground">{t('accounts.tdcCycle.cycleBalance')}</div>
         <div className="text-[15px] font-medium">{formatMoney(cycle.current_cycle_balance)}</div>
       </div>
       <div>
-        <div className="text-[10px] tracking-wider text-muted-foreground">CRÉDITO DISPONIBLE</div>
+        <div className="text-[10px] tracking-wider text-muted-foreground">
+          {t('accounts.tdcCycle.availableCredit')}
+        </div>
         <div className="text-[15px] font-medium" style={{ color: 'var(--nl-accent-ink)' }}>
           {cycle.available_credit != null ? formatMoney(cycle.available_credit) : '—'}
         </div>
@@ -858,6 +887,7 @@ function TdcCycleCard({ accountId }: { accountId: string }) {
  * the plain text from before. `installments` already comes filtered to the
  * ones that haven't finished (see activeInstallments in Accounts()). */
 function InstallmentsCard({ installments }: { installments: Transaction[] }) {
+  const { t } = useTranslation('pages')
   const total = installments.reduce((sum, tx) => sum + Number(tx.installment?.monthly_amount ?? 0), 0)
 
   return (
@@ -865,10 +895,12 @@ function InstallmentsCard({ installments }: { installments: Transaction[] }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5 text-[13px] font-medium">
           <Layers size={14} style={{ color: 'var(--nl-accent-ink)' }} />
-          {installments.length === 1 ? '1 compra a meses activa' : `${installments.length} compras a meses activas`}
+          {t('accounts.installments.active', { count: installments.length })}
         </div>
         <div className="text-right">
-          <div className="text-[10px] tracking-wider text-muted-foreground">COMPROMETIDO ESTE MES</div>
+          <div className="text-[10px] tracking-wider text-muted-foreground">
+            {t('accounts.installments.committedThisMonth')}
+          </div>
           <div className="text-[15px] font-medium" style={{ color: 'var(--nl-accent-ink)' }}>
             {formatMoney(String(total))}
           </div>
@@ -882,7 +914,9 @@ function InstallmentsCard({ installments }: { installments: Transaction[] }) {
             <div key={tx.id}>
               <div className="flex items-center justify-between gap-2 mb-1">
                 <span className="text-[13px] truncate">{tx.description}</span>
-                <span className="text-[13px] font-medium flex-shrink-0">{formatMoney(info.monthly_amount)}/mes</span>
+                <span className="text-[13px] font-medium flex-shrink-0">
+                  {t('accounts.installments.perMonth', { amount: formatMoney(info.monthly_amount) })}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--nl-bg-track)' }}>
@@ -944,60 +978,40 @@ function AccountRow({
 }
 
 function AccountsHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
+      <HelpSection heading={t('accounts.help.whatIsThisScreen.heading')}>
+        <p>{t('accounts.help.whatIsThisScreen.body')}</p>
+      </HelpSection>
+      <HelpSection heading={t('accounts.help.accountTypes.heading')}>
         <p>
-          Tus cuentas reales: bancos, efectivo y tarjetas de crédito. El resumen de arriba (Activos,
-          Pasivos, Patrimonio neto) se calcula sumando el saldo de todas ellas.
+          <Trans
+            i18nKey="accounts.help.accountTypes.body"
+            ns="pages"
+            components={{ strong: <strong /> }}
+          />
         </p>
       </HelpSection>
-      <HelpSection heading="Tipos de cuenta">
-        <p>
-          Al crear una cuenta eliges entre <strong>bancaria</strong>, <strong>ahorro</strong>,{' '}
-          <strong>efectivo</strong> y <strong>tarjeta de crédito</strong>. Las primeras tres son dinero
-          tuyo disponible; la tarjeta es un pasivo (lo que debes) -- no es lo mismo que una Deuda: los
-          préstamos formales o informales viven aparte, en Deudas.
-        </p>
+      <HelpSection heading={t('accounts.help.creditCards.heading')}>
+        <p>{t('accounts.help.creditCards.body')}</p>
       </HelpSection>
-      <HelpSection heading="Tarjetas de crédito">
-        <p>
-          Además del nombre y saldo, una TDC guarda límite de crédito, tasa de interés, día de corte y día
-          límite de pago — esos dos últimos alimentan el ciclo de facturación que ves en el detalle de la
-          cuenta. El botón "Pagar tarjeta" (aquí o en Transacciones) registra el pago como una
-          transferencia real desde cualquier otra cuenta tuya. Si compras algo a meses sin intereses,
-          márcalo al registrar el gasto y verás el progreso ("MSI pagadas/total") directo en el historial
-          de la tarjeta.
-        </p>
+      <HelpSection heading={t('accounts.help.logo.heading')}>
+        <p>{t('accounts.help.logo.body')}</p>
       </HelpSection>
-      <HelpSection heading="Logo y personalización">
-        <p>
-          Puedes subir una foto/logo para identificar la cuenta de un vistazo (se recorta y ajusta sola a
-          un cuadrado) y elegir un color que se usa en gráficas y listas en toda la app.
-        </p>
+      <HelpSection heading={t('accounts.help.transactions.heading')}>
+        <p>{t('accounts.help.transactions.body')}</p>
       </HelpSection>
-      <HelpSection heading="Movimientos de la cuenta">
-        <p>
-          Al seleccionar una cuenta a la izquierda, ves su historial de movimientos a la derecha, con
-          filtro de Entradas/Salidas y buscador.
-        </p>
+      <HelpSection heading={t('accounts.help.reconcile.heading')}>
+        <p>{t('accounts.help.reconcile.body')}</p>
       </HelpSection>
-      <HelpSection heading="Conciliar saldo">
-        <p>
-          Disponible en cuentas bancarias/de ahorro. Escribes lo que de verdad tienes (contado o del
-          estado de cuenta) y la app registra una transacción de ajuste por la diferencia — a diferencia
-          de editar el "Saldo inicial", esto sí queda como un movimiento visible en tu historial.
-        </p>
-      </HelpSection>
-      <HelpTip>
-        Prestarle dinero a alguien o que te presten no crea una cuenta aquí — vive en Deudas, separado de
-        tus cuentas reales, sin importar cuántas personas involucre.
-      </HelpTip>
+      <HelpTip>{t('accounts.help.tip')}</HelpTip>
     </>
   )
 }
 
 export function Accounts() {
+  const { t } = useTranslation('pages')
   const { data: summary } = useAccountSummary()
   const { data: accounts, isLoading } = useAccounts()
   const [open, setOpen] = useState(false)
@@ -1049,9 +1063,9 @@ export function Accounts() {
 
   async function handleDeleteAccount(account: Account) {
     const ok = await confirm({
-      title: 'Eliminar cuenta',
-      message: `¿Eliminar la cuenta "${account.name}"? Esta acción no se puede deshacer.`,
-      confirmLabel: 'Eliminar',
+      title: t('accounts.confirmDeleteAccount.title'),
+      message: t('accounts.confirmDeleteAccount.message', { name: account.name }),
+      confirmLabel: t('accounts.actions.delete'),
       variant: 'danger',
     })
     if (!ok) return
@@ -1065,9 +1079,9 @@ export function Accounts() {
 
   async function handleDeleteTransaction(tx: Transaction) {
     const ok = await confirm({
-      title: 'Eliminar transacción',
-      message: `¿Eliminar la transacción "${tx.description}"? Esta acción no se puede deshacer.`,
-      confirmLabel: 'Eliminar',
+      title: t('accounts.confirmDeleteTransaction.title'),
+      message: t('accounts.confirmDeleteTransaction.message', { description: tx.description }),
+      confirmLabel: t('accounts.actions.delete'),
       variant: 'danger',
     })
     if (!ok) return
@@ -1082,7 +1096,7 @@ export function Accounts() {
     <div>
       <ViewHeader
         icon={<Building2 />}
-        title="Cuentas"
+        title={t('accounts.title')}
         help={<AccountsHelp />}
         section={HEADER_SECTIONS.diario}
         tourKey="accounts"
@@ -1097,9 +1111,9 @@ export function Accounts() {
           (mt-auto) instead of floating right after the list. */}
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6 items-stretch">
         <div className="bg-card border border-border rounded-md p-[18px] flex flex-col" data-tour="accounts:list">
-          <div className="text-[11px] tracking-wider text-muted-foreground mb-2">ACTIVOS</div>
+          <div className="text-[11px] tracking-wider text-muted-foreground mb-2">{t('accounts.assets')}</div>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Cargando...</p>
+            <p className="text-sm text-muted-foreground">{t('accounts.loading')}</p>
           ) : (
             <div className="flex flex-col gap-1">
               {assetAccounts.map((a) => (
@@ -1112,7 +1126,7 @@ export function Accounts() {
               ))}
             </div>
           )}
-          <div className="text-[11px] tracking-wider text-muted-foreground mt-4 mb-2">PASIVOS</div>
+          <div className="text-[11px] tracking-wider text-muted-foreground mt-4 mb-2">{t('accounts.liabilities')}</div>
           <div className="flex flex-col gap-1">
             {liabilityAccounts.map((a) => (
               <AccountRow
@@ -1126,7 +1140,7 @@ export function Accounts() {
 
           <div className="flex items-center justify-between mt-auto pt-3.5 border-t border-border">
             <div>
-              <div className="text-[10px] tracking-wider text-muted-foreground">PATRIMONIO NETO</div>
+              <div className="text-[10px] tracking-wider text-muted-foreground">{t('accounts.netWorth')}</div>
               <div className="text-xl font-light" style={{ color: amountColor(summary?.net_worth ?? '0') }}>
                 {formatMoney(summary?.net_worth ?? '0')}
               </div>
@@ -1148,13 +1162,13 @@ export function Accounts() {
                     className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
                   >
                     <Plus size={13} />
-                    Agregar cuenta
+                    {t('accounts.newAccount.button')}
                   </button>
                 }
               />
               <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Nueva cuenta</DialogTitle>
+                  <DialogTitle>{t('accounts.newAccount.dialogTitle')}</DialogTitle>
                 </DialogHeader>
                 <NewAccountForm onDone={() => setOpen(false)} />
               </DialogContent>
@@ -1187,13 +1201,13 @@ export function Accounts() {
                           className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-info"
                         >
                           <Pencil size={13} />
-                          Editar
+                          {t('accounts.actions.edit')}
                         </button>
                       }
                     />
                     <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
                       <DialogHeader>
-                        <DialogTitle>Editar cuenta</DialogTitle>
+                        <DialogTitle>{t('accounts.editAccount.dialogTitle')}</DialogTitle>
                       </DialogHeader>
                       <EditAccountForm account={selectedAccount} onDone={() => setEditingAccount(null)} />
                     </DialogContent>
@@ -1214,13 +1228,13 @@ export function Accounts() {
                               className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
                             >
                               <Scale size={13} />
-                              Conciliar saldo
+                              {t('accounts.reconcile.title')}
                             </button>
                           }
                         />
                         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
                           <DialogHeader>
-                            <DialogTitle>Conciliar saldo</DialogTitle>
+                            <DialogTitle>{t('accounts.reconcile.title')}</DialogTitle>
                           </DialogHeader>
                           <ReconcileAccountForm
                             account={selectedAccount}
@@ -1244,13 +1258,15 @@ export function Accounts() {
                             className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
                           >
                             <CreditCard size={13} />
-                            Pagar tarjeta
+                            {t('accounts.payCard.button')}
                           </button>
                         }
                       />
                       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
                         <DialogHeader>
-                          <DialogTitle>Pagar tarjeta — {selectedAccount.name}</DialogTitle>
+                          <DialogTitle>
+                            {t('accounts.payCard.dialogTitle', { name: selectedAccount.name })}
+                          </DialogTitle>
                         </DialogHeader>
                         <PayCreditCardForm account={selectedAccount} onDone={() => setPayingAccount(null)} />
                       </DialogContent>
@@ -1262,7 +1278,7 @@ export function Accounts() {
                     className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 size={13} />
-                    Eliminar
+                    {t('accounts.actions.delete')}
                   </button>
                   <button
                     type="button"
@@ -1271,7 +1287,7 @@ export function Accounts() {
                     style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
                   >
                     <Plus size={14} />
-                    Nueva transacción
+                    {t('accounts.newTransaction.button')}
                   </button>
                 </div>
               </div>
@@ -1292,7 +1308,7 @@ export function Accounts() {
 
               <div className="flex gap-2 mb-4 flex-wrap">
                 <input
-                  placeholder="Buscar transacciones"
+                  placeholder={t('accounts.search.placeholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className={`${selectClass} h-9 flex-1 min-w-[160px]`}
@@ -1301,28 +1317,28 @@ export function Accounts() {
                   value={segment}
                   onChange={setSegment}
                   options={[
-                    { value: 'ALL', label: 'TODO' },
-                    { value: 'IN', label: 'ENTRADA' },
-                    { value: 'OUT', label: 'SALIDA' },
+                    { value: 'ALL', label: t('accounts.segment.all') },
+                    { value: 'IN', label: t('accounts.segment.in') },
+                    { value: 'OUT', label: t('accounts.segment.out') },
                   ]}
                 />
               </div>
 
               {loadingLedger ? (
-                <p className="text-sm text-muted-foreground">Cargando...</p>
+                <p className="text-sm text-muted-foreground">{t('accounts.loading')}</p>
               ) : filteredRows.length === 0 ? (
                 <p className="text-center text-[12px] text-muted-foreground py-7">
-                  Ninguna transacción coincide con tus filtros.
+                  {t('accounts.noTransactionsMatch')}
                 </p>
               ) : (
                 <div className="rounded-md overflow-hidden border border-border">
                   <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_90px_90px_70px] gap-2 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    <span>Fecha</span>
-                    <span>Descripción</span>
-                    <span>Categoría</span>
-                    <span className="text-right">Cargo</span>
-                    <span className="text-right">Abono</span>
-                    <span className="text-right">Acciones</span>
+                    <span>{t('accounts.table.date')}</span>
+                    <span>{t('accounts.table.description')}</span>
+                    <span>{t('accounts.table.category')}</span>
+                    <span className="text-right">{t('accounts.table.charge')}</span>
+                    <span className="text-right">{t('accounts.table.payment')}</span>
+                    <span className="text-right">{t('accounts.table.actions')}</span>
                   </div>
                   {visibleRows.map((tx) => {
                     const dir = lineDirection(tx, selectedAccount.id, selectedAccount.type)
@@ -1343,7 +1359,10 @@ export function Accounts() {
                         style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}
                       >
                         <Layers size={9} />
-                        MSI {tx.installment.paid_installments}/{tx.installment.total_installments}
+                        {t('accounts.msiBadge', {
+                          paid: tx.installment.paid_installments,
+                          total: tx.installment.total_installments,
+                        })}
                       </span>
                     )
                     const rowActions = (
@@ -1352,7 +1371,7 @@ export function Accounts() {
                           <button
                             type="button"
                             onClick={() => setEditingTx(tx)}
-                            title="Editar"
+                            title={t('accounts.actions.edit')}
                             className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-info/10 hover:text-info"
                           >
                             <Pencil size={13} />
@@ -1362,7 +1381,7 @@ export function Accounts() {
                           type="button"
                           onClick={() => handleDeleteTransaction(tx)}
                           disabled={deleteTransaction.isPending}
-                          title="Eliminar"
+                          title={t('accounts.actions.delete')}
                           className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
                         >
                           <Trash2 size={13} />
@@ -1413,20 +1432,20 @@ export function Accounts() {
               )}
               <div className="flex justify-between items-center mt-3.5 text-xs text-muted-foreground">
                 <div>
-                  Mostrando {visibleRows.length} de {filteredRows.length}
+                  {t('accounts.showingCount', { shown: visibleRows.length, total: filteredRows.length })}
                 </div>
                 {hasMoreInAccount && (
                   <Link
                     to={`/transactions?account=${selectedAccount.id}`}
                     className="text-[color:var(--nl-accent-ink)] hover:underline"
                   >
-                    Ver todas en Transacciones →
+                    {t('accounts.viewAllInTransactions')}
                   </Link>
                 )}
               </div>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">Crea una cuenta para ver su historial aquí.</p>
+            <p className="text-sm text-muted-foreground">{t('accounts.emptyDetail')}</p>
           )}
         </div>
       </div>

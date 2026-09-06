@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
-from app.models.user import PAY_CYCLES, THEMES
+from app.models.user import LOCALES, PAY_CYCLES, THEMES
 from app.schemas.common import IMAGE_DATA_URL_MAX_LENGTH, IMAGE_DATA_URL_PATTERN
 
 
@@ -15,6 +15,11 @@ class RegisterRequest(BaseModel):
     # (it's not enough for the frontend to disable the button: the actual
     # checkbox is the legal gate, this field is what enforces it server-side).
     accept_disclaimer: bool = False
+    # Whatever language the frontend was showing when the user picked
+    # "Sign up" (see LanguageSwitcher on AuthLayout) -- seeds the account's
+    # saved preference instead of everyone starting at the 'es' column
+    # default and having to change it by hand right after registering.
+    locale: str | None = Field(default=None, pattern=f"^({'|'.join(LOCALES)})$")
 
 
 class DeviceInfo(BaseModel):
@@ -62,6 +67,7 @@ class UpdateProfileRequest(BaseModel):
 
 class UpdateSettingsRequest(BaseModel):
     theme: str | None = Field(default=None, pattern=f"^({'|'.join(THEMES)})$")
+    locale: str | None = Field(default=None, pattern=f"^({'|'.join(LOCALES)})$")
     email_notifications: bool | None = None
     push_notifications: bool | None = None
     pay_cycle: str | None = Field(default=None, pattern=f"^({'|'.join(PAY_CYCLES)})$")
@@ -77,6 +83,7 @@ class UserOut(BaseModel):
     role: str
     auth_provider: str
     theme: str
+    locale: str
     email_notifications: bool
     push_notifications: bool
     pay_cycle: str

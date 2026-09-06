@@ -1,0 +1,304 @@
+{
+  "adminLayout": {
+    "badge": "Admin",
+    "backToApp": "Back to the app"
+  },
+  "appSidebar": {
+    "nav": {
+      "home": "Home",
+      "accounts": "Accounts",
+      "transactions": "Transactions",
+      "budget": "Budget",
+      "advisor": "AI Advisor",
+      "debts": "Debts",
+      "recurring": "Recurring",
+      "subscriptions": "Subscriptions",
+      "insights": "Insights",
+      "categories": "Categories",
+      "goals": "Goals"
+    },
+    "sections": {
+      "main": "Main",
+      "commitments": "Commitments",
+      "intelligence": "Intelligence",
+      "more": "MORE",
+      "reports": "REPORTS"
+    },
+    "reports": {
+      "netWorthHistory": "Net worth history",
+      "expenseBreakdown": "Expense breakdown"
+    },
+    "aria": {
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "notifications": "Notifications",
+      "settings": "Settings",
+      "logout": "Log out"
+    },
+    "theme": {
+      "toLight": "Switch to light mode",
+      "toDark": "Switch to dark mode"
+    },
+    "logoutConfirm": {
+      "title": "Log out",
+      "message": "Are you sure you want to log out?",
+      "confirmLabel": "Log out"
+    },
+    "fallbackUserName": "User"
+  },
+  "changelogButton": {
+    "trigger": "What's new",
+    "dialogTitle": "What's new",
+    "empty": "We're just getting started — there's nothing to show yet. Check back after the next update.",
+    "acknowledge": "Got it",
+    "feedback": {
+      "prompt": "Found a bug or have an idea to improve the app?",
+      "tabBug": "Report a bug",
+      "tabFeature": "Suggest a feature",
+      "placeholderBug": "Tell us what happened and on which screen...",
+      "placeholderFeature": "Tell us your idea...",
+      "sending": "Sending...",
+      "send": "Send",
+      "toastBug": "Thanks, we've reported it.",
+      "toastFeature": "Thanks for the idea, we'll take a look."
+    }
+  },
+  "disclaimerGate": {
+    "title": "We updated our Privacy Notice",
+    "intro": "Before you keep using NorthernLights, we need you to read and accept it.",
+    "logout": "Log out",
+    "saving": "Saving...",
+    "accept": "Accept and continue"
+  },
+  "layout": {
+    "quickAdd": "Quick add"
+  },
+  "passwordInput": {
+    "hide": "Hide password",
+    "show": "Show password"
+  },
+  "payCreditCardForm": {
+    "paymentDescription": "Payment {{name}}",
+    "paymentToast": "Payment to <0>{{name}}</0> recorded",
+    "currentBalance": "Current balance: {{amount}}",
+    "sourceAccountLabel": "Paying account",
+    "accountPlaceholder": "Select an account",
+    "amountLabel": "Amount",
+    "dateLabel": "Date",
+    "submitButton": "Record payment"
+  },
+  "categorySelect": {
+    "placeholder": "Select...",
+    "searchPlaceholder": "Search category...",
+    "noResults": "No results",
+    "generalLabel": "General"
+  },
+  "dialogActions": {
+    "submitHint": "to save",
+    "savingPending": "Saving...",
+    "cancel": "Cancel"
+  },
+  "primitives": {
+    "sections": {
+      "diario": "Daily",
+      "compromisos": "Commitments",
+      "inteligencia": "Intelligence"
+    },
+    "helpTitle": "Help — {{title}}",
+    "tourButtonTitle": "See guided tour",
+    "tourButtonLabel": "Tour"
+  },
+  "transactionModals": {
+    "quickAddTitle": "Quick add",
+    "newTransactionTitle": "New transaction",
+    "type": {
+      "expense": "Expense",
+      "income": "Income",
+      "transfer": "Transfer"
+    },
+    "defaultDescription": {
+      "transfer": "Transfer",
+      "expense": "Expense",
+      "income": "Income"
+    },
+    "amountPlaceholder": "$0.00",
+    "descriptionPlaceholder": "Description",
+    "descriptionPlaceholderExample": "E.g. Dinner with friends",
+    "categoryPlaceholder": "Category",
+    "accountPlaceholder": "Account",
+    "selectPlaceholder": "Select...",
+    "switchToDetailed": "Add details →",
+    "saveButton": "Save",
+    "categoryFieldLabel": "Category",
+    "accountFieldLabel": "Account",
+    "destinationAccountFieldLabel": "Destination account",
+    "dateFieldLabel": "Date",
+    "statusFieldLabel": "Status",
+    "status": {
+      "confirmed": "Completed",
+      "draft": "Pending"
+    },
+    "notesFieldLabel": "Notes (optional)",
+    "msiCheckboxLabel": "Interest-free installments?",
+    "installmentsFieldLabel": "How many months?",
+    "transferDestinationWarning": "Heads up: for transfers, pick the destination account above.",
+    "createTransactionButton": "Create transaction"
+  },
+  "editTransactionModal": {
+    "title": "Edit transaction",
+    "amountPlaceholder": "$0.00",
+    "descriptionPlaceholder": "Description",
+    "categoryFieldLabel": "Category",
+    "sourceAccountFieldLabel": "Source account",
+    "accountFieldLabel": "Account",
+    "selectPlaceholder": "Select...",
+    "destinationAccountFieldLabel": "Destination account",
+    "dateFieldLabel": "Date",
+    "notesFieldLabel": "Notes (optional)",
+    "saveButton": "Save"
+  },
+  "bulkExcelImportCard": {
+    "intro": "Been days without logging anything but have it all jotted down somewhere rough? Download the template, fill it in (it already comes with your accounts and categories as dropdowns) and upload it.",
+    "generatingButton": "Generating...",
+    "downloadTemplateButton": "Download template",
+    "uploadingButton": "Uploading...",
+    "uploadFileButton": "Upload file",
+    "lastFile": "Last file: {{fileName}}",
+    "resultSummary_one": "{{count}} transaction recorded.",
+    "resultSummary_other": "{{count}} transactions recorded.",
+    "errorSummary_one": "{{count}} row with issues:",
+    "errorSummary_other": "{{count}} rows with issues:",
+    "errorRow": "Row {{row}}{{block}}: {{reason}}"
+  },
+  "help": {
+    "thisScreenHelpTitle": "Help for this screen"
+  },
+  "transactionsCalendar": {
+    "weekdays": [
+      "M",
+      "T",
+      "W",
+      "T",
+      "F",
+      "S",
+      "S"
+    ],
+    "tooltip": {
+      "income": "+{{amount}} income",
+      "expense": "-{{amount}} expenses",
+      "other": "{{amount}} other movements",
+      "upcoming": "{{label}} (upcoming, {{amount}})"
+    },
+    "legend": {
+      "income": "Income",
+      "expense": "Expense",
+      "upcoming": "Upcoming"
+    },
+    "clearDateFilterButton": "Clear date filter"
+  },
+  "welcomeModal": {
+    "heading": "Welcome to {{title}}",
+    "startTourButton": "Start guided tour →",
+    "exploreOnMyOwnButton": "Explore on my own"
+  },
+  "tourHost": {
+    "stepCounter": "Step {{current}} of {{total}}",
+    "backButton": "Back",
+    "skipButton": "Skip",
+    "nextButton": "Next",
+    "doneButton": "Done"
+  },
+  "entryTypeLabels": {
+    "expense": "Expense",
+    "income": "Income",
+    "transfer": "Transfer",
+    "loan_received": "Loan received",
+    "loan_repayment": "Loan repayment",
+    "loan_given": "Loan given",
+    "loan_collection": "Loan collection",
+    "adjustment_in": "Balance adjustment",
+    "adjustment_out": "Balance adjustment"
+  },
+  "accountSubtypeLabels": {
+    "cash": "Cash",
+    "checking": "Checking account",
+    "savings": "Savings account",
+    "credit_card": "Credit card",
+    "payroll_loan": "Payroll loan",
+    "personal_loan": "Personal loan",
+    "store_credit": "Store credit",
+    "informal_debt": "Informal debt",
+    "loan_payable": "Loan payable",
+    "loan_receivable": "Loan receivable",
+    "installment": "Interest-free installments",
+    "civic": "Civic credit"
+  },
+  "debtTypeLabels": {
+    "personal_loan": "Personal loan",
+    "payroll_loan": "Payroll loan",
+    "informal": "Informal loan",
+    "civic": "Civic credit",
+    "loan_received": "Loan received"
+  },
+  "paymentFrequencyLabels": {
+    "weekly": "Weekly",
+    "biweekly": "Biweekly",
+    "monthly": "Monthly",
+    "irregular": "Irregular"
+  },
+  "itemTypeLabels": {
+    "subscription": "Subscription",
+    "service": "Service",
+    "utility": "Essential service",
+    "income": "Income"
+  },
+  "frequencyLabels": {
+    "weekly": "Weekly",
+    "biweekly": "Biweekly",
+    "monthly": "Monthly",
+    "bimonthly": "Bimonthly",
+    "annual": "Annual"
+  },
+  "statusLabels": {
+    "active": "Active",
+    "paused": "Paused",
+    "cancelled": "Cancelled"
+  },
+  "urgencyLabels": {
+    "normal": "Normal",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "importPrompt": {
+    "template": "From our entire conversation history about my finances, generate a\nMarkdown summary I'm going to import into my personal finance app.\nDon't invent figures we haven't discussed — if something isn't clear or I\ndidn't mention it, say so explicitly instead of guessing. Follow this\nstructure:\n\n## Accounts\nFor each bank, savings, cash, or credit card account:\n- Name, institution, type (checking/savings/cash/credit card)\n- Current balance (what I have, or what I currently owe if it's a card)\n- If it's a credit card: credit limit, annual interest rate, closing date,\n  payment due date\n\n## Debts with an active payment plan\nDebts I'm paying regularly:\n- Name, creditor, current balance, original amount (if it changed due to a\n  settlement/discount)\n- Installment amount, frequency (weekly/biweekly/monthly), payment day\n- Total and paid installments if applicable, interest rate if applicable\n\n## Debts with no payment plan\nDebts that exist but don't have organized payments yet:\n- Name, creditor, current balance, relevant notes\n\n## Recurring expenses, subscriptions, and fixed income\nThings that get charged or received periodically and aren't a debt with a\nbalance:\n- Name, amount, frequency, account it moves from/to\n- Closest matching category from this list: {{categories}}\n\n## Notes and open questions\nAnything ambiguous or that we discussed without arriving at a clear figure.\n\nIf you don't have information for a section, write \"No data\" instead of\nomitting it. Don't add explanations outside of these sections."
+  },
+  "image": {
+    "couldNotReadImage": "Couldn't read the image",
+    "couldNotProcessImage": "Couldn't process the image",
+    "selectValidImage": "Select an image (PNG, JPG, or WebP).",
+    "imageTooLarge": "The image is too large (max. 8 MB)."
+  },
+  "api": {
+    "noRefreshToken": "No refresh token",
+    "unexpectedError": "An unexpected error occurred"
+  },
+  "useAiChat": {
+    "defaultAttachmentMessage": "Here are my bank statements.",
+    "attachmentSuffix": "attached: {{names}}",
+    "streamingNotSupported": "The server doesn't support streaming",
+    "couldNotSendMessage": "Couldn't send the message",
+    "connectionError": "Connection error with the advisor"
+  },
+  "confirmStore": {
+    "defaultTitle": "Confirm",
+    "defaultConfirmLabel": "Confirm",
+    "defaultCancelLabel": "Cancel"
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Language",
+    "options": {
+      "es": "Español",
+      "en": "English"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AdminLayout } from '@/components/AdminLayout'
 import { ConfirmDialogHost } from '@/components/ConfirmDialogHost'
@@ -41,20 +42,28 @@ const queryClient = new QueryClient({
 })
 
 /** Refreshes the profile from the server when the app loads (with a session
- * already saved) and applies the account's theme if it differs from the one
- * left in this browser -- without this, the theme only lived in localStorage
- * and didn't travel between devices. `useCurrentUser` already existed but
- * wasn't used anywhere. */
+ * already saved) and applies the account's theme/language if they differ
+ * from what was left in this browser -- without this, they'd only live in
+ * localStorage and wouldn't travel between devices. `useCurrentUser`
+ * already existed but wasn't used anywhere.
+ *
+ * The account's locale wins over whatever localStorage/AuthLayout had
+ * showing pre-login on purpose: that pre-login choice is just a
+ * convenience to read the login form in your language, not a saved
+ * preference (see useSyncedLocale) -- once we know who's logged in, their
+ * actual saved preference is the source of truth. */
 function AuthBootstrap() {
   const { data: user } = useCurrentUser()
   const setUser = useAuthStore((s) => s.setUser)
   const setThemeMode = useThemeStore((s) => s.setMode)
+  const { i18n } = useTranslation()
 
   useEffect(() => {
     if (!user) return
     setUser(user)
     setThemeMode(user.theme)
-  }, [user, setUser, setThemeMode])
+    if (user.locale !== i18n.language) void i18n.changeLanguage(user.locale)
+  }, [user, setUser, setThemeMode, i18n])
 
   return null
 }

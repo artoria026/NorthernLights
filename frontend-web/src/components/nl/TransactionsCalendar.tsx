@@ -10,13 +10,15 @@ import {
   startOfWeek,
   subMonths,
 } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { enUS, es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Legend } from '@/components/nl/primitives'
 import { useDebts } from '@/hooks/useDebts'
 import { useRecurringItems } from '@/hooks/useRecurring'
 import { useTransactions } from '@/hooks/useTransactions'
+import i18n from '@/lib/i18n'
 import { advanceDebtDate, advanceRecurringDate, projectOccurrences } from '@/lib/recurrence'
 import { formatMoney } from '@/lib/utils'
 
@@ -37,6 +39,8 @@ export function TransactionsCalendar({
   selectedDate: string | null
   onSelectDate: (date: string | null) => void
 }) {
+  const { t } = useTranslation('common')
+  const weekdayLabels = t('transactionsCalendar.weekdays', { returnObjects: true }) as string[]
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()))
 
   const monthStart = startOfMonth(cursor)
@@ -111,7 +115,9 @@ export function TransactionsCalendar({
         >
           <ChevronLeft size={13} />
         </button>
-        <h2 className="text-xs font-medium capitalize">{format(cursor, 'MMMM yyyy', { locale: es })}</h2>
+        <h2 className="text-xs font-medium capitalize">
+          {format(cursor, 'MMMM yyyy', { locale: i18n.language === 'en' ? enUS : es })}
+        </h2>
         <button
           type="button"
           onClick={() => setCursor((c) => addMonths(c, 1))}
@@ -122,8 +128,8 @@ export function TransactionsCalendar({
       </div>
 
       <div className="grid grid-cols-7 gap-px rounded-md overflow-hidden border border-border" style={{ background: 'var(--nl-border)' }}>
-        {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
-          <div key={d} className="bg-card text-center text-[9px] text-muted-foreground py-1">
+        {weekdayLabels.map((d, i) => (
+          <div key={i} className="bg-card text-center text-[9px] text-muted-foreground py-1">
             {d}
           </div>
         ))}
@@ -135,11 +141,18 @@ export function TransactionsCalendar({
           const today = isToday(day)
           const isSelected = selectedDate === key
 
-          const tooltipLines = [format(day, "d 'de' MMMM", { locale: es })]
-          if (stats?.income) tooltipLines.push(`+${formatMoney(stats.income)} ingresos`)
-          if (stats?.expense) tooltipLines.push(`-${formatMoney(stats.expense)} gastos`)
-          if (stats?.other) tooltipLines.push(`${formatMoney(stats.other)} otros movimientos`)
-          for (const item of dayUpcoming) tooltipLines.push(`${item.label} (próximo, ${formatMoney(Number(item.amount))})`)
+          const tooltipLines = [
+            i18n.language === 'en'
+              ? format(day, 'MMMM d', { locale: enUS })
+              : format(day, "d 'de' MMMM", { locale: es }),
+          ]
+          if (stats?.income) tooltipLines.push(t('transactionsCalendar.tooltip.income', { amount: formatMoney(stats.income) }))
+          if (stats?.expense) tooltipLines.push(t('transactionsCalendar.tooltip.expense', { amount: formatMoney(stats.expense) }))
+          if (stats?.other) tooltipLines.push(t('transactionsCalendar.tooltip.other', { amount: formatMoney(stats.other) }))
+          for (const item of dayUpcoming)
+            tooltipLines.push(
+              t('transactionsCalendar.tooltip.upcoming', { label: item.label, amount: formatMoney(Number(item.amount)) }),
+            )
 
           return (
             <button
@@ -173,9 +186,9 @@ export function TransactionsCalendar({
       <div className="mt-2.5">
         <Legend
           items={[
-            { label: 'Ingreso', color: 'var(--nl-accent)' },
-            { label: 'Gasto', color: 'var(--nl-danger)' },
-            { label: 'Próximo', color: 'var(--nl-warning)' },
+            { label: t('transactionsCalendar.legend.income'), color: 'var(--nl-accent)' },
+            { label: t('transactionsCalendar.legend.expense'), color: 'var(--nl-danger)' },
+            { label: t('transactionsCalendar.legend.upcoming'), color: 'var(--nl-warning)' },
           ]}
         />
       </div>
@@ -186,7 +199,7 @@ export function TransactionsCalendar({
           onClick={() => onSelectDate(null)}
           className="mt-2.5 w-full rounded px-2.5 py-1.5 text-[11px] border border-border text-muted-foreground hover:text-foreground"
         >
-          Quitar filtro de fecha
+          {t('transactionsCalendar.clearDateFilterButton')}
         </button>
       )}
     </div>

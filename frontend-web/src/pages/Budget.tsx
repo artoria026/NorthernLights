@@ -12,6 +12,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { type FormEvent, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
@@ -27,7 +28,7 @@ import {
 } from '@/hooks/useBudget'
 import { useRecurringItems } from '@/hooks/useRecurring'
 import { apiErrorMessage } from '@/services/api'
-import { formatMoney, selectClass } from '@/lib/utils'
+import { activeDateLocale, formatMoney, selectClass } from '@/lib/utils'
 import type { BudgetCategoryBreakdown } from '@/types'
 
 const DONUT_COLORS = [
@@ -61,6 +62,7 @@ function barColorInk(pct: number) {
  * never had a limit -- that's where both the dot color and the suggestion
  * come from. */
 function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewingPastMonth?: boolean }) {
+  const { t } = useTranslation('pages')
   const { data: suggestions } = useBudgetLimitSuggestions()
   const setLimits = useSetBudgetLimits()
   const [values, setValues] = useState<Record<string, string>>({})
@@ -93,9 +95,8 @@ function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewi
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <p className="text-[12px] text-muted-foreground">
-        Ponle límite mensual a las categorías que quieras controlar. Deja vacías las que no te interesa
-        limitar.
-        {viewingPastMonth && ' Esto afecta el mes en curso, no el mes pasado que estás viendo.'}
+        {t('budget.setLimits.description')}
+        {viewingPastMonth && ` ${t('budget.setLimits.pastMonthNote')}`}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-h-[55vh] overflow-y-auto -mx-1 px-1 py-1">
         {(suggestions ?? []).map((s) => {
@@ -114,7 +115,7 @@ function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewi
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="Sin límite"
+                  placeholder={t('budget.setLimits.noLimitPlaceholder')}
                   value={values[s.category_id] ?? ''}
                   onChange={(e) => setValues((prev) => ({ ...prev, [s.category_id]: e.target.value }))}
                   className={`${selectClass} h-8 w-full pl-5 text-right`}
@@ -126,20 +127,21 @@ function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewi
                   onClick={() => setValues((prev) => ({ ...prev, [s.category_id]: s.average_last_3_months }))}
                   className="text-[11px] text-muted-foreground hover:text-foreground text-left"
                 >
-                  Promedio 3 meses: <span className="font-medium">{formatMoney(s.average_last_3_months)}</span>
+                  {t('budget.setLimits.average3MonthsLabel')}{' '}
+                  <span className="font-medium">{formatMoney(s.average_last_3_months)}</span>
                 </button>
               )}
             </div>
           )
         })}
         {(suggestions ?? []).length === 0 && (
-          <p className="text-sm text-muted-foreground py-2 col-span-2">Sin categorías de gasto.</p>
+          <p className="text-sm text-muted-foreground py-2 col-span-2">{t('budget.setLimits.noExpenseCategories')}</p>
         )}
       </div>
       {setLimits.isError && <p className="text-sm text-destructive">{apiErrorMessage(setLimits.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={setLimits.isPending}>
-          Guardar cambios
+          {t('budget.setLimits.saveChanges')}
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
@@ -163,6 +165,7 @@ function CategoryRow({
    * past month would mix a "today" data point with a historical row. */
   showSuggestions?: boolean
 }) {
+  const { t } = useTranslation('pages')
   const setLimit = useSetBudgetLimits()
   const average = Number(category.average_last_3_months)
   const limit = Number(category.monthly_limit)
@@ -179,7 +182,7 @@ function CategoryRow({
     <span
       className="flex items-center gap-0.5"
       style={{ color: trend === 'up' ? 'var(--nl-danger-ink)' : 'var(--nl-accent-ink)' }}
-      title={`${trend === 'up' ? '+' : ''}${Math.round(deltaPct as number)}% vs mes anterior`}
+      title={t('budget.categoryRow.vsLastMonth', { pct: `${trend === 'up' ? '+' : ''}${Math.round(deltaPct as number)}` })}
     >
       {trend === 'up' ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
     </span>
@@ -225,8 +228,9 @@ function CategoryRow({
           data-tour="budget:suggestion"
         >
           <span>
-            Promedio últimos 3 meses: <span className="font-medium">{formatMoney(category.average_last_3_months)}</span>
-            {average > limit ? ' (por arriba de tu límite)' : ' (por debajo de tu límite)'}
+            {t('budget.categoryRow.average3MonthsLabel')}{' '}
+            <span className="font-medium">{formatMoney(category.average_last_3_months)}</span>
+            {average > limit ? t('budget.categoryRow.aboveLimit') : t('budget.categoryRow.belowLimit')}
           </span>
           <button
             type="button"
@@ -238,7 +242,7 @@ function CategoryRow({
             }
             className="rounded px-2 py-0.5 border border-border hover:text-foreground disabled:opacity-40 flex-shrink-0"
           >
-            Usar este monto
+            {t('budget.categoryRow.useThisAmount')}
           </button>
         </div>
       )}
@@ -247,62 +251,50 @@ function CategoryRow({
 }
 
 function BudgetHelp() {
+  const { t } = useTranslation('pages')
   return (
     <>
-      <HelpSection heading="Qué es esta pantalla">
-        <p>
-          Cuánto planeas gastar por categoría de gasto variable (comida, transporte, etc.) cada mes,
-          contra lo que realmente llevas gastado — separado de tus gastos fijos comprometidos (deudas,
-          recurrentes).
-        </p>
+      <HelpSection heading={t('budget.help.whatIsThisScreen.heading')}>
+        <p>{t('budget.help.whatIsThisScreen.body')}</p>
       </HelpSection>
-      <HelpSection heading="Definir límite">
-        <p>
-          Le pones un tope mensual a una categoría. Si no le has puesto límite a ninguna, no aparece nada
-          en el desglose — es opcional, categoría por categoría.
-        </p>
+      <HelpSection heading={t('budget.help.settingLimit.heading')}>
+        <p>{t('budget.help.settingLimit.body')}</p>
       </HelpSection>
-      <HelpSection heading="Sugerencia de límite">
-        <p>
-          Cuando tu gasto promedio de los últimos 3 meses en una categoría difiere de su límite actual, te
-          lo señala y te deja aplicarlo con un click — sin tener que calcularlo tú.
-        </p>
+      <HelpSection heading={t('budget.help.limitSuggestion.heading')}>
+        <p>{t('budget.help.limitSuggestion.body')}</p>
       </HelpSection>
-      <HelpSection heading="Disponible">
-        <p>
-          Ingreso estimado menos comprometido fijo menos gastado. Si se pone en rojo (negativo), ya te
-          pasaste de lo que puedes gastar este mes.
-        </p>
+      <HelpSection heading={t('budget.help.available.heading')}>
+        <p>{t('budget.help.available.body')}</p>
       </HelpSection>
-      <HelpSection heading="Navegar meses pasados">
-        <p>
-          Usa las flechas junto al mes para revisar cómo te fue en meses anteriores. La vista semanal y la
-          alerta de límite solo aplican al mes en curso — un mes cerrado ya no tiene "semana actual".
-        </p>
+      <HelpSection heading={t('budget.help.navigatingPastMonths.heading')}>
+        <p>{t('budget.help.navigatingPastMonths.body')}</p>
       </HelpSection>
-      <HelpSection heading="Flecha por categoría">
-        <p>
-          Compara el gasto de esta categoría contra el mes anterior. Roja hacia arriba si gastaste más de
-          un 5%, verde hacia abajo si gastaste menos — sin flecha si es prácticamente igual.
-        </p>
+      <HelpSection heading={t('budget.help.categoryArrow.heading')}>
+        <p>{t('budget.help.categoryArrow.body')}</p>
       </HelpSection>
-      <HelpTip>
-        "Comprometido fijo" son tus deudas y recurrentes activos — dinero que ya sabes que vas a gastar,
-        por eso no compite con el presupuesto variable de arriba.
-      </HelpTip>
+      <HelpTip>{t('budget.help.fixedCommittedTip')}</HelpTip>
     </>
   )
 }
 
-const MONTH_SHORT = new Intl.DateTimeFormat('es-MX', { month: 'short', timeZone: 'UTC' })
-const MONTH_LONG = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+// Built fresh on every call (not cached at module scope) so it always
+// reflects the active language, not just the one in effect when this
+// module first loaded.
+function monthFormatter(style: 'short' | 'long'): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat(activeDateLocale(), {
+    month: style,
+    ...(style === 'long' ? { year: 'numeric' as const } : {}),
+    timeZone: 'UTC',
+  })
+}
 
-function monthLabel(year: number, month: number, formatter = MONTH_LONG) {
-  const label = formatter.format(new Date(Date.UTC(year, month - 1, 1)))
+function monthLabel(year: number, month: number, style: 'short' | 'long' = 'long') {
+  const label = monthFormatter(style).format(new Date(Date.UTC(year, month - 1, 1)))
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 export function Budget() {
+  const { t } = useTranslation('pages')
   const now = new Date()
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1
@@ -358,7 +350,7 @@ export function Budget() {
   const trendBars = (trend ?? [])
     .filter((m) => Number(m.budgeted) > 0)
     .map((m) => ({
-      label: monthLabel(m.year, m.month, MONTH_SHORT),
+      label: monthLabel(m.year, m.month, 'short'),
       value: m.percentage,
       color: barColor(m.percentage),
     }))
@@ -367,7 +359,7 @@ export function Budget() {
     <div>
       <ViewHeader
         icon={<PiggyBank />}
-        title="Presupuesto"
+        title={t('budget.title')}
         help={<BudgetHelp />}
         section={HEADER_SECTIONS.diario}
         tourKey="budget"
@@ -382,13 +374,13 @@ export function Budget() {
                   style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
                 >
                   <Plus size={14} />
-                  Definir límite
+                  {t('budget.defineLimit')}
                 </button>
               }
             />
             <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Límites mensuales por categoría</DialogTitle>
+                <DialogTitle>{t('budget.limitsDialogTitle')}</DialogTitle>
               </DialogHeader>
               <SetLimitsForm onDone={() => setOpen(false)} viewingPastMonth={!isCurrentMonth} />
             </DialogContent>
@@ -402,7 +394,7 @@ export function Budget() {
             type="button"
             onClick={goToPrevMonth}
             className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted"
-            aria-label="Mes anterior"
+            aria-label={t('budget.previousMonth')}
           >
             <ChevronLeft size={18} />
           </button>
@@ -414,7 +406,7 @@ export function Budget() {
             onClick={goToNextMonth}
             disabled={isCurrentMonth}
             className="rounded p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent"
-            aria-label="Mes siguiente"
+            aria-label={t('budget.nextMonth')}
           >
             <ChevronRight size={18} />
           </button>
@@ -424,7 +416,7 @@ export function Budget() {
               onClick={() => setViewed({ year: currentYear, month: currentMonth })}
               className="ml-2 text-[12px] text-muted-foreground hover:text-foreground underline"
             >
-              Volver a hoy
+              {t('budget.backToToday')}
             </button>
           )}
         </div>
@@ -432,7 +424,7 @@ export function Budget() {
           to="/reports?period=month&flow=expense"
           className="text-[12px] text-muted-foreground hover:text-foreground"
         >
-          Ver reporte completo del mes →
+          {t('budget.viewFullMonthReport')}
         </Link>
       </div>
 
@@ -440,22 +432,22 @@ export function Budget() {
         <StatCard
           compact
           icon={<Target />}
-          label="Presupuestado"
+          label={t('budget.stats.budgeted')}
           value={formatMoney(current?.variable_total_budgeted ?? '0')}
-          note={`${categories.length} categoría${categories.length === 1 ? '' : 's'} con límite`}
+          note={t('budget.categoriesWithLimit', { count: categories.length })}
         />
         <StatCard
           compact
           icon={<Receipt />}
-          label="Gastado"
+          label={t('budget.stats.spent')}
           value={<span style={{ color: barColorInk(spentPct) }}>{formatMoney(current?.variable_total_spent ?? '0')}</span>}
           borderColor={barColor(spentPct)}
-          note={`${spentPct}% de lo presupuestado`}
+          note={t('budget.stats.spentPctNote', { pct: spentPct })}
         />
         <StatCard
           compact
           icon={<PiggyBank />}
-          label="Disponible"
+          label={t('budget.stats.available')}
           dataTour="budget:available"
           value={
             <span style={{ color: Number(current?.available ?? 0) < 0 ? 'var(--nl-danger-ink)' : 'var(--nl-accent-ink)' }}>
@@ -464,17 +456,18 @@ export function Budget() {
           }
           note={
             <>
-              Ingreso estimado: {formatMoney(current?.income_estimated ?? '0')}
-              {isCurrentMonth && ` · Quedan ${daysLeftInMonth} día${daysLeftInMonth === 1 ? '' : 's'}`}
+              {t('budget.stats.estimatedIncomeLabel')}
+              {formatMoney(current?.income_estimated ?? '0')}
+              {isCurrentMonth && <> · {t('budget.daysLeft', { count: daysLeftInMonth })}</>}
             </>
           }
         />
         <StatCard
           compact
           icon={<Lock />}
-          label="Comprometido fijo"
+          label={t('budget.stats.committedFixed')}
           value={formatMoney(current?.committed_fixed ?? '0')}
-          note="Deudas y recurrentes activos"
+          note={t('budget.stats.debtsAndRecurringNote')}
           dataTour="budget:committed"
         />
       </div>
@@ -484,8 +477,7 @@ export function Budget() {
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={15} className="text-muted-foreground flex-shrink-0" />
             <span className="text-[13px] font-medium">
-              {alertCategories.length} categoría{alertCategories.length === 1 ? '' : 's'} cerca o por encima del
-              límite
+              {t('budget.categoriesNearOrOverLimit', { count: alertCategories.length })}
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -515,11 +507,11 @@ export function Budget() {
           the same grid, not custom per-row fractions. */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
-          <div className="text-[15px] font-medium mb-2">Desglose por categoría</div>
+          <div className="text-[15px] font-medium mb-2">{t('budget.breakdownByCategory')}</div>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Cargando...</p>
+            <p className="text-sm text-muted-foreground">{t('budget.loading')}</p>
           ) : categories.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Define límites por categoría para ver tu progreso aquí.</p>
+            <p className="text-sm text-muted-foreground">{t('budget.noCategoriesYet')}</p>
           ) : (
             categories.map((c, i) => (
               <CategoryRow
@@ -534,13 +526,13 @@ export function Budget() {
         </div>
 
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4" data-tour="budget:distribution">
-          <div className="text-[15px] font-medium mb-2">Distribución de gasto</div>
+          <div className="text-[15px] font-medium mb-2">{t('budget.expenseDistribution')}</div>
           {donutSlices.length > 0 ? (
             <div className="flex flex-col items-center gap-3">
               <Donut
                 slices={donutSlices}
                 centerLabel={formatMoney(current?.variable_total_spent ?? '0')}
-                centerSub={isCurrentMonth ? 'este mes' : monthLabel(viewed.year, viewed.month, MONTH_SHORT)}
+                centerSub={isCurrentMonth ? t('budget.thisMonth') : monthLabel(viewed.year, viewed.month, 'short')}
               />
               <div className="flex flex-col gap-1.5 w-full">
                 {donutSlices.map((s) => (
@@ -554,13 +546,13 @@ export function Budget() {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              {isCurrentMonth ? 'Sin gastos este mes todavía.' : 'Sin gastos registrados ese mes.'}
+              {isCurrentMonth ? t('budget.noExpensesThisMonth') : t('budget.noExpensesThatMonth')}
             </p>
           )}
         </div>
 
         <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
-          <div className="text-[15px] font-medium mb-2">Pagos recurrentes</div>
+          <div className="text-[15px] font-medium mb-2">{t('budget.recurringPayments')}</div>
           <div className="flex flex-col">
             {(recurring ?? []).slice(0, 6).map((r) => (
               <div key={r.id} className="flex items-center gap-2 py-2 border-t border-border first:border-0">
@@ -572,16 +564,18 @@ export function Budget() {
                 <span className="text-[13px] text-muted-foreground">{formatMoney(r.amount)}</span>
               </div>
             ))}
-            {(recurring ?? []).length === 0 && <p className="text-sm text-muted-foreground">Sin recurrentes activos.</p>}
+            {(recurring ?? []).length === 0 && (
+              <p className="text-sm text-muted-foreground">{t('budget.noActiveRecurring')}</p>
+            )}
           </div>
         </div>
 
         {isCurrentMonth ? (
           weekTotals && weekTotals.length > 0 && (
             <div className="lg:col-span-2 bg-card border border-border rounded-md p-4">
-              <div className="text-[15px] font-medium mb-2">Vista semanal</div>
+              <div className="text-[15px] font-medium mb-2">{t('budget.weeklyView')}</div>
               <SimpleBars
-                bars={weekTotals.map((w) => ({ label: `S${w.week}`, value: w.total }))}
+                bars={weekTotals.map((w) => ({ label: t('budget.weekShortLabel', { week: w.week }), value: w.total }))}
                 height={110}
                 showValues
                 formatValue={(v) => formatMoney(v.toFixed(2))}
@@ -590,7 +584,7 @@ export function Budget() {
                 {weekTotals.map((week) => (
                   <div key={week.week} className="flex items-center justify-between py-2 border-t border-border first:border-0 text-[13px]">
                     <span className="text-muted-foreground">
-                      Semana {week.week} · {week.date_from} — {week.date_to}
+                      {t('budget.weekRange', { week: week.week, from: week.date_from, to: week.date_to })}
                     </span>
                     <span className="font-medium">{formatMoney(week.total.toFixed(2))}</span>
                   </div>
@@ -601,21 +595,21 @@ export function Budget() {
         ) : (
           <div className="lg:col-span-2 bg-card border border-border rounded-md p-4 flex flex-col items-center justify-center text-center gap-2 min-h-[180px]">
             <p className="text-sm text-muted-foreground">
-              La vista semanal solo aplica al mes en curso.
+              {t('budget.weeklyViewCurrentMonthOnly')}
             </p>
             <button
               type="button"
               onClick={() => setViewed({ year: currentYear, month: currentMonth })}
               className="text-[12px] text-muted-foreground hover:text-foreground underline"
             >
-              Volver a hoy para verla
+              {t('budget.backToTodayToSee')}
             </button>
           </div>
         )}
 
         {trendBars.length > 0 && (
           <div className="lg:col-span-4 bg-card border border-border rounded-md p-3.5" data-tour="budget:trend">
-            <div className="text-[13px] font-medium mb-1.5">Tendencia · % del presupuesto usado por mes</div>
+            <div className="text-[13px] font-medium mb-1.5">{t('budget.trendHeading')}</div>
             <SimpleBars bars={trendBars} height={70} showValues formatValue={(v) => `${Math.round(v)}%`} />
           </div>
         )}

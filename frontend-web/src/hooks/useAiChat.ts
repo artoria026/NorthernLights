@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import type { AiUsage, ApiSuccess, ChatMessage } from '@/types'
@@ -62,6 +63,7 @@ export interface ChatAttachments {
 }
 
 export function useChatStream() {
+  const { t } = useTranslation('common')
   const [messages, setMessages] = useState<StreamingChatMessage[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,9 +85,9 @@ export function useChatStream() {
       // network one gets the file name appended as text so the
       // history saved on the server keeps that context even though
       // the chips (attachmentNames) aren't persisted.
-      const displayMessage = message || (attachmentNames ? 'Aquí están mis estados de cuenta.' : '')
+      const displayMessage = message || (attachmentNames ? t('useAiChat.defaultAttachmentMessage') : '')
       const networkMessage = attachmentNames
-        ? `${displayMessage} (adjunto: ${attachmentNames.join(', ')})`
+        ? `${displayMessage} (${t('useAiChat.attachmentSuffix', { names: attachmentNames.join(', ') })})`
         : displayMessage
       setMessages((prev) => [
         ...prev,
@@ -111,10 +113,10 @@ export function useChatStream() {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           body: form,
         })
-        if (!response.body) throw new Error('El servidor no soporta streaming')
+        if (!response.body) throw new Error(t('useAiChat.streamingNotSupported'))
         if (!response.ok) {
           const body = await response.json().catch(() => null)
-          throw new Error(body?.error ?? 'No se pudo enviar el mensaje')
+          throw new Error(body?.error ?? t('useAiChat.couldNotSendMessage'))
         }
 
         const reader = response.body.getReader()
@@ -149,7 +151,7 @@ export function useChatStream() {
           }
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error de conexión con el asesor')
+        setError(err instanceof Error ? err.message : t('useAiChat.connectionError'))
         hadError = true
       } finally {
         setIsStreaming(false)
@@ -188,7 +190,7 @@ export function useChatStream() {
         }
       }
     },
-    [queryClient],
+    [queryClient, t],
   )
 
   const retryLast = useCallback(() => {
