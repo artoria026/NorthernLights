@@ -19,7 +19,9 @@ Before creating a new branch, follow [docs/CONVENTIONS.md](docs/CONVENTIONS.md):
 
 ## Project documentation
 
-- [README.md](README.md) -- stack, setup, architecture, feature map.
+- [README.md](README.md) -- what the project is, stack, architecture, feature map.
+- [docs/SETUP.md](docs/SETUP.md) -- step-by-step to run this locally (database,
+  env vars, the one manual Postgres role, tests).
 - [docs/CONVENTIONS.md](docs/CONVENTIONS.md) -- branch and commit naming conventions.
 - [docs/RELEASING.md](docs/RELEASING.md) -- checklist for releasing a version and
   writing the changelog.
