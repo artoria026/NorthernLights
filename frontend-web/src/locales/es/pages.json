@@ -669,12 +669,15 @@
       "typeLabel": "Tipo",
       "totalAmountLabel": "Monto total",
       "paymentAmountLabel": "Cuota (opcional)",
-      "frequencyLabel": "Frecuencia",
+      "frequencyLabel": "Frecuencia (opcional)",
       "fundingAccountFromLabel": "¿De cuál cuenta sale el dinero? (opcional)",
       "fundingAccountToLabel": "¿A cuál cuenta entró el dinero? (opcional)",
       "fundingAccountPlaceholder": "Ninguna, ya lo traía antes de usar la app",
       "noneOption": "Ninguna",
-      "submitButton": "Crear deuda"
+      "submitButton": "Crear deuda",
+      "noFrequencyOption": "Sin frecuencia fija",
+      "interestRateLabel": "Tasa de interés anual (%) (opcional)",
+      "interestRatePlaceholder": "0"
     },
     "registerPaymentForm": {
       "oweYouNote": "Te debe: {{amount}}",

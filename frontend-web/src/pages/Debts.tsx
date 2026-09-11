@@ -261,22 +261,46 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
   const createDebt = useCreateDebt()
   const isReceivable = direction === 'owed_to_me'
 
-  const [form, setForm] = useState<CreateDebtInput>({
+  const [form, setForm] = useState<
+    Omit<CreateDebtInput, 'payment_frequency'> & {
+      // '' is a real, intentional state here (no fixed frequency) -- not
+      // the same as never having picked one, so it's kept distinct from
+      // `undefined` until submit time (see handleSubmit).
+      payment_frequency: PaymentFrequency | ''
+      // Kept as the human-typed percentage (e.g. "10") separate from
+      // CreateDebtInput's interest_rate, which the backend expects as a
+      // decimal fraction ("0.10") -- converted only at submit time, same
+      // pattern as interestRatePct in Accounts.tsx.
+      interestRatePct: string
+    }
+  >({
     name: '',
     type: isReceivable ? 'informal' : 'personal_loan',
     direction,
     total_amount: '',
     payment_amount: '',
-    payment_frequency: 'monthly',
+    // Receivables (money someone owes you, often informal) frequently have
+    // no real payment schedule -- don't force one. Debts you owe more often
+    // do have one, so 'monthly' stays a reasonable default there.
+    payment_frequency: isReceivable ? '' : 'monthly',
     funding_account_id: '',
+    interestRatePct: '',
   })
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     try {
+      const { interestRatePct, ...rest } = form
       await createDebt.mutateAsync({
-        ...form,
+        ...rest,
+        // Empty optional fields must become `undefined` (omitted), never
+        // sent as "" -- the backend parses them as Decimal/enum and "" is
+        // neither a valid number nor treated as absent, so it 422s instead
+        // of just defaulting.
+        payment_amount: form.payment_amount || undefined,
+        payment_frequency: form.payment_frequency || undefined,
         funding_account_id: form.funding_account_id || undefined,
+        interest_rate: interestRatePct ? String(parseFloat(interestRatePct) / 100) : undefined,
       })
       onDone()
     } catch {
@@ -333,13 +357,16 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">{t('debts.newDebtForm.frequencyLabel')}</label>
         <Select
-          value={form.payment_frequency}
-          onValueChange={(v) => setForm({ ...form, payment_frequency: (v as PaymentFrequency) ?? 'monthly' })}
+          value={form.payment_frequency || null}
+          onValueChange={(v) => setForm({ ...form, payment_frequency: (v as PaymentFrequency) ?? '' })}
         >
           <SelectTrigger className="h-9 w-full">
-            <SelectValue>{(v: PaymentFrequency) => paymentFrequencyLabel(v)}</SelectValue>
+            <SelectValue placeholder={t('debts.newDebtForm.noFrequencyOption')}>
+              {(v: PaymentFrequency | null) => (v ? paymentFrequencyLabel(v) : t('debts.newDebtForm.noFrequencyOption'))}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="">{t('debts.newDebtForm.noFrequencyOption')}</SelectItem>
             {FREQUENCIES.map((f) => (
               <SelectItem key={f} value={f}>
                 {paymentFrequencyLabel(f)}
@@ -347,6 +374,18 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.newDebtForm.interestRateLabel')}</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder={t('debts.newDebtForm.interestRatePlaceholder')}
+          value={form.interestRatePct}
+          onChange={(e) => setForm({ ...form, interestRatePct: e.target.value })}
+          className={`${selectClass} h-9 w-full`}
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">

@@ -669,12 +669,15 @@
       "typeLabel": "Type",
       "totalAmountLabel": "Total amount",
       "paymentAmountLabel": "Installment (optional)",
-      "frequencyLabel": "Frequency",
+      "frequencyLabel": "Frequency (optional)",
       "fundingAccountFromLabel": "Which account is the money coming out of? (optional)",
       "fundingAccountToLabel": "Which account did the money go into? (optional)",
       "fundingAccountPlaceholder": "None, I already had it before using the app",
       "noneOption": "None",
-      "submitButton": "Create debt"
+      "submitButton": "Create debt",
+      "noFrequencyOption": "No fixed frequency",
+      "interestRateLabel": "Annual interest rate (%) (optional)",
+      "interestRatePlaceholder": "0"
     },
     "registerPaymentForm": {
       "oweYouNote": "Owes you: {{amount}}",
