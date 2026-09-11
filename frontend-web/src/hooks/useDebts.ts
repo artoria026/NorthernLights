@@ -105,6 +105,7 @@ export interface CreateDebtInput {
   direction: DebtDirection
   total_amount: string
   current_balance?: string
+  interest_rate?: string
   payment_amount?: string
   payment_frequency?: PaymentFrequency
   total_installments?: number
