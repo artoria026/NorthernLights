@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 
 class CategoryCreate(BaseModel):
@@ -22,7 +22,10 @@ class CategoryUpdate(BaseModel):
 class CategoryOut(BaseModel):
     id: UUID
     user_id: UUID | None
-    name: str
+    # The name in the reader's language (Category.display_name); `slug` is the
+    # stable id of a system category, None for the user's own.
+    name: str = Field(validation_alias=AliasChoices("display_name", "name"))
+    slug: str | None
     type: str
     icon: str | None
     color: str
@@ -53,6 +56,8 @@ class CategoryExportItem(BaseModel):
     says whether `parent_name` is a system or one of the user's own."""
 
     name: str
+    name_en: str | None
+    slug: str | None
     type: str
     icon: str | None
     color: str
@@ -61,6 +66,7 @@ class CategoryExportItem(BaseModel):
     is_active: bool
     hidden: bool
     parent_name: str | None
+    parent_slug: str | None
     parent_is_system: bool | None
     created_at: datetime
 
@@ -77,6 +83,8 @@ class CategoryImportItem(BaseModel):
     fields (created_at) are ignored."""
 
     name: str = Field(min_length=1)
+    name_en: str | None = None
+    slug: str | None = None
     type: str = Field(pattern="^(income|expense)$")
     icon: str | None = None
     color: str = "#6366F1"
@@ -85,6 +93,7 @@ class CategoryImportItem(BaseModel):
     is_active: bool = True
     hidden: bool = False
     parent_name: str | None = None
+    parent_slug: str | None = None
     parent_is_system: bool | None = None
 
 

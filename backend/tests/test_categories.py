@@ -427,3 +427,136 @@ async def test_import_categories_rejects_invalid_files(client: AsyncClient, muta
     body = {"format": "northernlights.categories", "version": 1, "categories": []} | mutation
     response = await client.post("/api/v1/categories/import", headers=headers, json=body)
     assert response.status_code == 422
+
+
+async def _set_locale(client: AsyncClient, headers: dict, locale: str) -> None:
+    response = await client.put("/api/v1/auth/settings", headers=headers, json={"locale": locale})
+    assert response.status_code == 200
+
+
+async def test_system_categories_in_db_match_the_single_source_of_truth(client: AsyncClient):
+    from app.core.system_categories import SYSTEM_CATEGORIES
+
+    headers = await _auth(client)
+    listed = (await client.get("/api/v1/categories", headers=headers)).json()["data"]
+    by_slug = {c["slug"]: c for c in listed}
+    assert set(by_slug) == {c.slug for c in SYSTEM_CATEGORIES}
+    for expected in SYSTEM_CATEGORIES:
+        row = by_slug[expected.slug]
+        assert (row["name"], row["type"], row["icon"], row["color"], row["sort_order"]) == (
+            expected.name, expected.type, expected.icon, expected.color, expected.sort_order,
+        )
+
+
+async def test_category_names_follow_the_user_locale(client: AsyncClient):
+    headers = await _auth(client)
+    spanish = (await client.get("/api/v1/categories?type=expense", headers=headers)).json()["data"]
+    assert "Comida y Bebidas" in [c["name"] for c in spanish]
+
+    await _set_locale(client, headers, "en")
+    english = (await client.get("/api/v1/categories?type=expense", headers=headers)).json()["data"]
+    assert [c["name"] for c in english] == [
+        "Food & Drinks", "Transport & Mobility", "Housing & Home", "Health & Wellness",
+        "Clothing & Personal Care", "Leisure & Entertainment", "Education & Development",
+        "Pets", "Other Expense",
+    ]
+    # same rows, same slugs -- only the displayed name changes
+    assert [c["slug"] for c in english] == [c["slug"] for c in spanish]
+
+
+async def test_own_categories_are_never_translated(client: AsyncClient):
+    headers = await _auth(client)
+    await _set_locale(client, headers, "en")
+    created = await client.post(
+        "/api/v1/categories", headers=headers, json={"name": "Gimnasio", "type": "expense"}
+    )
+    assert created.json()["data"]["name"] == "Gimnasio"
+    assert created.json()["data"]["slug"] is None
+
+
+async def test_transactions_and_budget_show_category_in_user_locale(client: AsyncClient):
+    headers = await _auth(client)
+    await _set_locale(client, headers, "en")
+    account = (
+        await client.post(
+            "/api/v1/accounts",
+            headers=headers,
+            json={"name": "Efectivo", "type": "asset", "subtype": "cash", "initial_balance": "100"},
+        )
+    ).json()["data"]
+    food = next(
+        c
+        for c in (await client.get("/api/v1/categories?type=expense", headers=headers)).json()["data"]
+        if c["slug"] == "food_drinks"
+    )
+    tx = await client.post(
+        "/api/v1/transactions",
+        headers=headers,
+        json={
+            "entry_type": "expense", "description": "Lunch", "amount": "10",
+            "date": "2026-10-01", "account_id": account["id"], "category_id": food["id"],
+        },
+    )
+    assert tx.status_code == 201, tx.text
+    listing = (await client.get("/api/v1/transactions", headers=headers)).json()["data"]
+    assert listing[0]["category_name"] == "Food & Drinks"
+
+    await _set_locale(client, headers, "es")
+    listing = (await client.get("/api/v1/transactions", headers=headers)).json()["data"]
+    assert listing[0]["category_name"] == "Comida y Bebidas"
+
+
+async def test_category_import_matches_system_by_slug_and_either_language(client: AsyncClient):
+    headers = await _auth(client)
+    body = {
+        "format": "northernlights.categories",
+        "version": 1,
+        "categories": [
+            # by slug, even though the name is not any of the real ones
+            {"name": "x", "slug": "pets", "type": "expense", "is_system": True, "hidden": True},
+            # no slug, English name
+            {"name": "Other Expense", "type": "expense", "is_system": True, "hidden": True},
+            # subcategory under a system parent given by slug
+            {"name": "Super", "type": "expense", "parent_name": "?", "parent_slug": "food_drinks",
+             "parent_is_system": True},
+        ],
+    }
+    response = await client.post("/api/v1/categories/import", headers=headers, json=body)
+    assert response.json()["data"] == {"created": 1, "hidden": 2, "skipped": [], "unmatched": []}
+    hidden = (await client.get("/api/v1/categories/hidden", headers=headers)).json()["data"]
+    assert {c["slug"] for c in hidden} == {"pets", "other_expense"}
+
+
+async def test_export_carries_slug_and_english_name(client: AsyncClient):
+    headers = await _auth(client)
+    exported = (await client.get("/api/v1/categories/export", headers=headers)).json()
+    pets = next(c for c in exported["categories"] if c["slug"] == "pets")
+    assert (pets["name"], pets["name_en"]) == ("Mascotas", "Pets")
+    # canonical Spanish regardless of the reader's language
+    await _set_locale(client, headers, "en")
+    exported = (await client.get("/api/v1/categories/export", headers=headers)).json()
+    assert next(c for c in exported["categories"] if c["slug"] == "pets")["name"] == "Mascotas"
+
+
+async def test_ai_and_bulk_import_resolve_system_category_in_either_language(
+    client: AsyncClient, session_factory
+):
+    from app.ai.write_tools import _resolve_category_id
+    from app.services import category_service
+    from app.services.bulk_import_service import _category_lookup
+    from tests.conftest import rls_session as rls
+
+    token = await _register_and_login(client)
+    me = (await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})).json()
+    user_id = uuid.UUID(me["data"]["id"])
+
+    async with rls(session_factory, user_id) as session:
+        for wanted in ("Mascotas", "mascotas", "Pets", " pets "):
+            assert not isinstance(
+                await _resolve_category_id(session, user_id, wanted, "expense"), dict
+            )
+        assert isinstance(await _resolve_category_id(session, user_id, "Nope", "expense"), dict)
+
+        lookup = _category_lookup(await category_service.list_categories(session, user_id, "income"))
+        assert lookup["main job"] == lookup["empleo principal"]
+        assert lookup["other income"] == lookup["otro ingreso"]

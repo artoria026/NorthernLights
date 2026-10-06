@@ -40,7 +40,7 @@ from sqlalchemy.pool import NullPool
 
 from alembic import command
 from app.core.config import settings
-from app.core.database import get_admin_db, get_db, get_rls_db
+from app.core.database import apply_rls_context, get_admin_db, get_db, get_rls_db
 from app.core.security import CurrentUser, create_access_token, get_current_user
 from app.main import app
 
@@ -118,10 +118,7 @@ async def client(session_factory):
 
     async def _override_get_rls_db(current_user: CurrentUser = Depends(get_current_user)):
         async with session_factory() as session:
-            await session.execute(
-                text("SELECT set_config('app.current_user_id', :uid, true)"),
-                {"uid": str(current_user.id)},
-            )
+            await apply_rls_context(session, current_user.id)
             yield session
             await session.commit()
 
@@ -153,10 +150,7 @@ async def rls_session(session_factory, user_id: uuid.UUID):
     without going through HTTP: shares the same connection/transaction as `client`,
     so it sees data created via the API in the same test."""
     async with session_factory() as session:
-        await session.execute(
-            text("SELECT set_config('app.current_user_id', :uid, true)"),
-            {"uid": str(user_id)},
-        )
+        await apply_rls_context(session, user_id)
         yield session
         await session.commit()
 

@@ -427,9 +427,9 @@ async def _category_breakdown(
     result = await session.execute(
         select(
             effective_id,
-            func.coalesce(ParentCategory.name, Category.name),
+            func.coalesce(ParentCategory.display_name, Category.display_name),
             Category.parent_id,
-            Category.name,
+            Category.display_name,
             func.sum(JournalEntry.amount),
         )
         .join(Category, JournalEntry.category_id == Category.id)
@@ -442,7 +442,12 @@ async def _category_breakdown(
             JournalEntry.date >= start,
             JournalEntry.date <= end,
         )
-        .group_by(effective_id, ParentCategory.name, Category.parent_id, Category.name)
+        .group_by(
+            effective_id,
+            ParentCategory.display_name,
+            Category.parent_id,
+            Category.display_name,
+        )
     )
 
     totals: dict[UUID, Decimal] = {}

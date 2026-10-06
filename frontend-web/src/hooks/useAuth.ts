@@ -217,10 +217,21 @@ export function useSyncedLocale() {
   const { i18n } = useTranslation()
   const accessToken = useAuthStore((s) => s.accessToken)
   const updateSettings = useUpdateSettings()
+  const queryClient = useQueryClient()
 
   function setLocale(next: Locale) {
     void i18n.changeLanguage(next)
-    if (accessToken) updateSettings.mutate({ locale: next })
+    if (accessToken) {
+      updateSettings.mutate(
+        { locale: next },
+        {
+          // Some text comes from the backend already in the user's language
+          // (system category names), so what's cached is now in the old one.
+          onSuccess: () =>
+            queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== 'auth' }),
+        },
+      )
+    }
   }
 
   return { locale: i18n.language as Locale, setLocale, isPending: updateSettings.isPending }

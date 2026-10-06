@@ -34,7 +34,9 @@ async def list_categories(
     )
     if type_:
         query = query.where(Category.type == type_)
-    query = query.order_by(Category.user_id.is_not(None), Category.sort_order, Category.name)
+    query = query.order_by(
+        Category.user_id.is_not(None), Category.sort_order, Category.display_name
+    )
     result = await session.execute(query)
     return list(result.scalars().all())
 
@@ -88,6 +90,8 @@ async def export_categories(session: AsyncSession, user_id: UUID) -> CategoryExp
         items.append(
             CategoryExportItem(
                 name=c.name,
+                name_en=c.name_en,
+                slug=c.slug,
                 type=c.type,
                 icon=c.icon,
                 color=c.color,
@@ -96,6 +100,7 @@ async def export_categories(session: AsyncSession, user_id: UUID) -> CategoryExp
                 is_active=c.is_active,
                 hidden=c.id in hidden_ids,
                 parent_name=parent.name if parent else None,
+                parent_slug=parent.slug if parent else None,
                 parent_is_system=(parent.user_id is None) if parent else None,
                 created_at=c.created_at,
             )
@@ -117,8 +122,9 @@ async def import_categories(
     """Applies a categories export. Additive, never destructive to the
     user's setup:
 
-    - System entries are matched to the current system categories by
-      (type, name), case-insensitive. A `hidden` one gets hidden for this
+    - System entries are matched to the current system categories by `slug`
+      (stable), or failing that by (type, name) in either language,
+      case-insensitive. A `hidden` one gets hidden for this
       user (same effect as deactivate_category, which unlinks its
       transactions); one that isn't hidden is left as it is. A system entry
       that matches nothing (e.g. renamed in a newer seed) is reported in
@@ -139,7 +145,19 @@ async def import_categories(
         .scalars()
         .all()
     )
-    system = {(c.type, c.name.casefold()): c for c in existing if c.user_id is None}
+    system_rows = [c for c in existing if c.user_id is None]
+    system_by_slug = {c.slug: c for c in system_rows if c.slug}
+    # Fallback for files without slugs: either language's name.
+    system_by_name = {(c.type, c.name.casefold()): c for c in system_rows}
+    system_by_name.update(
+        {(c.type, c.name_en.casefold()): c for c in system_rows if c.name_en}
+    )
+
+    def find_system(slug: str | None, type_: str, name: str | None) -> Category | None:
+        if slug and slug in system_by_slug:
+            return system_by_slug[slug]
+        return system_by_name.get((type_, name.casefold())) if name else None
+
     # (type, name, parent id) -> category, for the user's own ones.
     own = {(c.type, c.name.casefold(), c.parent_id): c for c in existing if c.user_id is not None}
 
@@ -148,7 +166,7 @@ async def import_categories(
     unmatched: list[str] = []
 
     for item in (i for i in data.categories if i.is_system):
-        category = system.get((item.type, item.name.casefold()))
+        category = find_system(item.slug, item.type, item.name)
         if category is None:
             unmatched.append(item.name)
         elif item.hidden:
@@ -161,7 +179,7 @@ async def import_categories(
         parent_id: UUID | None = None
         if item.parent_name is not None:
             if item.parent_is_system:
-                parent = system.get((item.type, item.parent_name.casefold()))
+                parent = find_system(item.parent_slug, item.type, item.parent_name)
             else:
                 parent = own.get((item.type, item.parent_name.casefold(), None))
             if parent is None:
@@ -186,6 +204,7 @@ async def import_categories(
         )
         category.sort_order = item.sort_order
         category.is_active = item.is_active
+        await session.flush()
         own[key] = category
         created += 1
 
@@ -231,6 +250,8 @@ async def create_category(session: AsyncSession, user_id: UUID, data: CategoryCr
     )
     session.add(category)
     await session.flush()
+    # Loads display_name (a SQL expression) so the caller can serialize it.
+    await session.refresh(category)
     return category
 
 
@@ -245,6 +266,7 @@ async def update_category(
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(category, field, value)
     await session.flush()
+    await session.refresh(category)
     return category
 
 
@@ -337,9 +359,9 @@ async def get_names_by_ids(session: AsyncSession, category_ids: list[UUID]) -> d
     if not category_ids:
         return {}
     result = await session.execute(
-        select(Category.id, Category.name).where(Category.id.in_(category_ids))
+        select(Category.id, Category.display_name).where(Category.id.in_(category_ids))
     )
-    return {row.id: row.name for row in result.all()}
+    return {row[0]: row[1] for row in result.all()}
 
 
 async def get_month_summary(
