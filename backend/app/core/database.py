@@ -82,7 +82,7 @@ async def get_rls_db(
 
 async def get_admin_db() -> AsyncGenerator[AsyncSession, None]:
     """Session with SET LOCAL ROLE finanzas_admin (BYPASSRLS + SELECT
-    only, see migration 74f91ad52f09) -- exclusive to admin_service's
+    only, see the initial migration 293528f67338) -- exclusive to admin_service's
     cross-user aggregations (list_users/get_stats).
     Same connection/engine as the rest of the app (finanzas_user must be a
     member of finanzas_admin to be able to assume it); SET LOCAL reverts on its

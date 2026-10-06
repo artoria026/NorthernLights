@@ -29,7 +29,6 @@ async def list_categories(
             Category.user_id == user_id,
             (Category.user_id.is_(None)) & Category.id.not_in(hidden),
         ),
-        Category.is_active.is_(True),
         Category.deleted_at.is_(None),
     )
     if type_:
@@ -97,7 +96,6 @@ async def export_categories(session: AsyncSession, user_id: UUID) -> CategoryExp
                 color=c.color,
                 sort_order=c.sort_order,
                 is_system=c.user_id is None,
-                is_active=c.is_active,
                 hidden=c.id in hidden_ids,
                 parent_name=parent.name if parent else None,
                 parent_slug=parent.slug if parent else None,
@@ -203,7 +201,6 @@ async def import_categories(
             ),
         )
         category.sort_order = item.sort_order
-        category.is_active = item.is_active
         await session.flush()
         own[key] = category
         created += 1

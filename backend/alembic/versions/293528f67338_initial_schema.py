@@ -11,6 +11,23 @@ base. Un deploy nuevo no tiene datos viejos que migrar, asi que cargar 19
 migraciones incrementales solo para llegar al mismo estado final no aporta
 nada y hace mas lento cualquier `alembic upgrade head` desde cero.
 
+Segunda consolidacion (antes del reset de la base): se pliegan aqui las 9
+migraciones incrementales que se acumularon sobre esta (a3d7af2c6426,
+a48efe292423, 0b0045a6474b, fab8d0a6fafd, 562e5a0a2776, 09b80e7086b5,
+7215c736b010, 0d919327ed97, a5bac829e8b8), asi que esta pasa a ser la UNICA
+migracion. El resultado es el mismo esquema final (verificado comparando
+columnas, constraints, indices, policies, triggers y seed contra la cadena),
+con estos cambios ya incorporados:
+
+- Policies de RLS con la guardia NULLIF(current_setting(...), '')::uuid desde
+  el inicio, y la de `devices` con la condicion de refresh token.
+- user_preferences.accepted_disclaimer_version y user_preferences.locale.
+- feedback.admin_note y el tipo de notificacion feedback_status_changed.
+- Sin credit_card/installment en debts.type, y la tabla installment_plans.
+- Categorias de sistema bilingues: `slug` estable y `name_en` (solo filas de
+  sistema), sin la columna `is_active` que nunca se uso, y el seed final de 17
+  categorias (ver app/core/system_categories.py, que es su gemelo).
+
 Un solo fix real respecto al estado que tenian las migraciones viejas:
 `user_preferences` nunca tuvo RLS (bug de omision -- la tabla si tiene
 `user_id` y datos por usuario, pero se quedo fuera de la lista de
@@ -23,11 +40,14 @@ Create Date: 2026-08-10 00:00:00.000000
 
 """
 
+import uuid
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+from passlib.context import CryptContext
 
 from alembic import op
+from app.core.config import settings
 
 # revision identifiers, used by Alembic.
 revision: str = "293528f67338"
@@ -36,6 +56,55 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 ADMIN_ROLE_NAME = "finanzas_admin"
+
+# Guardia de todas las policies de RLS (ver docstring): current_setting devuelve
+# '' (no NULL) en una sesion donde nunca se seteo, y ''::uuid revienta.
+_GUARD = "NULLIF(current_setting('app.current_user_id', true), '')::uuid"
+
+
+def _seed_admin_user() -> None:
+    """Crea el primer usuario admin (el que luego promueve a otros desde el panel)
+    si ADMIN_EMAIL y ADMIN_PASSWORD estan definidos. Idempotente: si ya existe un
+    usuario con ese email no lo toca ni le cambia la contrasena. No marca el aviso
+    de privacidad como aceptado: el admin lo acepta en su primer login, igual que
+    cualquiera. El hash usa el mismo esquema (bcrypt via passlib) que
+    app.core.security, que es lo que verifica el login."""
+    email = settings.ADMIN_EMAIL.strip()
+    password = settings.ADMIN_PASSWORD
+    if not email or not password:
+        print(f"[{revision}] ADMIN_EMAIL/ADMIN_PASSWORD no definidos -- no se crea usuario admin.")
+        return
+    if len(password) < 8:
+        if settings.APP_ENV == "production":
+            # Fail the deploy loudly instead of shipping an admin anyone can guess.
+            raise RuntimeError(
+                f"[{revision}] ADMIN_PASSWORD tiene menos de 8 caracteres y APP_ENV=production: "
+                "usa una contrasena real (el registro tambien exige 8)."
+            )
+        print(
+            f"[{revision}] AVISO: ADMIN_PASSWORD tiene menos de 8 caracteres (el registro exige "
+            "8). Cambiala desde Configuracion en cuanto entres."
+        )
+
+    conn = op.get_bind()
+    if conn.execute(sa.text("SELECT 1 FROM users WHERE email = :e"), {"e": email}).scalar():
+        print(f"[{revision}] ya existe un usuario {email} -- no se toca.")
+        return
+
+    user_id = str(uuid.uuid4())
+    password_hash = CryptContext(schemes=["bcrypt"], deprecated="auto").hash(password)
+    conn.execute(
+        sa.text(
+            "INSERT INTO users (id, email, name, password_hash, role, auth_provider) "
+            "VALUES (:id, :email, :name, :hash, 'admin', 'email')"
+        ),
+        {"id": user_id, "email": email, "name": settings.ADMIN_NAME or "Admin", "hash": password_hash},
+    )
+    # user_preferences has FORCE ROW LEVEL SECURITY: its INSERT only passes the
+    # policy with app.current_user_id set (transaction-local, like a real request).
+    conn.execute(sa.text("SELECT set_config('app.current_user_id', :id, true)"), {"id": user_id})
+    conn.execute(sa.text("INSERT INTO user_preferences (user_id) VALUES (:id)"), {"id": user_id})
+    print(f"[{revision}] usuario admin creado: {email}")
 
 
 def upgrade() -> None:
@@ -150,15 +219,18 @@ def upgrade() -> None:
             icon text,
             color text DEFAULT '#6366F1'::text NOT NULL,
             is_system boolean DEFAULT false NOT NULL,
-            is_active boolean DEFAULT true NOT NULL,
             sort_order integer DEFAULT 0 NOT NULL,
             created_at timestamp with time zone DEFAULT now() NOT NULL,
             updated_at timestamp with time zone DEFAULT now() NOT NULL,
             deleted_at timestamp with time zone,
             parent_id uuid,
-            CONSTRAINT categories_type_check CHECK ((type = ANY (ARRAY['income'::text, 'expense'::text]))),
+            slug text,
+            name_en text,
+            CONSTRAINT ck_categories_type CHECK ((type = ANY (ARRAY['income'::text, 'expense'::text]))),
             CONSTRAINT ck_categories_subcategory_user_scoped
-                CHECK (parent_id IS NULL OR user_id IS NOT NULL)
+                CHECK (parent_id IS NULL OR user_id IS NOT NULL),
+            CONSTRAINT ck_categories_i18n_system_only
+                CHECK (user_id IS NULL OR (slug IS NULL AND name_en IS NULL))
         )
         """
     )
@@ -278,7 +350,7 @@ def upgrade() -> None:
             CONSTRAINT ck_debts_direction CHECK ((direction = ANY (ARRAY['owed_by_me'::text, 'owed_to_me'::text]))),
             CONSTRAINT debts_payment_frequency_check CHECK (((payment_frequency IS NULL) OR (payment_frequency = ANY (ARRAY['weekly'::text, 'biweekly'::text, 'monthly'::text, 'irregular'::text])))),
             CONSTRAINT debts_status_check CHECK ((status = ANY (ARRAY['active'::text, 'completed'::text, 'negotiating'::text]))),
-            CONSTRAINT debts_type_check CHECK ((type = ANY (ARRAY['credit_card'::text, 'personal_loan'::text, 'payroll_loan'::text, 'installment'::text, 'informal'::text, 'civic'::text, 'loan_received'::text])))
+            CONSTRAINT debts_type_check CHECK ((type = ANY (ARRAY['personal_loan'::text, 'payroll_loan'::text, 'informal'::text, 'civic'::text, 'loan_received'::text])))
         )
         """
     )
@@ -331,6 +403,7 @@ def upgrade() -> None:
             status text DEFAULT 'new'::text NOT NULL,
             created_at timestamp with time zone DEFAULT now() NOT NULL,
             updated_at timestamp with time zone DEFAULT now() NOT NULL,
+            admin_note text,
             CONSTRAINT feedback_pkey PRIMARY KEY (id),
             CONSTRAINT ck_feedback_type CHECK ((type = ANY (ARRAY['bug'::text, 'feature'::text]))),
             CONSTRAINT ck_feedback_status
@@ -476,7 +549,7 @@ def upgrade() -> None:
             related_entity_type text,
             related_entity_id uuid,
             created_at timestamp with time zone DEFAULT now() NOT NULL,
-            CONSTRAINT notifications_type_check CHECK ((type = ANY (ARRAY['report_ready'::text, 'insight_generated'::text, 'insight_reviewed'::text, 'debt_alert'::text, 'budget_alert'::text, 'tdc_due'::text, 'pending_payment'::text, 'pending_payment_reminder'::text, 'subscription_alert'::text, 'loan_overdue'::text])))
+            CONSTRAINT notifications_type_check CHECK ((type = ANY (ARRAY['report_ready'::text, 'insight_generated'::text, 'insight_reviewed'::text, 'debt_alert'::text, 'budget_alert'::text, 'tdc_due'::text, 'pending_payment'::text, 'pending_payment_reminder'::text, 'subscription_alert'::text, 'loan_overdue'::text, 'feedback_status_changed'::text])))
         )
         """
     )
@@ -617,6 +690,9 @@ def upgrade() -> None:
             updated_at timestamp with time zone DEFAULT now() NOT NULL,
             debt_trouble_mode boolean DEFAULT false NOT NULL,
             last_seen_changelog_version text,
+            accepted_disclaimer_version character varying,
+            locale character varying DEFAULT 'es'::character varying NOT NULL,
+            CONSTRAINT ck_user_preferences_locale CHECK (locale IN ('es', 'en')),
             CONSTRAINT ck_user_preferences_pay_cycle CHECK (((pay_cycle)::text = ANY ((ARRAY['weekly'::character varying, 'biweekly'::character varying, 'monthly'::character varying])::text[]))),
             CONSTRAINT ck_user_preferences_theme CHECK (((theme)::text = ANY ((ARRAY['dark'::character varying, 'light'::character varying])::text[])))
         )
@@ -838,13 +914,19 @@ def upgrade() -> None:
 
     op.execute(
         """
-        CREATE INDEX idx_categories_system ON categories USING btree (type, sort_order) WHERE ((user_id IS NULL) AND (is_active = true))
+        CREATE INDEX idx_categories_system ON categories USING btree (type, sort_order) WHERE (user_id IS NULL)
         """
     )
 
     op.execute(
         """
-        CREATE INDEX idx_categories_user_type ON categories USING btree (user_id, type) WHERE ((is_active = true) AND (deleted_at IS NULL))
+        CREATE UNIQUE INDEX uq_categories_system_slug ON categories USING btree (slug) WHERE (slug IS NOT NULL)
+        """
+    )
+
+    op.execute(
+        """
+        CREATE INDEX idx_categories_user_type ON categories USING btree (user_id, type) WHERE (deleted_at IS NULL)
         """
     )
 
@@ -1403,67 +1485,71 @@ def upgrade() -> None:
 
     op.execute(
         """
-        CREATE POLICY rls_accounts ON accounts USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_accounts ON accounts USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_budget_limits ON budget_limits USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_budget_limits ON budget_limits USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_budget_periods ON budget_periods USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_budget_periods ON budget_periods USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_categories ON categories USING (((user_id IS NULL) OR (user_id = (current_setting('app.current_user_id'::text, true))::uuid)))
+        CREATE POLICY rls_categories ON categories USING (((user_id IS NULL) OR (user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid)))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_chat_messages ON chat_messages USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_chat_messages ON chat_messages USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_debt_payments ON debt_payments USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_debt_payments ON debt_payments USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_debts ON debts USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_debts ON debts USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_devices ON devices USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_devices ON devices
+            USING (
+                user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
+                OR refresh_token = current_setting('app.lookup_refresh_token', true)
+            )
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_insight_reviews ON insight_reviews USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_insight_reviews ON insight_reviews USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_insights ON insights USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_insights ON insights USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_journal_entries ON journal_entries USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_journal_entries ON journal_entries USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
@@ -1471,37 +1557,37 @@ def upgrade() -> None:
         """
         CREATE POLICY rls_journal_lines ON journal_lines USING ((EXISTS ( SELECT 1
            FROM journal_entries je
-          WHERE ((je.id = journal_lines.entry_id) AND (je.user_id = (current_setting('app.current_user_id'::text, true))::uuid)))))
+          WHERE ((je.id = journal_lines.entry_id) AND (je.user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid)))))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_notifications ON notifications USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_notifications ON notifications USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_recurring_items ON recurring_items USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_recurring_items ON recurring_items USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_report_insights ON report_insights USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_report_insights ON report_insights USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_reports ON reports USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_reports ON reports USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
     op.execute(
         """
-        CREATE POLICY rls_unplanned_debts ON unplanned_debts USING ((user_id = (current_setting('app.current_user_id'::text, true))::uuid))
+        CREATE POLICY rls_unplanned_debts ON unplanned_debts USING ((user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid))
         """
     )
 
@@ -1526,7 +1612,7 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE POLICY rls_user_preferences ON user_preferences
-            USING (user_id = current_setting('app.current_user_id', true)::uuid)
+            USING (user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid)
         """
     )
 
@@ -1554,7 +1640,7 @@ def upgrade() -> None:
     op.execute(
         """
         CREATE POLICY rls_category_hides ON category_hides
-            USING (user_id = current_setting('app.current_user_id', true)::uuid)
+            USING (user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid)
         """
     )
 
@@ -1570,17 +1656,52 @@ def upgrade() -> None:
         """
         CREATE POLICY rls_feedback ON feedback
             USING (
-                user_id = current_setting('app.current_user_id', true)::uuid
+                user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
                 OR EXISTS (
                     SELECT 1 FROM users
-                    WHERE users.id = current_setting('app.current_user_id', true)::uuid
+                    WHERE users.id = NULLIF(current_setting('app.current_user_id', true), '')::uuid
                         AND users.role = 'admin'
                 )
             )
         """
     )
 
-    # Seed de categorias del sistema: solo de primer nivel (parent_id NULL),
+    # -- installment_plans: metadata 1:1 de la transaccion real de una compra a
+    # meses sin intereses (MSI) con tarjeta. `monthly_amount` y en que cuota
+    # va se calculan al vuelo desde esa transaccion, nunca se guardan.
+    op.execute(
+        """
+        CREATE TABLE installment_plans (
+            id uuid DEFAULT gen_random_uuid() NOT NULL,
+            user_id uuid NOT NULL,
+            journal_entry_id uuid NOT NULL,
+            total_installments integer NOT NULL,
+            created_at timestamp with time zone DEFAULT now() NOT NULL,
+            updated_at timestamp with time zone DEFAULT now() NOT NULL,
+            CONSTRAINT installment_plans_pkey PRIMARY KEY (id),
+            CONSTRAINT installment_plans_journal_entry_id_key UNIQUE (journal_entry_id),
+            CONSTRAINT installment_plans_journal_entry_id_fkey FOREIGN KEY (journal_entry_id)
+                REFERENCES journal_entries(id) ON DELETE CASCADE,
+            CONSTRAINT installment_plans_user_id_fkey FOREIGN KEY (user_id)
+                REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    op.execute("ALTER TABLE ONLY installment_plans FORCE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE installment_plans ENABLE ROW LEVEL SECURITY")
+    op.execute("CREATE INDEX idx_installment_plans_user ON installment_plans USING btree (user_id)")
+    op.execute(
+        "CREATE TRIGGER trg_updated_at_installment_plans BEFORE UPDATE ON installment_plans "
+        "FOR EACH ROW EXECUTE FUNCTION set_updated_at()"
+    )
+    op.execute(
+        f"CREATE POLICY rls_installment_plans ON installment_plans USING (user_id = {_GUARD})"
+    )
+
+    # Seed de categorias del sistema (17, bilingues: `name` es el espaniol canonico,
+    # `name_en` el ingles, `slug` el identificador estable -- gemelo de
+    # app/core/system_categories.py, un test verifica que coincidan): solo de
+    # primer nivel (parent_id NULL),
     # a proposito -- no se siembran subcategorias por defecto. Cada usuario
     # arma su propio arbol de subcategorias debajo de estas (ver
     # ck_categories_subcategory_user_scoped mas arriba: una subcategoria
@@ -1589,28 +1710,35 @@ def upgrade() -> None:
     # solo en category_service.create_category).
     op.execute(
         """
-        INSERT INTO categories (user_id, name, type, icon, color, is_system, sort_order) VALUES
-            (NULL, 'Comida y Bebidas',        'expense', 'utensils',         '#f5a623', TRUE, 10),
-            (NULL, 'Transporte y Movilidad',  'expense', 'car',              '#e85d9c', TRUE, 20),
-            (NULL, 'Vivienda y Hogar',        'expense', 'home',             '#4e8ef0', TRUE, 30),
-            (NULL, 'Salud y Bienestar',       'expense', 'heart',            '#8b7cf6', TRUE, 40),
-            (NULL, 'Ropa y Cuidado Personal', 'expense', 'shirt',            '#00c9a7', TRUE, 50),
-            (NULL, 'Ocio y Entretenimiento',  'expense', 'gamepad-2',        '#f04e4e', TRUE, 60),
-            (NULL, 'Educacion y Desarrollo',  'expense', 'graduation-cap',   '#f5a623', TRUE, 70),
-            (NULL, 'Mascotas',                'expense', 'paw-print',        '#e85d9c', TRUE, 80),
-            (NULL, 'Otro Gasto',              'expense', 'more-horizontal',  '#6f6f76', TRUE, 999),
-            (NULL, 'Empleo principal',        'income',  'briefcase',        '#00c9a7', TRUE, 10),
-            (NULL, 'Freelance',               'income',  'laptop',           '#4e8ef0', TRUE, 20),
-            (NULL, 'Otro',                    'income',  'plus-circle',      '#6f6f76', TRUE, 999)
+        INSERT INTO categories (user_id, name, name_en, slug, type, icon, color, is_system, sort_order) VALUES
+            (NULL, 'Comida y Bebidas', 'Food & Drinks', 'food_drinks', 'expense', 'utensils', '#f5a623', TRUE, 10),
+            (NULL, 'Despensa y Mandado', 'Groceries', 'groceries', 'expense', 'shopping-cart', '#00c9a7', TRUE, 15),
+            (NULL, 'Transporte y Movilidad', 'Transport & Mobility', 'transport_mobility', 'expense', 'car', '#e85d9c', TRUE, 20),
+            (NULL, 'Vivienda y Hogar', 'Housing & Home', 'housing_home', 'expense', 'home', '#4e8ef0', TRUE, 30),
+            (NULL, 'Salud y Bienestar', 'Health & Wellness', 'health_wellness', 'expense', 'heart', '#8b7cf6', TRUE, 40),
+            (NULL, 'Ropa y Cuidado Personal', 'Clothing & Personal Care', 'clothing_personal_care', 'expense', 'shirt', '#00c9a7', TRUE, 50),
+            (NULL, 'Ocio y Entretenimiento', 'Leisure & Entertainment', 'leisure_entertainment', 'expense', 'gamepad-2', '#f04e4e', TRUE, 60),
+            (NULL, 'Suscripciones', 'Subscriptions', 'subscriptions', 'expense', 'tv', '#8b7cf6', TRUE, 65),
+            (NULL, 'Educación y Desarrollo', 'Education & Development', 'education_development', 'expense', 'graduation-cap', '#f5a623', TRUE, 70),
+            (NULL, 'Mascotas', 'Pets', 'pets', 'expense', 'paw-print', '#e85d9c', TRUE, 80),
+            (NULL, 'Regalos y Ocasiones Especiales', 'Gifts & Special Occasions', 'gifts_occasions', 'expense', 'gift', '#e85d9c', TRUE, 85),
+            (NULL, 'Otro Gasto', 'Other Expense', 'other_expense', 'expense', 'more-horizontal', '#6f6f76', TRUE, 999),
+            (NULL, 'Empleo principal', 'Main Job', 'main_job', 'income', 'briefcase', '#00c9a7', TRUE, 10),
+            (NULL, 'Freelance', 'Freelance', 'freelance', 'income', 'laptop', '#4e8ef0', TRUE, 20),
+            (NULL, 'Inversiones y Rendimientos', 'Investments & Returns', 'investments_returns', 'income', 'trending-up', '#4e8ef0', TRUE, 30),
+            (NULL, 'Reembolsos y Devoluciones', 'Refunds & Reimbursements', 'refunds_reimbursements', 'income', 'receipt', '#f5a623', TRUE, 40),
+            (NULL, 'Otro Ingreso', 'Other Income', 'other_income', 'income', 'plus-circle', '#6f6f76', TRUE, 999)
         """
     )
 
-    # -- rol de reporting de Admin (ver README "Setup en una maquina nueva",
-    # paso 3): CREATE ROLE es un paso manual con superuser porque
-    # finanzas_user no tiene CREATEROLE a proposito. Si el rol todavia no
-    # existe (deploy nuevo, o dev que no corrio ese paso), se omiten los
-    # GRANTs sin fallar el deploy -- hay que crear el rol y volver a correr
-    # `alembic upgrade head`.
+    _seed_admin_user()
+
+    # -- rol de reporting de Admin (ver docs/SETUP.md, "Admin reporting role"):
+    # CREATE ROLE es un paso manual con superuser porque finanzas_user no tiene
+    # CREATEROLE a proposito. El rol se crea ANTES de la primera migracion: si
+    # todavia no existe, se omiten los GRANTs sin fallar el deploy, pero como
+    # esta es la unica migracion, volver a correr `alembic upgrade head` ya no
+    # los aplica (la base ya esta en head) -- en ese caso se dan a mano.
     conn = op.get_bind()
     role_exists = conn.execute(
         sa.text("SELECT 1 FROM pg_roles WHERE rolname = :name"), {"name": ADMIN_ROLE_NAME}
@@ -1618,8 +1746,8 @@ def upgrade() -> None:
     if not role_exists:
         print(
             f"[{revision}] el rol {ADMIN_ROLE_NAME} no existe todavia -- se omiten los "
-            "GRANTs. Crearlo a mano con un superuser (ver README) y volver a correr "
-            "`alembic upgrade head`."
+            "GRANTs. Hay que crearlo y darle los permisos a mano (ver docs/SETUP.md, "
+            "'Admin reporting role'): volver a correr `alembic upgrade head` ya no los aplica."
         )
         return
 
@@ -1633,6 +1761,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute("DROP TABLE IF EXISTS installment_plans CASCADE")
     op.execute("DROP TABLE IF EXISTS feedback CASCADE")
     op.execute("DROP TABLE IF EXISTS category_hides CASCADE")
     op.execute("DROP TABLE IF EXISTS journal_lines CASCADE")

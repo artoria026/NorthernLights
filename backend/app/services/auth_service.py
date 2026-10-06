@@ -200,8 +200,8 @@ async def refresh(session: AsyncSession, refresh_token: str) -> TokenPair:
 
     Bug #4 of the RLS family: this is the ONLY Device lookup that can't know
     the user_id ahead of time (it's literally the endpoint used when the
-    access token has already expired) -- rls_devices (see migration
-    a3d7af2c6426) has a separate clause for this, enabled by setting
+    access token has already expired) -- rls_devices (see the
+    initial migration 293528f67338) has a separate clause for this, enabled by setting
     app.lookup_refresh_token to the hash being looked up before the query.
     logout()/logout_all() don't need this: they already know the user_id
     from a valid access token before touching `devices`."""

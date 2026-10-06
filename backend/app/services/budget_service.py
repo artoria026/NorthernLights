@@ -67,7 +67,6 @@ async def get_limit_suggestions(session: AsyncSession, user_id: UUID) -> list[di
         .where(
             or_(Category.user_id.is_(None), Category.user_id == user_id),
             Category.type == "expense",
-            Category.is_active.is_(True),
             Category.parent_id.is_(None),
         )
         .order_by(Category.sort_order)

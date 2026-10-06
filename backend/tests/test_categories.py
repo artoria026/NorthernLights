@@ -4,6 +4,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.exc import IntegrityError
 
+from app.core.system_categories import SYSTEM_CATEGORIES
 from app.models.category import Category
 
 pytestmark = pytest.mark.asyncio
@@ -29,7 +30,7 @@ async def test_list_categories_includes_system_seed(client: AsyncClient):
     assert response.status_code == 200
     categories = response.json()["data"]
     assert any(c["is_system"] for c in categories)
-    assert len(categories) == 9
+    assert len(categories) == len([c for c in SYSTEM_CATEGORIES if c.type == "expense"])
 
 
 async def test_create_own_category(client: AsyncClient):
@@ -346,8 +347,8 @@ async def test_export_categories_has_system_state_and_own_tree(client: AsyncClie
     assert body["format"] == "northernlights.categories"
     by_name = {c["name"]: c for c in body["categories"]}
 
-    # 12 system + 4 own
-    assert len(body["categories"]) == 16
+    # every system category + 4 own
+    assert len(body["categories"]) == len(SYSTEM_CATEGORIES) + 4
     assert by_name["Mascotas"]["is_system"] and by_name["Mascotas"]["hidden"]
     assert not by_name["Comida y Bebidas"]["hidden"]
     assert by_name["Gimnasio"]["icon"] == "dumbbell" and by_name["Gimnasio"]["color"] == "#112233"
@@ -435,8 +436,6 @@ async def _set_locale(client: AsyncClient, headers: dict, locale: str) -> None:
 
 
 async def test_system_categories_in_db_match_the_single_source_of_truth(client: AsyncClient):
-    from app.core.system_categories import SYSTEM_CATEGORIES
-
     headers = await _auth(client)
     listed = (await client.get("/api/v1/categories", headers=headers)).json()["data"]
     by_slug = {c["slug"]: c for c in listed}
@@ -455,11 +454,8 @@ async def test_category_names_follow_the_user_locale(client: AsyncClient):
 
     await _set_locale(client, headers, "en")
     english = (await client.get("/api/v1/categories?type=expense", headers=headers)).json()["data"]
-    assert [c["name"] for c in english] == [
-        "Food & Drinks", "Transport & Mobility", "Housing & Home", "Health & Wellness",
-        "Clothing & Personal Care", "Leisure & Entertainment", "Education & Development",
-        "Pets", "Other Expense",
-    ]
+    expense = sorted((c for c in SYSTEM_CATEGORIES if c.type == "expense"), key=lambda c: c.sort_order)
+    assert [c["name"] for c in english] == [c.name_en for c in expense]
     # same rows, same slugs -- only the displayed name changes
     assert [c["slug"] for c in english] == [c["slug"] for c in spanish]
 
