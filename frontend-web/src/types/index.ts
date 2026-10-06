@@ -86,7 +86,6 @@ export interface Category {
   icon: string | null
   color: string
   is_system: boolean
-  is_active: boolean
   sort_order: number
   parent_id: string | null
   created_at: string

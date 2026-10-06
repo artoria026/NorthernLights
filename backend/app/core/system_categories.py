@@ -24,16 +24,21 @@ class SystemCategory(NamedTuple):
 
 SYSTEM_CATEGORIES: tuple[SystemCategory, ...] = (
     SystemCategory("food_drinks", "expense", "Comida y Bebidas", "Food & Drinks", "utensils", "#f5a623", 10),
+    SystemCategory("groceries", "expense", "Despensa y Mandado", "Groceries", "shopping-cart", "#00c9a7", 15),
     SystemCategory("transport_mobility", "expense", "Transporte y Movilidad", "Transport & Mobility", "car", "#e85d9c", 20),
     SystemCategory("housing_home", "expense", "Vivienda y Hogar", "Housing & Home", "home", "#4e8ef0", 30),
     SystemCategory("health_wellness", "expense", "Salud y Bienestar", "Health & Wellness", "heart", "#8b7cf6", 40),
     SystemCategory("clothing_personal_care", "expense", "Ropa y Cuidado Personal", "Clothing & Personal Care", "shirt", "#00c9a7", 50),
     SystemCategory("leisure_entertainment", "expense", "Ocio y Entretenimiento", "Leisure & Entertainment", "gamepad-2", "#f04e4e", 60),
+    SystemCategory("subscriptions", "expense", "Suscripciones", "Subscriptions", "tv", "#8b7cf6", 65),
     SystemCategory("education_development", "expense", "Educación y Desarrollo", "Education & Development", "graduation-cap", "#f5a623", 70),
     SystemCategory("pets", "expense", "Mascotas", "Pets", "paw-print", "#e85d9c", 80),
+    SystemCategory("gifts_occasions", "expense", "Regalos y Ocasiones Especiales", "Gifts & Special Occasions", "gift", "#e85d9c", 85),
     SystemCategory("other_expense", "expense", "Otro Gasto", "Other Expense", "more-horizontal", "#6f6f76", 999),
     SystemCategory("main_job", "income", "Empleo principal", "Main Job", "briefcase", "#00c9a7", 10),
     SystemCategory("freelance", "income", "Freelance", "Freelance", "laptop", "#4e8ef0", 20),
+    SystemCategory("investments_returns", "income", "Inversiones y Rendimientos", "Investments & Returns", "trending-up", "#4e8ef0", 30),
+    SystemCategory("refunds_reimbursements", "income", "Reembolsos y Devoluciones", "Refunds & Reimbursements", "receipt", "#f5a623", 40),
     SystemCategory("other_income", "income", "Otro Ingreso", "Other Income", "plus-circle", "#6f6f76", 999),
 )
 

@@ -29,13 +29,13 @@ class Category(Base, TimestampMixin, SoftDeleteMixin):
             "idx_categories_user_type",
             "user_id",
             "type",
-            postgresql_where="is_active = TRUE AND deleted_at IS NULL",
+            postgresql_where="deleted_at IS NULL",
         ),
         Index(
             "idx_categories_system",
             "type",
             "sort_order",
-            postgresql_where="user_id IS NULL AND is_active = TRUE",
+            postgresql_where="user_id IS NULL",
         ),
         # Slug/English name only exist on system categories (user_id NULL).
         CheckConstraint(
@@ -66,7 +66,6 @@ class Category(Base, TimestampMixin, SoftDeleteMixin):
     color: Mapped[str] = mapped_column(String, default="#6366F1")
 
     is_system: Mapped[bool] = mapped_column(default=False)
-    is_active: Mapped[bool] = mapped_column(default=True)
     sort_order: Mapped[int] = mapped_column(default=0)
     parent_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("categories.id", ondelete="CASCADE"), nullable=True

@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     # AI_PROVIDER/etc: this isn't infra config, it's versioned content.
     DISCLAIMER_VERSION: str = "2026-08-15"
 
+    # First admin user, created by the initial Alembic migration when both
+    # ADMIN_EMAIL and ADMIN_PASSWORD are set (idempotent: never touches an
+    # existing user). Only read at migration time -- the running app doesn't use them.
+    ADMIN_EMAIL: str = ""
+    ADMIN_PASSWORD: str = ""
+    ADMIN_NAME: str = "Admin"
+
     # App
     APP_ENV: str = "development"
     APP_HOST: str = "0.0.0.0"

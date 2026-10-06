@@ -29,7 +29,7 @@ the correct dependency. POST /auth/refresh is a separate case: it can't
 use get_rls_db (there's no valid access token, it's the endpoint for when it already
 expired) -- its Device is looked up by refresh_token before knowing the user_id,
 so the `devices` policy needed an extra clause for that
-specific lookup (see migration a3d7af2c6426).
+specific lookup (see migration the initial migration 293528f67338).
 
 The rest of the suite runs against `finanzas_user`, which in some environments
 (e.g. a Postgres bootstrap inside a Docker container) can end up
@@ -212,7 +212,7 @@ async def test_refresh_works_under_real_row_level_security(low_priv_session_fact
     user_id, and the original `devices` policy (only "is my own device")
     wouldn't let that row be seen under real RLS -- /auth/refresh returned 401 with
     ANY token, valid or not. Fix: rls_devices has an extra clause
-    (see migration a3d7af2c6426) that allows the lookup by the exact hash
+    (see migration the initial migration 293528f67338) that allows the lookup by the exact hash
     being searched for."""
     email = f"{uuid.uuid4()}@example.com"
     async with low_priv_session_factory() as session:

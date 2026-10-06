@@ -9,6 +9,11 @@ os.environ.setdefault(
 )
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production-use-only-in-ci-suites")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test")
+# The initial migration seeds an admin when these are set; the tests' database
+# must start with no users, whatever the developer's .env says (env vars win
+# over the .env file).
+os.environ["ADMIN_EMAIL"] = ""
+os.environ["ADMIN_PASSWORD"] = ""
 
 # Hard lock, not just the fallback above: `setdefault` doesn't protect anything if
 # DATABASE_URL is already set from outside (e.g. a `docker compose run`

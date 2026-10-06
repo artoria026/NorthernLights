@@ -30,7 +30,6 @@ class CategoryOut(BaseModel):
     icon: str | None
     color: str
     is_system: bool
-    is_active: bool
     sort_order: int
     parent_id: UUID | None
     created_at: datetime
@@ -63,7 +62,6 @@ class CategoryExportItem(BaseModel):
     color: str
     sort_order: int
     is_system: bool
-    is_active: bool
     hidden: bool
     parent_name: str | None
     parent_slug: str | None
@@ -90,7 +88,6 @@ class CategoryImportItem(BaseModel):
     color: str = "#6366F1"
     sort_order: int = 0
     is_system: bool = False
-    is_active: bool = True
     hidden: bool = False
     parent_name: str | None = None
     parent_slug: str | None = None
