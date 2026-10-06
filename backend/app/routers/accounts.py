@@ -1,13 +1,16 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_rls_db
 from app.core.security import CurrentUser, get_current_user
 from app.schemas.account import (
     AccountCreate,
+    AccountExport,
+    AccountImportRequest,
+    AccountImportResult,
     AccountOut,
     AccountReconcileRequest,
     AccountReconcileResult,
@@ -47,6 +50,46 @@ async def summary(
 ) -> SuccessResponse:
     data = await account_service.get_summary(session, current_user.id)
     return SuccessResponse(data=AccountSummary(**data))
+
+
+def _json_download(export: AccountExport, filename: str) -> Response:
+    return Response(
+        content=export.model_dump_json(indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/export")
+async def export_accounts(
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> Response:
+    export = await account_service.export_accounts(session, current_user.id)
+    return _json_download(export, f"cuentas_{date.today().isoformat()}.json")
+
+
+@router.post("/import", status_code=status.HTTP_201_CREATED)
+async def import_accounts(
+    data: AccountImportRequest,
+    use_current_balance: bool = True,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    created, skipped = await account_service.import_accounts(
+        session, current_user.id, data, use_current_balance
+    )
+    return SuccessResponse(data=AccountImportResult(created=created, skipped=skipped))
+
+
+@router.get("/{account_id}/export")
+async def export_account(
+    account_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> Response:
+    export = await account_service.export_accounts(session, current_user.id, account_id)
+    return _json_download(export, f"cuenta_{date.today().isoformat()}.json")
 
 
 @router.get("/{account_id}")

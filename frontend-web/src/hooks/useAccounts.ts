@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { downloadBlob } from '@/lib/download'
 import { api } from '@/services/api'
 import type { Account, AccountReconcileResult, AccountSummary, ApiSuccess, TdcCycle } from '@/types'
 
@@ -144,6 +145,45 @@ export function useDeleteAccount() {
     onSuccess: (id) => {
       queryClient.setQueryData<Account[]>(['accounts'], (prev) => (prev ?? []).filter((a) => a.id !== id))
       queryClient.invalidateQueries({ queryKey: ['accounts', 'summary'] })
+    },
+  })
+}
+
+/** Downloads the accounts' configuration (logo included, transactions excluded) as
+ * a JSON file: every account when `id` is omitted, just that one otherwise. */
+export function useExportAccounts() {
+  return useMutation({
+    mutationFn: async (id?: string) => {
+      const response = await api.get(id ? `/accounts/${id}/export` : '/accounts/export', {
+        responseType: 'blob',
+      })
+      downloadBlob(
+        response.data as Blob,
+        id ? 'cuenta.json' : 'cuentas.json',
+        response.headers['content-disposition'],
+      )
+    },
+  })
+}
+
+export interface ImportAccountsResult {
+  created: number
+  skipped: string[]
+}
+
+/** Recreates accounts from a file produced by useExportAccounts. The file is parsed
+ * here only to hand the backend a JSON body -- all real validation happens there. */
+export function useImportAccounts() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const body: unknown = JSON.parse(await file.text())
+      const { data } = await api.post<ApiSuccess<ImportAccountsResult>>('/accounts/import', body)
+      return data.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['engine'] })
     },
   })
 }

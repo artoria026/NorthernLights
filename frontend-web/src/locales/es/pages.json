@@ -231,7 +231,8 @@
     },
     "actions": {
       "edit": "Editar",
-      "delete": "Eliminar"
+      "delete": "Eliminar",
+      "export": "Exportar"
     },
     "newAccount": {
       "dialogTitle": "Nueva cuenta",
@@ -377,6 +378,15 @@
         "body": "Disponible en cuentas bancarias/de ahorro. Escribes lo que de verdad tienes (contado o del estado de cuenta) y la app registra una transacción de ajuste por la diferencia — a diferencia de editar el \"Saldo inicial\", esto sí queda como un movimiento visible en tu historial."
       },
       "tip": "Prestarle dinero a alguien o que te presten no crea una cuenta aquí — vive en Deudas, separado de tus cuentas reales, sin importar cuántas personas involucre."
+    },
+    "import": {
+      "button": "Importar",
+      "importing": "Importando...",
+      "done_one": "1 cuenta importada.",
+      "done_other": "{{count}} cuentas importadas.",
+      "doneWithSkipped_one": "1 cuenta importada, {{skipped}} omitidas (ya existían).",
+      "doneWithSkipped_other": "{{count}} cuentas importadas, {{skipped}} omitidas (ya existían).",
+      "invalidFile": "El archivo no es un JSON válido."
     }
   },
   "transactions": {
@@ -609,6 +619,18 @@
         "body": "Para empezar de cero sin perder tu cuenta: dos botones rápidos (\"todo excepto cuentas\" o \"absolutamente todo\") y una lista para borrar solo categorías específicas — por ejemplo, solo transacciones, o solo el historial del Asesor IA. Borrar cuentas bancarias también borra tus transacciones y recurrentes, porque dependen de que la cuenta exista."
       },
       "tip": "Eliminar tu cuenta es permanente: cierra todas tus sesiones y desactiva el acceso. \"Borrar datos\" es distinto — tu login se queda intacto, solo se borra lo que elijas."
+    },
+    "exportAccounts": {
+      "title": "Exportar e importar cuentas",
+      "description": "Descarga todas tus cuentas en un archivo JSON con su configuración completa (tipo, corte y pago de tarjetas, límite, tasa, color, logo, etc.), sin transacciones. Puedes importar ese mismo archivo después; cada cuenta empieza con el saldo que tenía al exportar y las que ya existen se omiten.",
+      "button": "Descargar cuentas (JSON)",
+      "exporting": "Exportando..."
+    },
+    "exportCategories": {
+      "title": "Exportar e importar categorías",
+      "description": "Descarga todas tus categorías (ingresos y gastos) en un archivo JSON: las del sistema con si las ocultaste o no, y las tuyas con su ícono, color, orden y subcategorías. Al importarlo se crean las que aún no tienes (las que ya existen se omiten) y se ocultan las del sistema que estaban ocultas. Las categorías del sistema no se pueden renombrar.",
+      "button": "Descargar categorías (JSON)",
+      "exporting": "Exportando..."
     }
   },
   "debts": {
@@ -889,6 +911,19 @@
       "transactionsHeading": "Qué pasa con las transacciones",
       "transactionsBody": "Al desactivar una categoría de sistema o eliminar una propia (ícono de basura), las transacciones que la tenían asignada se quedan sin categoría (no se borran ni se bloquea la acción) — podés volver a categorizarlas después si hace falta.",
       "tip": "Nunca eliges una cuenta contable al usar una categoría en una transacción — el sistema la resuelve sola por dentro. Aquí solo administras el catálogo de nombres."
+    },
+    "export": {
+      "button": "Exportar"
+    },
+    "import": {
+      "button": "Importar",
+      "importing": "Importando...",
+      "done": "Importación lista: {{created}} creadas, {{hidden}} de sistema ocultadas.",
+      "skipped_one": "1 ya existía.",
+      "skipped_other": "{{count}} ya existían.",
+      "unmatched_one": "1 no se pudo asociar: {{list}}.",
+      "unmatched_other": "{{count}} no se pudieron asociar: {{list}}.",
+      "invalidFile": "El archivo no es un JSON válido."
     }
   },
   "recurring": {

@@ -1,4 +1,4 @@
-import { Building2, Check, CreditCard, Landmark, Layers, Pencil, PiggyBank, Plus, Scale, Trash2, Wallet } from 'lucide-react'
+import { Building2, Check, CreditCard, Download, Landmark, Layers, Pencil, PiggyBank, Plus, Scale, Trash2, Wallet } from 'lucide-react'
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { ImportAccountsButton } from '@/components/nl/ImportAccountsButton'
 import { PayCreditCardForm } from '@/components/nl/PayCreditCardForm'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
 import { categoryIcon } from '@/lib/categoryIcons'
@@ -17,6 +18,7 @@ import {
   type UpdateAccountInput,
   useAccountSummary,
   useAccounts,
+  useExportAccounts,
   useCreateAccount,
   useDeleteAccount,
   useReconcileAccount,
@@ -1025,6 +1027,7 @@ export function Accounts() {
   const pushToast = useUiStore((s) => s.pushToast)
   const confirm = useConfirmStore((s) => s.ask)
   const deleteAccount = useDeleteAccount()
+  const exportAccounts = useExportAccounts()
   const deleteTransaction = useDeleteTransaction()
   const openDetailed = useTransactionModalStore((s) => s.openDetailed)
 
@@ -1138,41 +1141,44 @@ export function Accounts() {
             ))}
           </div>
 
-          <div className="flex items-center justify-between mt-auto pt-3.5 border-t border-border">
+          <div className="flex flex-col gap-3 mt-auto pt-3.5 border-t border-border">
             <div>
               <div className="text-[10px] tracking-wider text-muted-foreground">{t('accounts.netWorth')}</div>
               <div className="text-xl font-light" style={{ color: amountColor(summary?.net_worth ?? '0') }}>
                 {formatMoney(summary?.net_worth ?? '0')}
               </div>
             </div>
-            <Dialog
-              open={open}
-              onOpenChange={(next, eventDetails) => {
-                // A click outside the modal (e.g. when using the native color
-                // picker) shouldn't close it -- only Escape or the explicit buttons.
-                if (!next && eventDetails.reason === 'outside-press') return
-                setOpen(next)
-              }}
-            >
-              <DialogTrigger
-                render={
-                  <button
-                    type="button"
-                    data-tour="accounts:new-button"
-                    className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground"
-                  >
-                    <Plus size={13} />
-                    {t('accounts.newAccount.button')}
-                  </button>
-                }
-              />
-              <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{t('accounts.newAccount.dialogTitle')}</DialogTitle>
-                </DialogHeader>
-                <NewAccountForm onDone={() => setOpen(false)} />
-              </DialogContent>
-            </Dialog>
+            <div className="grid grid-cols-2 gap-2">
+              <Dialog
+                open={open}
+                onOpenChange={(next, eventDetails) => {
+                  // A click outside the modal (e.g. when using the native color
+                  // picker) shouldn't close it -- only Escape or the explicit buttons.
+                  if (!next && eventDetails.reason === 'outside-press') return
+                  setOpen(next)
+                }}
+              >
+                <DialogTrigger
+                  render={
+                    <button
+                      type="button"
+                      data-tour="accounts:new-button"
+                      className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded px-3 py-2 text-[12px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-50"
+                    >
+                      <Plus size={13} />
+                      {t('accounts.newAccount.button')}
+                    </button>
+                  }
+                />
+                <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{t('accounts.newAccount.dialogTitle')}</DialogTitle>
+                  </DialogHeader>
+                  <NewAccountForm onDone={() => setOpen(false)} />
+                </DialogContent>
+              </Dialog>
+              <ImportAccountsButton className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded px-3 py-2 text-[12px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-50" />
+            </div>
           </div>
         </div>
 
@@ -1212,6 +1218,19 @@ export function Accounts() {
                       <EditAccountForm account={selectedAccount} onDone={() => setEditingAccount(null)} />
                     </DialogContent>
                   </Dialog>
+                  <button
+                    type="button"
+                    disabled={exportAccounts.isPending}
+                    onClick={() =>
+                      exportAccounts.mutate(selectedAccount.id, {
+                        onError: (err) => pushToast(apiErrorMessage(err), 'error'),
+                      })
+                    }
+                    className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  >
+                    <Download size={13} />
+                    {t('accounts.actions.export')}
+                  </button>
                   {selectedAccount.type === 'asset' &&
                     RECONCILABLE_SUBTYPES.has(selectedAccount.subtype ?? '') && (
                       <Dialog

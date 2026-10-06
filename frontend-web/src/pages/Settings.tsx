@@ -1,4 +1,4 @@
-import { Check, FileText, LogOut, Settings as SettingsIcon, ShieldCheck, Trash2, X } from 'lucide-react'
+import { Check, Download, FileText, LogOut, Settings as SettingsIcon, ShieldCheck, Trash2, X } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -7,6 +7,8 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DisclaimerContent } from '@/components/DisclaimerContent'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { ImportAccountsButton } from '@/components/nl/ImportAccountsButton'
+import { ImportCategoriesButton } from '@/components/nl/ImportCategoriesButton'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { ToggleSwitch, ViewHeader } from '@/components/nl/primitives'
 import {
@@ -18,7 +20,10 @@ import {
   useUpdateProfile,
   useUpdateSettings,
 } from '@/hooks/useAuth'
+import { useExportAccounts } from '@/hooks/useAccounts'
+import { useExportCategories } from '@/hooks/useCategories'
 import { type DataCategory, useEraseData } from '@/hooks/useData'
+import { useUiStore } from '@/stores/uiStore'
 import { apiErrorMessage } from '@/services/api'
 import { fileToNormalizedDataUrl, validateImageFile } from '@/lib/image'
 import { selectClass } from '@/lib/utils'
@@ -463,6 +468,77 @@ function categoryLabel(t: (key: string) => string, category: DataCategory): stri
   return t(`settings.dataManagement.categories.${category}`)
 }
 
+function ExportImportCard({
+  title,
+  description,
+  exportLabel,
+  exportingLabel,
+  exportMutation,
+  importButton,
+  dataTour,
+}: {
+  title: string
+  description: string
+  exportLabel: string
+  exportingLabel: string
+  exportMutation: { isPending: boolean; mutate: (v: undefined, o: { onError: (e: unknown) => void }) => void }
+  importButton: React.ReactNode
+  dataTour: string
+}) {
+  const pushToast = useUiStore((s) => s.pushToast)
+
+  return (
+    <SettingsCard title={title} dataTour={dataTour}>
+      <p className="text-xs text-muted-foreground mb-3">{description}</p>
+      <div className="flex gap-2 flex-wrap">
+        <button
+          type="button"
+          disabled={exportMutation.isPending}
+          onClick={() => exportMutation.mutate(undefined, { onError: (err) => pushToast(apiErrorMessage(err), 'error') })}
+          className="flex items-center gap-1.5 rounded px-4 py-2 text-[13px] border border-border text-foreground hover:bg-accent disabled:opacity-50"
+        >
+          <Download size={14} />
+          {exportMutation.isPending ? exportingLabel : exportLabel}
+        </button>
+        {importButton}
+      </div>
+    </SettingsCard>
+  )
+}
+
+const SETTINGS_IMPORT_BUTTON_CLASS =
+  'flex items-center gap-1.5 rounded px-4 py-2 text-[13px] border border-border text-foreground hover:bg-accent disabled:opacity-50'
+
+function ExportAccountsCard() {
+  const { t } = useTranslation('pages')
+  return (
+    <ExportImportCard
+      title={t('settings.exportAccounts.title')}
+      description={t('settings.exportAccounts.description')}
+      exportLabel={t('settings.exportAccounts.button')}
+      exportingLabel={t('settings.exportAccounts.exporting')}
+      exportMutation={useExportAccounts()}
+      importButton={<ImportAccountsButton className={SETTINGS_IMPORT_BUTTON_CLASS} />}
+      dataTour="settings:export-accounts"
+    />
+  )
+}
+
+function ExportCategoriesCard() {
+  const { t } = useTranslation('pages')
+  return (
+    <ExportImportCard
+      title={t('settings.exportCategories.title')}
+      description={t('settings.exportCategories.description')}
+      exportLabel={t('settings.exportCategories.button')}
+      exportingLabel={t('settings.exportCategories.exporting')}
+      exportMutation={useExportCategories()}
+      importButton={<ImportCategoriesButton className={SETTINGS_IMPORT_BUTTON_CLASS} />}
+      dataTour="settings:export-categories"
+    />
+  )
+}
+
 function DataManagementCard() {
   const { t, i18n } = useTranslation('pages')
   const eraseData = useEraseData()
@@ -772,6 +848,8 @@ export function Settings() {
             separated from the rest -- it's the screen's only action with
             no going back. */}
         <div className="border-t border-border mt-8 pt-6 grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          <ExportAccountsCard />
+          <ExportCategoriesCard />
           <DataManagementCard />
           <SessionCard />
         </div>

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { downloadBlob } from '@/lib/download'
 import { api } from '@/services/api'
 import { patchAllListQueries, patchMatchingListQueries } from '@/lib/queryCache'
 import type { ApiSuccess, Category } from '@/types'
@@ -163,6 +164,42 @@ export function useCategorySummary(year?: number, month?: number) {
         params: year && month ? { year, month } : undefined,
       })
       return data.data
+    },
+  })
+}
+
+/** Downloads every category's configuration (system ones with their hidden state,
+ * own ones with subcategories) as a JSON file. */
+export function useExportCategories() {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.get('/categories/export', { responseType: 'blob' })
+      downloadBlob(response.data as Blob, 'categorias.json', response.headers['content-disposition'])
+    },
+  })
+}
+
+export interface ImportCategoriesResult {
+  created: number
+  hidden: number
+  skipped: string[]
+  unmatched: string[]
+}
+
+/** Applies a file produced by useExportCategories. Parsed here only to hand the
+ * backend a JSON body -- the real validation happens there. */
+export function useImportCategories() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const body: unknown = JSON.parse(await file.text())
+      const { data } = await api.post<ApiSuccess<ImportCategoriesResult>>('/categories/import', body)
+      return data.data
+    },
+    onSuccess: () => {
+      // Hiding system categories also unlinks their transactions.
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
 }

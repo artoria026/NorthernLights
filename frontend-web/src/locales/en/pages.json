@@ -231,7 +231,8 @@
     },
     "actions": {
       "edit": "Edit",
-      "delete": "Delete"
+      "delete": "Delete",
+      "export": "Export"
     },
     "newAccount": {
       "dialogTitle": "New account",
@@ -377,6 +378,15 @@
         "body": "Available on bank/savings accounts. You enter what you actually have (counted, or from your statement) and the app records an adjustment transaction for the difference — unlike editing the \"Initial balance\", this does show up as a visible transaction in your history."
       },
       "tip": "Lending money to someone, or being lent money, doesn't create an account here — it lives in Debts, separate from your real accounts, no matter how many people are involved."
+    },
+    "import": {
+      "button": "Import",
+      "importing": "Importing...",
+      "done_one": "1 account imported.",
+      "done_other": "{{count}} accounts imported.",
+      "doneWithSkipped_one": "1 account imported, {{skipped}} skipped (already existed).",
+      "doneWithSkipped_other": "{{count}} accounts imported, {{skipped}} skipped (already existed).",
+      "invalidFile": "That file isn't valid JSON."
     }
   },
   "transactions": {
@@ -609,6 +619,18 @@
         "body": "To start fresh without losing your account: two quick buttons (\"everything except accounts\" or \"absolutely everything\") and a list to delete only specific categories — for example, just transactions, or just the AI Advisor history. Deleting bank accounts also deletes your transactions and recurring items, since they depend on the account existing."
       },
       "tip": "Deleting your account is permanent: it closes all your sessions and disables access. \"Delete data\" is different — your login stays intact, only what you choose gets deleted."
+    },
+    "exportAccounts": {
+      "title": "Export and import accounts",
+      "description": "Download all your accounts as a JSON file: their full configuration (type, credit card cutoff and payment days, limit, rate, color, logo, etc.), without transactions. You can import that same file back; each account starts with the balance it had when exported, and accounts that already exist are skipped.",
+      "button": "Download accounts (JSON)",
+      "exporting": "Exporting..."
+    },
+    "exportCategories": {
+      "title": "Export and import categories",
+      "description": "Download all your categories (income and expense) as a JSON file: system categories with whether you hid them, plus your own with their icon, color, order and subcategories. Importing it back creates the ones you don't have yet (existing ones are skipped) and hides the system categories that were hidden. System categories can't be renamed.",
+      "button": "Download categories (JSON)",
+      "exporting": "Exporting..."
     }
   },
   "debts": {
@@ -889,6 +911,19 @@
       "transactionsHeading": "What happens to transactions",
       "transactionsBody": "When you deactivate a system category or delete one of your own (trash icon), the transactions that had it assigned are left uncategorized (they aren't deleted, and the action isn't blocked) — you can recategorize them later if needed.",
       "tip": "You never choose an accounting account when using a category in a transaction — the system resolves it internally on its own. Here you only manage the catalog of names."
+    },
+    "export": {
+      "button": "Export"
+    },
+    "import": {
+      "button": "Import",
+      "importing": "Importing...",
+      "done": "Import done: {{created}} created, {{hidden}} system hidden.",
+      "skipped_one": "1 already existed.",
+      "skipped_other": "{{count}} already existed.",
+      "unmatched_one": "1 couldn't be matched: {{list}}.",
+      "unmatched_other": "{{count}} couldn't be matched: {{list}}.",
+      "invalidFile": "That file isn't valid JSON."
     }
   },
   "recurring": {
