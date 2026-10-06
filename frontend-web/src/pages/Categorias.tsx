@@ -2,6 +2,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Download,
   EyeOff,
   Pencil,
   Pipette,
@@ -16,6 +17,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { ImportCategoriesButton } from '@/components/nl/ImportCategoriesButton'
 import { HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
 import {
   CATEGORY_COLOR_CHOICES,
@@ -35,6 +37,7 @@ import {
   useCreateCategory,
   useDeactivateCategory,
   useDeleteCategory,
+  useExportCategories,
   useHiddenCategories,
   useReactivateCategory,
   useUpdateCategory,
@@ -773,6 +776,26 @@ function CategoriasHelp() {
   )
 }
 
+const HEADER_SECONDARY_BUTTON_CLASS =
+  'flex items-center gap-1.5 rounded px-3 py-1.5 text-[13px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-50'
+
+function ExportCategoriesButton() {
+  const { t } = useTranslation('pages')
+  const exportCategories = useExportCategories()
+  const pushToast = useUiStore((s) => s.pushToast)
+  return (
+    <button
+      type="button"
+      disabled={exportCategories.isPending}
+      onClick={() => exportCategories.mutate(undefined, { onError: (err) => pushToast(apiErrorMessage(err), 'error') })}
+      className={HEADER_SECONDARY_BUTTON_CLASS}
+    >
+      <Download size={13} />
+      {t('categories.export.button')}
+    </button>
+  )
+}
+
 export function Categorias() {
   const { t } = useTranslation('pages')
   const [type, setType] = useState<CatType>('expense')
@@ -799,29 +822,33 @@ export function Categorias() {
         section={HEADER_SECTIONS.diario}
         tourKey="categories"
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger
-              render={
-                <button
-                  type="button"
-                  data-tour="categories:new-button"
-                  className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] font-medium"
-                  style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-                >
-                  <Plus size={14} />
-                  {t('categories.newButton')}
-                </button>
-              }
-            />
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>
-                  {type === 'income' ? t('categories.newIncomeTitle') : t('categories.newExpenseTitle')}
-                </DialogTitle>
-              </DialogHeader>
-              <NewCategoryForm type={type} onDone={() => setOpen(false)} />
-            </DialogContent>
-          </Dialog>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ExportCategoriesButton />
+            <ImportCategoriesButton className={HEADER_SECONDARY_BUTTON_CLASS} />
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger
+                render={
+                  <button
+                    type="button"
+                    data-tour="categories:new-button"
+                    className="flex items-center gap-1.5 rounded px-3.5 py-1.5 text-[13px] font-medium"
+                    style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
+                  >
+                    <Plus size={14} />
+                    {t('categories.newButton')}
+                  </button>
+                }
+              />
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>
+                    {type === 'income' ? t('categories.newIncomeTitle') : t('categories.newExpenseTitle')}
+                  </DialogTitle>
+                </DialogHeader>
+                <NewCategoryForm type={type} onDone={() => setOpen(false)} />
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 

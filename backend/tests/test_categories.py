@@ -299,3 +299,131 @@ async def test_subcategory_requires_user_id_at_db_level(client: AsyncClient, ses
         )
         with pytest.raises(IntegrityError):
             await session.flush()
+
+
+async def _auth(client: AsyncClient) -> dict:
+    return {"Authorization": f"Bearer {await _register_and_login(client)}"}
+
+
+async def _setup_custom_categories(client: AsyncClient, headers: dict) -> None:
+    """A hidden system category, an own top-level category with a subcategory
+    under it, and a subcategory under a system parent."""
+    system = (await client.get("/api/v1/categories?type=expense", headers=headers)).json()["data"]
+    food = next(c for c in system if c["name"] == "Comida y Bebidas")
+    pets = next(c for c in system if c["name"] == "Mascotas")
+    await client.post(f"/api/v1/categories/{pets['id']}/deactivate", headers=headers)
+
+    gym = (
+        await client.post(
+            "/api/v1/categories",
+            headers=headers,
+            json={"name": "Gimnasio", "type": "expense", "icon": "dumbbell", "color": "#112233"},
+        )
+    ).json()["data"]
+    await client.post(
+        "/api/v1/categories",
+        headers=headers,
+        json={"name": "Suplementos", "type": "expense", "parent_id": gym["id"]},
+    )
+    await client.post(
+        "/api/v1/categories",
+        headers=headers,
+        json={"name": "Super", "type": "expense", "parent_id": food["id"]},
+    )
+    await client.post(
+        "/api/v1/categories", headers=headers, json={"name": "Bonos", "type": "income"}
+    )
+
+
+async def test_export_categories_has_system_state_and_own_tree(client: AsyncClient):
+    headers = await _auth(client)
+    await _setup_custom_categories(client, headers)
+
+    response = await client.get("/api/v1/categories/export", headers=headers)
+    assert response.status_code == 200
+    assert "attachment" in response.headers["content-disposition"]
+    body = response.json()
+    assert body["format"] == "northernlights.categories"
+    by_name = {c["name"]: c for c in body["categories"]}
+
+    # 12 system + 4 own
+    assert len(body["categories"]) == 16
+    assert by_name["Mascotas"]["is_system"] and by_name["Mascotas"]["hidden"]
+    assert not by_name["Comida y Bebidas"]["hidden"]
+    assert by_name["Gimnasio"]["icon"] == "dumbbell" and by_name["Gimnasio"]["color"] == "#112233"
+    assert by_name["Suplementos"]["parent_name"] == "Gimnasio"
+    assert by_name["Suplementos"]["parent_is_system"] is False
+    assert by_name["Super"]["parent_name"] == "Comida y Bebidas"
+    assert by_name["Super"]["parent_is_system"] is True
+    assert "id" not in by_name["Gimnasio"] and "user_id" not in by_name["Gimnasio"]
+    assert by_name["Bonos"]["type"] == "income"
+    # parents always before their subcategories
+    names = [c["name"] for c in body["categories"]]
+    assert names.index("Gimnasio") < names.index("Suplementos")
+
+
+async def test_export_then_import_roundtrip_into_fresh_user(client: AsyncClient):
+    source = await _auth(client)
+    await _setup_custom_categories(client, source)
+    exported = (await client.get("/api/v1/categories/export", headers=source)).json()
+
+    target = await _auth(client)
+    response = await client.post("/api/v1/categories/import", headers=target, json=exported)
+    assert response.status_code == 201
+    assert response.json()["data"] == {"created": 4, "hidden": 1, "skipped": [], "unmatched": []}
+
+    listing = (await client.get("/api/v1/categories", headers=target)).json()["data"]
+    names = {c["name"]: c for c in listing}
+    assert "Mascotas" not in names  # hidden for this user
+    assert names["Gimnasio"]["color"] == "#112233"
+    assert names["Suplementos"]["parent_id"] == names["Gimnasio"]["id"]
+    assert names["Super"]["parent_id"] == names["Comida y Bebidas"]["id"]
+    assert names["Bonos"]["type"] == "income"
+
+
+async def test_import_categories_is_idempotent(client: AsyncClient):
+    headers = await _auth(client)
+    await _setup_custom_categories(client, headers)
+    exported = (await client.get("/api/v1/categories/export", headers=headers)).json()
+
+    response = await client.post("/api/v1/categories/import", headers=headers, json=exported)
+    data = response.json()["data"]
+    assert data["created"] == 0
+    assert sorted(data["skipped"]) == ["Bonos", "Gimnasio", "Super", "Suplementos"]
+    assert data["unmatched"] == []
+
+
+async def test_import_reports_unmatched_system_and_missing_parent(client: AsyncClient):
+    headers = await _auth(client)
+    body = {
+        "format": "northernlights.categories",
+        "version": 1,
+        "categories": [
+            {"name": "Categoria Renombrada", "type": "expense", "is_system": True, "hidden": True},
+            {"name": "Huerfana", "type": "expense", "parent_name": "No Existe",
+             "parent_is_system": False},
+        ],
+    }
+    response = await client.post("/api/v1/categories/import", headers=headers, json=body)
+    assert response.json()["data"] == {
+        "created": 0,
+        "hidden": 0,
+        "skipped": [],
+        "unmatched": ["Categoria Renombrada", "No Existe > Huerfana"],
+    }
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        {"format": "other"},
+        {"version": 99},
+        {"categories": [{"name": "X", "type": "transfer"}]},
+        {"categories": [{"name": "", "type": "expense"}]},
+    ],
+)
+async def test_import_categories_rejects_invalid_files(client: AsyncClient, mutation: dict):
+    headers = await _auth(client)
+    body = {"format": "northernlights.categories", "version": 1, "categories": []} | mutation
+    response = await client.post("/api/v1/categories/import", headers=headers, json=body)
+    assert response.status_code == 422

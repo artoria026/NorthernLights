@@ -333,3 +333,161 @@ async def test_update_initial_balance_invalidates_financial_snapshot_cache(clien
     assert updated.status_code == 200
 
     assert await cache_service.get_financial_snapshot(redis, user_id) is None
+
+
+async def test_export_all_accounts_includes_config_and_logo_without_internal(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    logo = "data:image/png;base64,iVBORw0KGgo="
+
+    await client.post(
+        "/api/v1/accounts",
+        headers=headers,
+        json={
+            "name": "Tarjeta Oro",
+            "type": "liability",
+            "subtype": "credit_card",
+            "last_4_digits": "1234",
+            "logo_data_url": logo,
+            "credit_limit": "20000.00",
+            "interest_rate": "0.4500",
+            "billing_cycle_day": 5,
+            "payment_due_day": 25,
+        },
+    )
+    await client.post(
+        "/api/v1/accounts",
+        headers=headers,
+        json={"name": "Efectivo", "type": "asset", "subtype": "cash", "initial_balance": "50.00"},
+    )
+
+    response = await client.get("/api/v1/accounts/export", headers=headers)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+    assert "attachment" in response.headers["content-disposition"]
+
+    body = response.json()
+    assert body["format"] == "northernlights.accounts"
+    assert body["version"] == 1
+    assert [a["name"] for a in body["accounts"]] == ["Tarjeta Oro", "Efectivo"]
+    card = body["accounts"][0]
+    assert card["logo_data_url"] == logo
+    assert card["credit_limit"] == "20000.00"
+    assert card["billing_cycle_day"] == 5
+    assert card["payment_due_day"] == 25
+    assert card["last_4_digits"] == "1234"
+    assert "id" not in card and "user_id" not in card
+
+
+async def test_export_single_account(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    created = await client.post(
+        "/api/v1/accounts",
+        headers=headers,
+        json={"name": "Ahorros", "type": "asset", "subtype": "savings", "initial_balance": "10.00"},
+    )
+    account_id = created.json()["data"]["id"]
+
+    response = await client.get(f"/api/v1/accounts/{account_id}/export", headers=headers)
+    assert response.status_code == 200
+    accounts = response.json()["accounts"]
+    assert len(accounts) == 1
+    assert accounts[0]["name"] == "Ahorros"
+    assert accounts[0]["initial_balance"] == "10.00"
+
+
+async def test_export_account_of_another_user_is_404(client: AsyncClient):
+    owner_headers = {"Authorization": f"Bearer {await _register_and_login(client)}"}
+    other_headers = {"Authorization": f"Bearer {await _register_and_login(client)}"}
+    created = await client.post(
+        "/api/v1/accounts",
+        headers=owner_headers,
+        json={"name": "Privada", "type": "asset", "subtype": "cash"},
+    )
+    account_id = created.json()["data"]["id"]
+
+    response = await client.get(f"/api/v1/accounts/{account_id}/export", headers=other_headers)
+    assert response.status_code == 404
+
+
+async def test_export_then_import_roundtrip_into_empty_user(client: AsyncClient):
+    source = {"Authorization": f"Bearer {await _register_and_login(client)}"}
+    logo = "data:image/png;base64,iVBORw0KGgo="
+    await client.post(
+        "/api/v1/accounts",
+        headers=source,
+        json={
+            "name": "Tarjeta Oro", "type": "liability", "subtype": "credit_card",
+            "last_4_digits": "1234", "logo_data_url": logo, "initial_balance": "300.00",
+            "credit_limit": "20000.00", "interest_rate": "0.4500",
+            "billing_cycle_day": 5, "payment_due_day": 25,
+        },
+    )
+    await client.post(
+        "/api/v1/accounts",
+        headers=source,
+        json={"name": "Efectivo", "type": "asset", "subtype": "cash", "initial_balance": "50.00"},
+    )
+    exported = (await client.get("/api/v1/accounts/export", headers=source)).json()
+
+    target = {"Authorization": f"Bearer {await _register_and_login(client)}"}
+    response = await client.post("/api/v1/accounts/import", headers=target, json=exported)
+    assert response.status_code == 201
+    assert response.json()["data"] == {"created": 2, "skipped": []}
+
+    accounts = (await client.get("/api/v1/accounts", headers=target)).json()["data"]
+    card = next(a for a in accounts if a["name"] == "Tarjeta Oro")
+    assert card["logo_data_url"] == logo
+    assert card["credit_limit"] == "20000.00"
+    assert card["billing_cycle_day"] == 5
+    assert card["balance"] == "300.00"
+    assert card["id"] != exported["accounts"][0].get("id")
+
+
+async def test_import_is_idempotent_and_skips_existing(client: AsyncClient):
+    headers = {"Authorization": f"Bearer {await _register_and_login(client)}"}
+    await client.post(
+        "/api/v1/accounts",
+        headers=headers,
+        json={"name": "Efectivo", "type": "asset", "subtype": "cash"},
+    )
+    exported = (await client.get("/api/v1/accounts/export", headers=headers)).json()
+
+    response = await client.post("/api/v1/accounts/import", headers=headers, json=exported)
+    assert response.json()["data"] == {"created": 0, "skipped": ["Efectivo"]}
+    assert len((await client.get("/api/v1/accounts", headers=headers)).json()["data"]) == 1
+
+
+async def test_import_can_start_from_initial_balance(client: AsyncClient):
+    headers = {"Authorization": f"Bearer {await _register_and_login(client)}"}
+    payload = {
+        "format": "northernlights.accounts",
+        "version": 1,
+        "accounts": [
+            {"name": "Ahorros", "type": "asset", "subtype": "savings",
+             "initial_balance": "100.00", "balance": "250.00"},
+        ],
+    }
+    await client.post(
+        "/api/v1/accounts/import", headers=headers, params={"use_current_balance": "false"},
+        json=payload,
+    )
+    account = (await client.get("/api/v1/accounts", headers=headers)).json()["data"][0]
+    assert account["balance"] == "100.00"
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        {"format": "other"},
+        {"version": 99},
+        {"accounts": [{"name": "X", "type": "expense"}]},
+        {"accounts": [{"name": "X", "type": "asset", "logo_data_url": "javascript:alert(1)"}]},
+    ],
+)
+async def test_import_rejects_invalid_files(client: AsyncClient, mutation: dict):
+    headers = {"Authorization": f"Bearer {await _register_and_login(client)}"}
+    body = {"format": "northernlights.accounts", "version": 1, "accounts": []} | mutation
+    response = await client.post("/api/v1/accounts/import", headers=headers, json=body)
+    assert response.status_code == 422

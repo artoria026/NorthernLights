@@ -9,7 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.category import Category
 from app.models.category_hide import CategoryHide
 from app.models.transaction import JournalEntry
-from app.schemas.category import CategoryCreate, CategoryUpdate
+from app.schemas.category import (
+    CATEGORY_EXPORT_FORMAT,
+    CATEGORY_EXPORT_VERSION,
+    CategoryCreate,
+    CategoryExport,
+    CategoryExportItem,
+    CategoryImportRequest,
+    CategoryUpdate,
+)
 
 
 async def list_categories(
@@ -47,6 +55,141 @@ async def list_hidden_categories(
     query = query.order_by(Category.type, Category.sort_order, Category.name)
     result = await session.execute(query)
     return list(result.scalars().all())
+
+
+async def export_categories(session: AsyncSession, user_id: UUID) -> CategoryExport:
+    """Everything about the user's categories for the JSON download: every
+    system category with whether this user hid it, plus all of their own
+    categories (subcategories included). Soft-deleted ones are gone for the
+    user, so they're not exported."""
+    hidden_ids = set(
+        (
+            await session.execute(
+                select(CategoryHide.category_id).where(CategoryHide.user_id == user_id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    result = await session.execute(
+        select(Category)
+        .where(
+            or_(Category.user_id == user_id, Category.user_id.is_(None)),
+            Category.deleted_at.is_(None),
+        )
+        .order_by(Category.type, Category.user_id.is_not(None), Category.sort_order, Category.name)
+    )
+    categories = list(result.scalars().all())
+    by_id = {c.id: c for c in categories}
+
+    items = []
+    for c in categories:
+        parent = by_id.get(c.parent_id) if c.parent_id else None
+        items.append(
+            CategoryExportItem(
+                name=c.name,
+                type=c.type,
+                icon=c.icon,
+                color=c.color,
+                sort_order=c.sort_order,
+                is_system=c.user_id is None,
+                is_active=c.is_active,
+                hidden=c.id in hidden_ids,
+                parent_name=parent.name if parent else None,
+                parent_is_system=(parent.user_id is None) if parent else None,
+                created_at=c.created_at,
+            )
+        )
+    # Parents before their subcategories, so a reader (or the importer) never
+    # meets a child first.
+    items.sort(key=lambda i: i.parent_name is not None)
+    return CategoryExport(
+        format=CATEGORY_EXPORT_FORMAT,
+        version=CATEGORY_EXPORT_VERSION,
+        exported_at=datetime.now(UTC),
+        categories=items,
+    )
+
+
+async def import_categories(
+    session: AsyncSession, user_id: UUID, data: CategoryImportRequest
+) -> dict[str, object]:
+    """Applies a categories export. Additive, never destructive to the
+    user's setup:
+
+    - System entries are matched to the current system categories by
+      (type, name), case-insensitive. A `hidden` one gets hidden for this
+      user (same effect as deactivate_category, which unlinks its
+      transactions); one that isn't hidden is left as it is. A system entry
+      that matches nothing (e.g. renamed in a newer seed) is reported in
+      `unmatched`, never created.
+    - The user's own categories are created (top level first, then
+      subcategories under a system or own parent). One that already exists
+      with the same type, name and parent is skipped, so importing twice is
+      harmless."""
+    existing = (
+        (
+            await session.execute(
+                select(Category).where(
+                    or_(Category.user_id == user_id, Category.user_id.is_(None)),
+                    Category.deleted_at.is_(None),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    system = {(c.type, c.name.casefold()): c for c in existing if c.user_id is None}
+    # (type, name, parent id) -> category, for the user's own ones.
+    own = {(c.type, c.name.casefold(), c.parent_id): c for c in existing if c.user_id is not None}
+
+    created = hidden = 0
+    skipped: list[str] = []
+    unmatched: list[str] = []
+
+    for item in (i for i in data.categories if i.is_system):
+        category = system.get((item.type, item.name.casefold()))
+        if category is None:
+            unmatched.append(item.name)
+        elif item.hidden:
+            await deactivate_category(session, user_id, category.id)
+            hidden += 1
+
+    own_items = [i for i in data.categories if not i.is_system]
+    # Top level first, so a subcategory can find the parent created in this run.
+    for item in sorted(own_items, key=lambda i: i.parent_name is not None):
+        parent_id: UUID | None = None
+        if item.parent_name is not None:
+            if item.parent_is_system:
+                parent = system.get((item.type, item.parent_name.casefold()))
+            else:
+                parent = own.get((item.type, item.parent_name.casefold(), None))
+            if parent is None:
+                unmatched.append(f"{item.parent_name} > {item.name}")
+                continue
+            parent_id = parent.id
+
+        key = (item.type, item.name.casefold(), parent_id)
+        if key in own:
+            skipped.append(item.name)
+            continue
+        category = await create_category(
+            session,
+            user_id,
+            CategoryCreate(
+                name=item.name,
+                type=item.type,
+                icon=item.icon,
+                color=item.color,
+                parent_id=parent_id,
+            ),
+        )
+        category.sort_order = item.sort_order
+        category.is_active = item.is_active
+        own[key] = category
+        created += 1
+
+    return {"created": created, "hidden": hidden, "skipped": skipped, "unmatched": unmatched}
 
 
 async def get_category(session: AsyncSession, user_id: UUID, category_id: UUID) -> Category:

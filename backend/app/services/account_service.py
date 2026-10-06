@@ -1,5 +1,5 @@
 import calendar
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -10,7 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.constants import LIQUID_SUBTYPES
 from app.models.account import Account
 from app.models.transaction import JournalEntry, JournalLine
-from app.schemas.account import AccountCreate, AccountUpdate
+from app.schemas.account import (
+    ACCOUNT_EXPORT_FORMAT,
+    ACCOUNT_EXPORT_VERSION,
+    AccountCreate,
+    AccountExport,
+    AccountExportItem,
+    AccountImportRequest,
+    AccountUpdate,
+)
 from app.services import cache_service
 
 # Account types whose balance grows with a debit (standard accounting rule).
@@ -76,6 +84,59 @@ async def list_accounts(session: AsyncSession, user_id: UUID) -> list[Account]:
         .order_by(Account.created_at)
     )
     return list(result.scalars().all())
+
+
+async def export_accounts(
+    session: AsyncSession, user_id: UUID, account_id: UUID | None = None
+) -> AccountExport:
+    """Snapshot of the user's configured accounts for the JSON download: all
+    of them, or just `account_id` (404 if it isn't a real account of theirs).
+    Same filter as list_accounts, so internal ledger accounts never leak."""
+    if account_id is None:
+        accounts = await list_accounts(session, user_id)
+    else:
+        account = await get_account(session, user_id, account_id)
+        if account.is_internal or account.type not in ("asset", "liability"):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Cuenta no encontrada")
+        accounts = [account]
+    return AccountExport(
+        format=ACCOUNT_EXPORT_FORMAT,
+        version=ACCOUNT_EXPORT_VERSION,
+        exported_at=datetime.now(UTC),
+        accounts=[AccountExportItem.model_validate(a) for a in accounts],
+    )
+
+
+async def import_accounts(
+    session: AsyncSession,
+    user_id: UUID,
+    data: AccountImportRequest,
+    use_current_balance: bool = True,
+) -> tuple[int, list[str]]:
+    """Recreates accounts from an export file. Transactions aren't part of the
+    file, so by default each account starts at the balance it had when it was
+    exported (`use_current_balance`); otherwise at its original initial_balance.
+
+    An account whose name + type + subtype already matches one the user has
+    (case-insensitive) is skipped, not duplicated -- importing the same file
+    twice is harmless."""
+    existing = {
+        (a.name.casefold(), a.type, a.subtype) for a in await list_accounts(session, user_id)
+    }
+    created = 0
+    skipped: list[str] = []
+    for item in data.accounts:
+        key = (item.name.casefold(), item.type, item.subtype)
+        if key in existing:
+            skipped.append(item.name)
+            continue
+        payload = item.model_dump(exclude={"balance"})
+        if use_current_balance and item.balance is not None:
+            payload["initial_balance"] = item.balance
+        await create_account(session, user_id, AccountCreate(**payload))
+        existing.add(key)
+        created += 1
+    return created, skipped
 
 
 _LEDGER_ACCOUNT_NAME = {"income": "Ingresos", "expense": "Gastos"}
