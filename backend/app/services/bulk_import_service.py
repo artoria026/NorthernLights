@@ -71,8 +71,8 @@ def build_template_workbook(
     lists_ws = wb.create_sheet(LISTS_SHEET)
     lists_ws.sheet_state = "hidden"
     account_names = [a.name for a in accounts] or ["(crea una cuenta primero)"]
-    income_names = [c.name for c in income_categories] or ["(sin categorias)"]
-    expense_names = [c.name for c in expense_categories] or ["(sin categorias)"]
+    income_names = [c.display_name for c in income_categories] or ["(sin categorias)"]
+    expense_names = [c.display_name for c in expense_categories] or ["(sin categorias)"]
     for i, name in enumerate(account_names, start=1):
         lists_ws.cell(row=i, column=1, value=name)
     for i, name in enumerate(income_names, start=1):
@@ -228,14 +228,25 @@ def parse_upload(content: bytes) -> ParseResult:
     return result
 
 
+def _category_lookup(categories: list[Category]) -> dict[str, UUID]:
+    """Lowercased name -> id. A system category answers to its name in either
+    language, whatever the language of the template the file came from."""
+    lookup: dict[str, UUID] = {}
+    for c in categories:
+        for name in (c.name, c.name_en):
+            if name:
+                lookup[name.strip().lower()] = c.id
+    return lookup
+
+
 async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: ParseResult) -> dict:
     accounts = await account_service.list_accounts(session, user_id)
     income_categories = await category_service.list_categories(session, user_id, "income")
     expense_categories = await category_service.list_categories(session, user_id, "expense")
 
     account_by_name = {a.name.strip().lower(): a.id for a in accounts}
-    income_by_name = {c.name.strip().lower(): c.id for c in income_categories}
-    expense_by_name = {c.name.strip().lower(): c.id for c in expense_categories}
+    income_by_name = _category_lookup(income_categories)
+    expense_by_name = _category_lookup(expense_categories)
 
     created = 0
     errors = list(parsed.errors)

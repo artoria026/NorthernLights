@@ -287,9 +287,18 @@ async def _resolve_category_id(
     session: AsyncSession, user_id: UUID, name: str, expected_type: str
 ) -> UUID | dict:
     categories = await category_service.list_categories(session, user_id, expected_type)
-    match = next((c for c in categories if c.name.strip().lower() == name.strip().lower()), None)
+    wanted = name.strip().lower()
+    # A system category answers to its name in either language.
+    match = next(
+        (
+            c
+            for c in categories
+            if wanted in {c.name.strip().lower(), (c.name_en or "").strip().lower()}
+        ),
+        None,
+    )
     if match is None:
-        existing = ", ".join(c.name for c in categories) or "(ninguna)"
+        existing = ", ".join(c.display_name for c in categories) or "(ninguna)"
         return {
             "error": (
                 f"No encontre una categoria de tipo '{expected_type}' llamada '{name}'. "

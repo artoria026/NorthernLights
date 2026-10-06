@@ -78,7 +78,10 @@ export interface TdcCycle {
 export interface Category {
   id: string
   user_id: string | null
+  /** Already in the user's language for system categories (the backend resolves it). */
   name: string
+  /** Stable id of a system category; null for the user's own. */
+  slug: string | null
   type: 'income' | 'expense'
   icon: string | null
   color: string

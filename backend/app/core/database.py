@@ -36,6 +36,26 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+async def apply_rls_context(session: AsyncSession, user_id: UUID) -> None:
+    """Per-transaction settings every authenticated session needs: the user
+    RLS filters by, and that user's language (read by Category.display_name).
+    The tests' dependency override calls this too, so they can't diverge."""
+    # SET LOCAL doesn't accept bind parameters ($1) in Postgres; set_config() does.
+    # 3rd argument `true` = local to the current transaction (equivalent to SET LOCAL).
+    await session.execute(
+        text("SELECT set_config('app.current_user_id', :uid, true)"),
+        {"uid": str(user_id)},
+    )
+    # After the line above: user_preferences is itself behind RLS.
+    await session.execute(
+        text(
+            "SELECT set_config('app.locale', COALESCE("
+            "(SELECT locale FROM user_preferences WHERE user_id = CAST(:uid AS uuid)), 'es'), true)"
+        ),
+        {"uid": str(user_id)},
+    )
+
+
 @asynccontextmanager
 async def rls_session(user_id: UUID) -> AsyncGenerator[AsyncSession, None]:
     """Session with RLS active for code that runs outside an HTTP request
@@ -43,12 +63,7 @@ async def rls_session(user_id: UUID) -> AsyncGenerator[AsyncSession, None]:
     helper for the FastAPI case; see its docstring for the explanation of
     `set_config`."""
     async with AsyncSessionLocal() as session, session.begin():
-        # SET LOCAL doesn't accept bind parameters ($1) in Postgres; set_config() does.
-        # 3rd argument `true` = local to the current transaction (equivalent to SET LOCAL).
-        await session.execute(
-            text("SELECT set_config('app.current_user_id', :uid, true)"),
-            {"uid": str(user_id)},
-        )
+        await apply_rls_context(session, user_id)
         yield session
 
 

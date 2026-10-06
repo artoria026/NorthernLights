@@ -228,7 +228,9 @@ async def get_summary(
     by_category = []
     if totals_by_category:
         cat_result = await session.execute(
-            select(Category.id, Category.name).where(Category.id.in_(totals_by_category))
+            select(Category.id, Category.display_name).where(
+                Category.id.in_(totals_by_category)
+            )
         )
         names: dict[UUID, str] = {row[0]: row[1] for row in cat_result.all()}
         by_category = [

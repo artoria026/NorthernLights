@@ -35,7 +35,7 @@ def _week_ranges(year: int, month: int) -> list[tuple[date, date]]:
 
 async def get_limits(session: AsyncSession, user_id: UUID) -> list[dict]:
     result = await session.execute(
-        select(BudgetLimit, Category.name)
+        select(BudgetLimit, Category.display_name)
         .join(Category, Category.id == BudgetLimit.category_id)
         .where(BudgetLimit.user_id == user_id)
         .order_by(Category.sort_order)
@@ -58,7 +58,12 @@ async def get_limit_suggestions(session: AsyncSession, user_id: UUID) -> list[di
     spend over the last 3 months, so we can suggest a starting amount even
     if the user never set a cap on that category."""
     cat_result = await session.execute(
-        select(Category.id, Category.name, Category.color, Category.sort_order)
+        select(
+            Category.id,
+            Category.display_name.label("name"),
+            Category.color,
+            Category.sort_order,
+        )
         .where(
             or_(Category.user_id.is_(None), Category.user_id == user_id),
             Category.type == "expense",
@@ -254,7 +259,7 @@ async def upsert_period_spent(
             session,
             user_id,
             effective_category_id,
-            effective_category.name if effective_category else "",
+            effective_category.display_name if effective_category else "",
             period.spent,
             period.budgeted,
         )
@@ -328,7 +333,9 @@ async def get_current_budget(session: AsyncSession, user_id: UUID, year: int, mo
         # the category's type, so in theory a "limit" could be set on an
         # income category via a direct API call.
         cat_result = await session.execute(
-            select(Category.id, Category.name, Category.sort_order).where(
+            select(
+                Category.id, Category.display_name.label("name"), Category.sort_order
+            ).where(
                 Category.id.in_(candidate_ids),
                 Category.type == "expense",
                 Category.parent_id.is_(None),

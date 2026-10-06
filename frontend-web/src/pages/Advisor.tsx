@@ -25,6 +25,7 @@ import { HEADER_SECTIONS, ViewHeader } from '@/components/nl/primitives'
 import { useAiHistory, useAiUsage, useChatStream, useClearAiHistory } from '@/hooks/useAiChat'
 import { useFinancialSnapshot } from '@/hooks/useEngine'
 import { useTransactions } from '@/hooks/useTransactions'
+import { useCategories } from '@/hooks/useCategories'
 import { getExportPrompt } from '@/lib/importPrompt'
 import { amountColor, formatMoney, isPositiveEntryType } from '@/lib/utils'
 
@@ -263,6 +264,8 @@ export function Advisor() {
   const { data: history } = useAiHistory(1, 20)
   const { data: recentTx } = useTransactions({ per_page: 5 })
   const { data: usage } = useAiUsage()
+  const { data: categories } = useCategories()
+  const topLevelCategoryNames = (categories ?? []).filter((c) => c.parent_id === null).map((c) => c.name)
   const clearHistory = useClearAiHistory()
   const { messages, setMessages, sendMessage, isStreaming, error, canRetry, retryLast, savedInsight } =
     useChatStream()
@@ -333,7 +336,7 @@ export function Advisor() {
   }
 
   async function copyPrompt() {
-    await navigator.clipboard.writeText(getExportPrompt())
+    await navigator.clipboard.writeText(getExportPrompt(topLevelCategoryNames))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

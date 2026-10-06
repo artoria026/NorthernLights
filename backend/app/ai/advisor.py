@@ -19,6 +19,7 @@ from app.ai.write_tools import (
 from app.core.config import settings
 from app.core.database import rls_session
 from app.core.json_utils import json_safe
+from app.core.system_categories import system_category_names
 from app.services import cache_service, chat_service, engine_service
 
 SYSTEM_PROMPT = """
@@ -105,12 +106,16 @@ movimiento haria inutilizable un estado con muchos renglones. Da tu resumen
 final en texto normal al terminar.
 Con varios PDFs adjuntos en el mismo mensaje, procesalos todos antes de dar
 tu resumen final, asi puedes cruzar referencias entre meses. Las categorias
-del sistema ya existen, son fijas, y debes usar el nombre EXACTO:
-- Gasto: Comida y Bebidas, Transporte y Movilidad, Vivienda y Hogar, Salud y
-  Bienestar, Ropa y Cuidado Personal, Ocio y Entretenimiento, Educacion y
-  Desarrollo, Mascotas, Otro Gasto
-- Ingreso: Empleo principal, Freelance, Otro
+del sistema ya existen, son fijas, y debes usar el nombre EXACTO (cada una vale en
+español o en ingles, 'Español / English'):
+- Gasto: {expense_categories}
+- Ingreso: {income_categories}
 """
+
+# str.replace, not format(): the text above has braces of its own.
+STATEMENT_INSTRUCTIONS = STATEMENT_INSTRUCTIONS.replace(
+    "{expense_categories}", system_category_names("expense")
+).replace("{income_categories}", system_category_names("income"))
 
 MAX_TOOL_ITERATIONS = 20
 
