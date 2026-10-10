@@ -33,7 +33,11 @@
       "googleUnavailableTitle": "Todavía no disponible",
       "devLoginButton": "Usar cuenta de prueba (solo dev)",
       "noAccountText": "¿No tienes cuenta?",
-      "registerLink": "Regístrate"
+      "registerLink": "Regístrate",
+      "sessionEnded": {
+        "idle": "Tu sesión se cerró por inactividad. Inicia sesión de nuevo para continuar.",
+        "restart": "Cerraste la aplicación, así que tu sesión terminó. Inicia sesión de nuevo para continuar."
+      }
     },
     "register": {
       "valueProps": {

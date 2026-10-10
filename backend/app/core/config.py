@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    # Inactivity limit, bank-app style: a session with no real user activity
+    # (see POST /auth/activity) for this long can't be refreshed anymore. The web
+    # app warns 60 s before and signs out; this is the server-side enforcement
+    # the client can't bypass. Fixed for every user (not a per-user preference).
+    SESSION_IDLE_TIMEOUT_MINUTES: int = 10
 
     # Google OAuth (M01 extended) -- empty until a real project is created in
     # Google Cloud Console; without GOOGLE_CLIENT_ID/SECRET, /auth/google/login

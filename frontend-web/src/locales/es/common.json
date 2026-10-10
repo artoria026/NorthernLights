@@ -300,5 +300,12 @@
       "es": "Español",
       "en": "English"
     }
+  },
+  "sessionTimeout": {
+    "title": "¿Sigues ahí?",
+    "message": "Por tu seguridad, cerraremos tu sesión por inactividad.",
+    "countdownLabel": "Tu sesión se cierra en {{time}}",
+    "stay": "Seguir en sesión",
+    "signOut": "Cerrar sesión"
   }
 }

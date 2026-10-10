@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { writeLastActivity } from '@/lib/sessionTimeout'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
@@ -15,7 +16,9 @@ export function useLogin() {
       return data.data
     },
     onSuccess: async (tokens) => {
-      setTokens(tokens.access_token, tokens.refresh_token)
+      setTokens(tokens.access_token, tokens.refresh_token, tokens.idle_timeout_seconds)
+      // A new session starts a new inactivity clock (the stored one is from the last one).
+      writeLastActivity(Date.now())
       const me = await api.get<ApiSuccess<User>>('/auth/me', {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
       })

@@ -33,7 +33,11 @@
       "googleUnavailableTitle": "Not available yet",
       "devLoginButton": "Use test account (dev only)",
       "noAccountText": "Don't have an account?",
-      "registerLink": "Sign up"
+      "registerLink": "Sign up",
+      "sessionEnded": {
+        "idle": "Your session was closed due to inactivity. Sign in again to continue.",
+        "restart": "You closed the app, so your session ended. Sign in again to continue."
+      }
     },
     "register": {
       "valueProps": {

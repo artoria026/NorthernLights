@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   ArrowRight,
+  Clock,
   Eye,
   EyeOff,
   Lock,
@@ -13,6 +14,7 @@ import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLogin } from '@/hooks/useAuth'
+import { consumeLogoutReason } from '@/lib/sessionTimeout'
 import { api, apiErrorMessage } from '@/services/api'
 import { AuthLayout, type AuthValueProp } from './AuthLayout'
 
@@ -52,6 +54,8 @@ export function Login() {
   const login = useLogin()
   const [searchParams] = useSearchParams()
   const oauthMessage = searchParams.get('mensaje')
+  // Why the last session ended (inactivity / app restarted), read once.
+  const [endedReason] = useState(() => consumeLogoutReason())
   const valueProps = buildValueProps(t)
 
   async function handleSubmit(event: FormEvent) {
@@ -147,6 +151,16 @@ export function Login() {
             </button>
           </div>
         </div>
+
+        {endedReason && !errorMessage && (
+          <div
+            role="status"
+            className="flex items-start gap-2 rounded-md border border-border bg-muted px-3 py-2.5 text-[12.5px] text-foreground"
+          >
+            <Clock size={14} strokeWidth={2} className="flex-shrink-0 mt-0.5" />
+            <span>{t(`auth.login.sessionEnded.${endedReason}`)}</span>
+          </div>
+        )}
 
         {errorMessage && (
           <div

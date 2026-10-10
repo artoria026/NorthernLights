@@ -49,6 +49,16 @@ async def refresh(data: RefreshRequest, session: AsyncSession = Depends(get_db))
     return SuccessResponse(data=tokens)
 
 
+@router.post("/activity")
+async def activity(
+    data: RefreshRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    result = await auth_service.record_activity(session, current_user.id, data.refresh_token)
+    return SuccessResponse(data=result)
+
+
 @router.post("/logout")
 async def logout(
     data: RefreshRequest,
