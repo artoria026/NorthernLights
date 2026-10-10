@@ -12,7 +12,7 @@ import {
   Tag,
   Trash2,
 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useId, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
@@ -42,6 +42,7 @@ import {
   useReactivateCategory,
   useUpdateCategory,
 } from '@/hooks/useCategories'
+import { useDismissable } from '@/hooks/useDismissable'
 import { apiErrorMessage } from '@/services/api'
 import { formatMoney, selectClass } from '@/lib/utils'
 import { useConfirmStore } from '@/stores/confirmStore'
@@ -489,12 +490,20 @@ function CategoryCard({
   total,
   subcategories,
   subtotals,
+  expanded,
+  onToggleExpanded,
+  onCollapse,
   tourTarget,
 }: {
   category: Category
   total: string | undefined
   subcategories?: Category[]
   subtotals?: Map<string, string>
+  /** Whether this card's subcategory panel is open. Owned by the page so only one
+   * card is open at a time. */
+  expanded: boolean
+  onToggleExpanded: () => void
+  onCollapse: () => void
   /** The first card rendered acts as the anchor for the Categories guided
    * tour (see tours.ts) -- not a business prop. */
   tourTarget?: boolean
@@ -505,7 +514,8 @@ function CategoryCard({
   const confirm = useConfirmStore((s) => s.ask)
   const pushToast = useUiStore((s) => s.pushToast)
   const [editOpen, setEditOpen] = useState(false)
-  const [expanded, setExpanded] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const panelId = useId()
   const Icon = categoryIcon(category.icon)
   // Only one level of nesting: only top-level expense categories can have
   // subcategories (see category_service.create_category).
@@ -536,6 +546,10 @@ function CategoryCard({
           : []),
       ]
     : []
+
+  // The subcategory panel floats over the grid (it takes no room in it, so the
+  // other cards never move): closes on an outside press or Escape.
+  useDismissable(cardRef, expanded, onCollapse)
 
   async function handleDelete() {
     const ok = await confirm({
@@ -569,7 +583,13 @@ function CategoryCard({
 
   return (
     <div
-      className="bg-card border border-border rounded-md p-4 flex flex-col gap-3"
+      ref={cardRef}
+      // `relative` anchors the floating panel; while it's open the card rises above
+      // its neighbours (z-20) and squares its bottom corners so card + panel read
+      // as one raised object.
+      className={`relative bg-card border border-border rounded-md p-4 flex flex-col gap-3 ${
+        expanded && canHaveSubcategories ? 'z-20 rounded-b-none' : ''
+      }`}
       data-tour={tourTarget ? 'categories:first-card' : undefined}
     >
       <div className="flex items-center gap-2.5">
@@ -653,7 +673,9 @@ function CategoryCard({
       {canHaveSubcategories && (
         <button
           type="button"
-          onClick={() => setExpanded((v) => !v)}
+          onClick={onToggleExpanded}
+          aria-expanded={expanded}
+          aria-controls={panelId}
           className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground -mt-1"
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -664,36 +686,41 @@ function CategoryCard({
       )}
 
       {canHaveSubcategories && expanded && (
-        <div className="relative pl-4">
-          {/* Tree trunk -- each row (SubcategoryRow/RemainderRow/
-              AddSubcategoryRow) draws its own horizontal branch (TreeTick)
-              toward this trunk, instead of repeating a card's full chrome
-              like before. */}
-          <span
-            className="absolute w-px"
-            style={{ left: 3, top: 0, bottom: 14, background: 'var(--nl-border)' }}
-            aria-hidden="true"
-          />
-          <div className="flex flex-col">
-            {subcategoryList.map((sub) => (
-              <SubcategoryRow
-                key={sub.id}
-                category={sub}
-                amount={subtotals?.get(sub.id) ?? '0'}
-                percentage={
-                  combinedTotalNum > 0
-                    ? Math.round((Number(subtotals?.get(sub.id) ?? '0') / combinedTotalNum) * 100)
-                    : null
-                }
-              />
-            ))}
-            {parentDirectNum > 0 && (
-              <RemainderRow
-                amount={parentDirectNum}
-                percentage={Math.round((parentDirectNum / combinedTotalNum) * 100)}
-              />
-            )}
-            <AddSubcategoryRow parent={category} />
+        <div
+          id={panelId}
+          className="absolute -left-px -right-px top-[calc(100%+1px)] z-10 max-h-[min(60vh,28rem)] overflow-y-auto rounded-b-md border border-t-0 border-border bg-card px-4 pb-4 pt-3 shadow-lg shadow-black/30 animate-in fade-in-0 slide-in-from-top-1 duration-150"
+        >
+          <div className="relative pl-4">
+            {/* Tree trunk -- each row (SubcategoryRow/RemainderRow/
+                AddSubcategoryRow) draws its own horizontal branch (TreeTick)
+                toward this trunk, instead of repeating a card's full chrome
+                like before. */}
+            <span
+              className="absolute w-px"
+              style={{ left: 3, top: 0, bottom: 14, background: 'var(--nl-border)' }}
+              aria-hidden="true"
+            />
+            <div className="flex flex-col">
+              {subcategoryList.map((sub) => (
+                <SubcategoryRow
+                  key={sub.id}
+                  category={sub}
+                  amount={subtotals?.get(sub.id) ?? '0'}
+                  percentage={
+                    combinedTotalNum > 0
+                      ? Math.round((Number(subtotals?.get(sub.id) ?? '0') / combinedTotalNum) * 100)
+                      : null
+                  }
+                />
+              ))}
+              {parentDirectNum > 0 && (
+                <RemainderRow
+                  amount={parentDirectNum}
+                  percentage={Math.round((parentDirectNum / combinedTotalNum) * 100)}
+                />
+              )}
+              <AddSubcategoryRow parent={category} />
+            </div>
           </div>
         </div>
       )}
@@ -800,6 +827,8 @@ export function Categorias() {
   const { t } = useTranslation('pages')
   const [type, setType] = useState<CatType>('expense')
   const [open, setOpen] = useState(false)
+  // Which card's subcategory panel is open (one at a time).
+  const [openCardId, setOpenCardId] = useState<string | null>(null)
   const { data: categories, isLoading } = useCategories(type)
   const { data: summary } = useCategorySummary()
 
@@ -877,6 +906,9 @@ export function Categorias() {
               total={totalsByCategory.get(c.id)}
               subcategories={subcategoriesByParent.get(c.id)}
               subtotals={totalsByCategory}
+              expanded={openCardId === c.id}
+              onToggleExpanded={() => setOpenCardId((current) => (current === c.id ? null : c.id))}
+              onCollapse={() => setOpenCardId(null)}
               tourTarget={i === 0}
             />
           ))}
