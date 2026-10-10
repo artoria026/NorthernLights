@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useUpdateSettings } from '@/hooks/useAuth'
 import { LATEST_CHANGELOG_VERSION } from '@/lib/changelog'
+import { writeLastActivity } from '@/lib/sessionTimeout'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import type { ApiSuccess, User } from '@/types'
@@ -48,6 +49,7 @@ export function AuthCallback() {
     }
 
     setTokens(accessToken, refreshToken)
+    writeLastActivity(Date.now())
     window.history.replaceState({}, '', '/auth/callback')
     ;(async () => {
       try {

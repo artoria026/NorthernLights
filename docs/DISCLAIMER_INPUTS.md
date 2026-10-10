@@ -47,7 +47,10 @@ read and create transactions via chat, including attaching PDFs of bank statemen
 
 - **Identity**: name, email, password (hashed), avatar, role, auth provider (email/Google).
 - **Devices**: device name and type, push token (once enabled), refresh token (hashed, never
-  in plain text).
+  in plain text), and when the session was last used (`last_used_at`): login plus the "I'm
+  here" signals the web app sends while the person is actually using it, to close sessions
+  left idle (10 minutes by default). No keystrokes or screen content are recorded, only
+  that activity happened.
 - **Financial**: accounts (with last 4 digits of card), all transactions with double-entry
   accounting, debts (including **names of creditors/third parties**), budgets, recurring
   expenses/subscriptions, reports and AI-generated insights about the user's financial

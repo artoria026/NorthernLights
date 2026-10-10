@@ -300,5 +300,12 @@
       "es": "Español",
       "en": "English"
     }
+  },
+  "sessionTimeout": {
+    "title": "Are you still there?",
+    "message": "For your security, we'll sign you out due to inactivity.",
+    "countdownLabel": "Your session closes in {{time}}",
+    "stay": "Stay signed in",
+    "signOut": "Sign out"
   }
 }

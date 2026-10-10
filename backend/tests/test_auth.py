@@ -452,3 +452,172 @@ async def test_unlink_google_requires_existing_password(client: AsyncClient):
     # This account was never linked to Google.
     response = await client.post("/api/v1/auth/google/unlink", headers=headers)
     assert response.status_code == 400
+
+
+# --- Session inactivity (bank-app style) -----------------------------------
+
+
+async def _login_user(client: AsyncClient) -> tuple[dict, dict]:
+    """Registers + logs in; returns (auth headers, token data from /login)."""
+    email = f"{uuid.uuid4()}@example.com"
+    await client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "name": "Idle", "password": "supersecret123", "accept_disclaimer": True},
+    )
+    login = await client.post(
+        "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
+    )
+    data = login.json()["data"]
+    return {"Authorization": f"Bearer {data['access_token']}"}, data
+
+
+async def _set_last_used(session_factory, refresh_token: str, seconds_ago: int) -> None:
+    """Moves the device's activity clock back, as if that much time had passed."""
+    from sqlalchemy import text
+
+    async with session_factory() as session:
+        await session.execute(
+            text("SELECT set_config('app.lookup_refresh_token', :t, true)"),
+            {"t": hash_token(refresh_token)},
+        )
+        await session.execute(
+            text(
+                "UPDATE devices SET last_used_at = now() - make_interval(secs => :s) "
+                "WHERE refresh_token = :t"
+            ),
+            {"s": seconds_ago, "t": hash_token(refresh_token)},
+        )
+        await session.commit()
+
+
+async def _last_used_age_seconds(session_factory, refresh_token: str) -> float:
+    from sqlalchemy import text
+
+    async with session_factory() as session:
+        await session.execute(
+            text("SELECT set_config('app.lookup_refresh_token', :t, true)"),
+            {"t": hash_token(refresh_token)},
+        )
+        row = await session.execute(
+            text(
+                "SELECT extract(epoch FROM now() - last_used_at) FROM devices "
+                "WHERE refresh_token = :t"
+            ),
+            {"t": hash_token(refresh_token)},
+        )
+        return float(row.scalar_one())
+
+
+async def test_login_and_refresh_return_the_idle_timeout(client: AsyncClient):
+    _, data = await _login_user(client)
+    assert data["idle_timeout_seconds"] == settings.SESSION_IDLE_TIMEOUT_MINUTES * 60 == 600
+
+    refreshed = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": data["refresh_token"]}
+    )
+    assert refreshed.json()["data"]["idle_timeout_seconds"] == 600
+
+
+async def test_refresh_after_the_idle_limit_is_rejected_with_its_own_code(
+    client: AsyncClient, session_factory
+):
+    _, data = await _login_user(client)
+    await _set_last_used(session_factory, data["refresh_token"], seconds_ago=11 * 60)
+
+    response = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": data["refresh_token"]}
+    )
+    assert response.status_code == 401
+    assert response.json()["code"] == "SESSION_IDLE"
+
+
+async def test_refresh_just_inside_the_limit_still_works(client: AsyncClient, session_factory):
+    _, data = await _login_user(client)
+    await _set_last_used(session_factory, data["refresh_token"], seconds_ago=9 * 60)
+
+    response = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": data["refresh_token"]}
+    )
+    assert response.status_code == 200
+
+
+async def test_refreshing_does_not_count_as_activity(client: AsyncClient, session_factory):
+    """A background poll that triggers a refresh must not keep an abandoned
+    session alive: the activity clock stays where it was."""
+    _, data = await _login_user(client)
+    await _set_last_used(session_factory, data["refresh_token"], seconds_ago=5 * 60)
+
+    refreshed = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": data["refresh_token"]}
+    )
+    new_refresh_token = refreshed.json()["data"]["refresh_token"]
+
+    age = await _last_used_age_seconds(session_factory, new_refresh_token)
+    assert age >= 5 * 60 - 5
+
+
+async def test_activity_resets_the_clock(client: AsyncClient, session_factory):
+    headers, data = await _login_user(client)
+    await _set_last_used(session_factory, data["refresh_token"], seconds_ago=5 * 60)
+
+    response = await client.post(
+        "/api/v1/auth/activity", headers=headers, json={"refresh_token": data["refresh_token"]}
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["idle_timeout_seconds"] == 600
+    assert await _last_used_age_seconds(session_factory, data["refresh_token"]) < 10
+
+
+async def test_activity_writes_are_throttled(client: AsyncClient, session_factory):
+    headers, data = await _login_user(client)
+    await _set_last_used(session_factory, data["refresh_token"], seconds_ago=5)
+
+    await client.post(
+        "/api/v1/auth/activity", headers=headers, json={"refresh_token": data["refresh_token"]}
+    )
+    # 5 s ago is inside the 30 s throttle window: not rewritten.
+    assert await _last_used_age_seconds(session_factory, data["refresh_token"]) >= 4
+
+
+async def test_activity_cannot_revive_an_idle_session(client: AsyncClient, session_factory):
+    headers, data = await _login_user(client)
+    await _set_last_used(session_factory, data["refresh_token"], seconds_ago=11 * 60)
+
+    response = await client.post(
+        "/api/v1/auth/activity", headers=headers, json={"refresh_token": data["refresh_token"]}
+    )
+    assert response.status_code == 401
+    assert response.json()["code"] == "SESSION_IDLE"
+    # ...and the refresh token still doesn't work afterwards.
+    again = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": data["refresh_token"]}
+    )
+    assert again.status_code == 401
+    assert again.json()["code"] == "SESSION_IDLE"
+
+
+async def test_activity_with_an_unknown_refresh_token_is_rejected(client: AsyncClient):
+    headers, _ = await _login_user(client)
+    response = await client.post(
+        "/api/v1/auth/activity", headers=headers, json={"refresh_token": "not-a-real-token"}
+    )
+    assert response.status_code == 401
+    assert response.json()["code"] != "SESSION_IDLE"
+
+
+async def test_a_fresh_login_after_idle_works_again(client: AsyncClient, session_factory):
+    """Idle closes the session, not the account: signing in again starts a new clock."""
+    email = f"{uuid.uuid4()}@example.com"
+    creds = {"email": email, "password": "supersecret123"}
+    await client.post(
+        "/api/v1/auth/register",
+        json={**creds, "name": "Idle", "accept_disclaimer": True},
+    )
+    first = (await client.post("/api/v1/auth/login", json=creds)).json()["data"]
+    await _set_last_used(session_factory, first["refresh_token"], seconds_ago=11 * 60)
+
+    second = (await client.post("/api/v1/auth/login", json=creds)).json()["data"]
+    refreshed = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": second["refresh_token"]}
+    )
+    assert refreshed.status_code == 200

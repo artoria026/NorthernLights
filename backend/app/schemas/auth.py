@@ -42,6 +42,13 @@ class TokenPair(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    # So the client's inactivity countdown uses the server's limit instead of a
+    # copy of it in a VITE_ variable.
+    idle_timeout_seconds: int
+
+
+class ActivityResponse(BaseModel):
+    idle_timeout_seconds: int
 
 
 class ChangePasswordRequest(BaseModel):

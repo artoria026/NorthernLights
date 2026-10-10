@@ -1,3 +1,4 @@
+import { reportActivity } from '@/lib/sessionTimeout'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -126,6 +127,8 @@ export function useChatStream() {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
+          // Waiting on an answer isn't being idle: keep the session clock moving.
+          reportActivity()
           buffer += decoder.decode(value, { stream: true })
 
           const chunks = buffer.split('\n\n')

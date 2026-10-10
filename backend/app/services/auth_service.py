@@ -18,6 +18,7 @@ from app.core.security import (
 )
 from app.models.user import Device, User, UserPreferences
 from app.schemas.auth import (
+    ActivityResponse,
     DeviceInfo,
     RegisterRequest,
     TokenPair,
@@ -29,6 +30,37 @@ from app.services import cache_service
 
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 PASSWORD_RESET_TTL_SECONDS = 900
+# POST /auth/activity writes to `devices` at most this often per device.
+ACTIVITY_WRITE_THROTTLE = timedelta(seconds=30)
+
+
+def idle_timeout() -> timedelta:
+    return timedelta(minutes=settings.SESSION_IDLE_TIMEOUT_MINUTES)
+
+
+def _idle_timeout_seconds() -> int:
+    return int(idle_timeout().total_seconds())
+
+
+def _session_idle_error() -> HTTPException:
+    return HTTPException(
+        status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "error": "Sesion cerrada por inactividad",
+            "code": "SESSION_IDLE",
+        },
+    )
+
+
+def _raise_if_idle(device: "Device") -> None:
+    """`devices.last_used_at` is the session's activity clock: set at login and by
+    record_activity() -- NOT by refresh(), which a background poll triggers every
+    time the access token lapses and would keep an abandoned session alive
+    forever. Past the limit the session is over. Nothing is written here (a
+    request that raises is rolled back anyway): the clock only moves forward
+    through login/activity, so an idle session can't come back on its own."""
+    if device.last_used_at and datetime.now(UTC) - device.last_used_at > idle_timeout():
+        raise _session_idle_error()
 
 
 async def set_rls_user(session: AsyncSession, user_id: UUID) -> None:
@@ -164,7 +196,11 @@ async def issue_tokens_for_device(
         )
 
     access_token = create_access_token(user.id, user.role)
-    return TokenPair(access_token=access_token, refresh_token=refresh_token)
+    return TokenPair(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        idle_timeout_seconds=_idle_timeout_seconds(),
+    )
 
 
 async def login(session: AsyncSession, email: str, password: str, device: DeviceInfo) -> TokenPair:
@@ -215,6 +251,7 @@ async def refresh(session: AsyncSession, refresh_token: str) -> TokenPair:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sesion invalida")
     if device.refresh_token_expires_at and device.refresh_token_expires_at < datetime.now(UTC):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sesion expirada")
+    _raise_if_idle(device)
 
     user_result = await session.execute(select(User).where(User.id == device.user_id))
     user = user_result.scalar_one_or_none()
@@ -225,10 +262,39 @@ async def refresh(session: AsyncSession, refresh_token: str) -> TokenPair:
     new_refresh_token = generate_secure_token()
     device.refresh_token = hash_token(new_refresh_token)
     device.refresh_token_expires_at = datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    device.last_used_at = datetime.now(UTC)
+    # last_used_at is deliberately NOT touched: refreshing is not user activity
+    # (see _raise_if_idle).
 
     access_token = create_access_token(user.id, user.role)
-    return TokenPair(access_token=access_token, refresh_token=new_refresh_token)
+    return TokenPair(
+        access_token=access_token,
+        refresh_token=new_refresh_token,
+        idle_timeout_seconds=_idle_timeout_seconds(),
+    )
+
+
+async def record_activity(
+    session: AsyncSession, user_id: UUID, refresh_token: str
+) -> ActivityResponse:
+    """The web app tells us the person is really there (mouse, keyboard, touch, or
+    "keep me signed in" in the countdown). Resets the inactivity clock of the
+    device that owns `refresh_token`. It can't revive a session that already
+    went idle -- that one needs a new login."""
+    await set_rls_user(session, user_id)
+    result = await session.execute(
+        select(Device).where(
+            Device.refresh_token == hash_token(refresh_token), Device.user_id == user_id
+        )
+    )
+    device = result.scalar_one_or_none()
+    if device is None or not device.is_active:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sesion invalida")
+    _raise_if_idle(device)
+
+    now = datetime.now(UTC)
+    if device.last_used_at is None or now - device.last_used_at >= ACTIVITY_WRITE_THROTTLE:
+        device.last_used_at = now
+    return ActivityResponse(idle_timeout_seconds=_idle_timeout_seconds())
 
 
 async def logout(session: AsyncSession, user_id: UUID, refresh_token: str) -> None:

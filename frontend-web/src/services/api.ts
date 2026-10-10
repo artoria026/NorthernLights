@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import i18n from '@/lib/i18n'
+import { setLogoutReason } from '@/lib/sessionTimeout'
 import { useAuthStore } from '@/stores/authStore'
 import type { ApiSuccess, TokenPair } from '@/types'
 
@@ -28,8 +29,8 @@ async function refreshAccessToken(): Promise<string> {
   // The backend rotates the refresh token on every use (single-use) -- if we
   // only stored the new access_token, the next refresh would send the old
   // token (already invalid on the server) and the session would silently die.
-  const { access_token, refresh_token } = response.data.data
-  useAuthStore.getState().setTokens(access_token, refresh_token)
+  const { access_token, refresh_token, idle_timeout_seconds } = response.data.data
+  useAuthStore.getState().setTokens(access_token, refresh_token, idle_timeout_seconds)
   return access_token
 }
 
@@ -52,8 +53,13 @@ api.interceptors.response.use(
         refreshPromise = null
         originalRequest.headers.set('Authorization', `Bearer ${newToken}`)
         return api(originalRequest)
-      } catch {
+      } catch (refreshError) {
         refreshPromise = null
+        // The server closes a session that went idle (code SESSION_IDLE): say so
+        // on the login screen instead of just dropping the person there.
+        if (axios.isAxiosError(refreshError) && refreshError.response?.data?.code === 'SESSION_IDLE') {
+          setLogoutReason('idle')
+        }
         useAuthStore.getState().logout()
         window.location.href = '/login'
       }

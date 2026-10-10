@@ -28,6 +28,7 @@ export interface TokenPair {
   access_token: string
   refresh_token: string
   token_type: string
+  idle_timeout_seconds: number
 }
 
 export interface Account {
