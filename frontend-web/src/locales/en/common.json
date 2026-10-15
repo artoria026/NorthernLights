@@ -307,5 +307,8 @@
     "countdownLabel": "Your session closes in {{time}}",
     "stay": "Stay signed in",
     "signOut": "Sign out"
+  },
+  "pageSize": {
+    "label": "Rows per page"
   }
 }

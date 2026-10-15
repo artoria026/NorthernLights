@@ -31,7 +31,7 @@ async def _out_one(session: AsyncSession, entry: JournalEntry) -> TransactionOut
 @router.get("")
 async def list_transactions(
     page: int = Query(default=1, ge=1),
-    per_page: int = Query(default=20, ge=1, le=100),
+    per_page: int = Query(default=20, ge=1, le=500),
     entry_type: str | None = None,
     category_id: UUID | None = None,
     account_id: UUID | None = None,

@@ -12,7 +12,12 @@ async def _register_and_login(client: AsyncClient) -> str:
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Test", "password": "supersecret123", "accept_disclaimer": True},
+        json={
+            "email": email,
+            "name": "Test",
+            "password": "supersecret123",
+            "accept_disclaimer": True,
+        },
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -494,6 +499,18 @@ async def test_update_transaction_lines_for_transfer(client: AsyncClient):
     origin = await client.get(f"/api/v1/accounts/{origin_id}", headers=headers)
     dest = await client.get(f"/api/v1/accounts/{dest_id}", headers=headers)
     dest2 = await client.get(f"/api/v1/accounts/{dest2_id}", headers=headers)
-    assert origin.json()["data"]["balance"] == "300.00"  # no net change (200 went out, still goes out)
+    assert (
+        origin.json()["data"]["balance"] == "300.00"
+    )  # no net change (200 went out, still goes out)
     assert dest.json()["data"]["balance"] == "0.00"  # reverted, no longer received anything
     assert dest2.json()["data"]["balance"] == "200.00"  # now receives the new destination's amount
+
+
+@pytest.mark.parametrize("path", ["/api/v1/transactions", "/api/v1/insights/history"])
+async def test_lists_accept_pages_up_to_500_rows(client: AsyncClient, path: str):
+    headers = {"Authorization": f"Bearer {await _register_and_login(client)}"}
+    ok = await client.get(f"{path}?per_page=500", headers=headers)
+    assert ok.status_code == 200
+    assert ok.json()["meta"]["per_page"] == 500
+    too_many = await client.get(f"{path}?per_page=501", headers=headers)
+    assert too_many.status_code == 422

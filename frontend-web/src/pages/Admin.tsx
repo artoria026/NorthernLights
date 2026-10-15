@@ -21,6 +21,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { PageSizeSelect } from '@/components/nl/PageSizeSelect'
+import { usePageSize } from '@/hooks/usePageSize'
 import { EmptyState, ProgressBar, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -463,13 +465,13 @@ function FeedbackRow({ item }: { item: AdminFeedback }) {
   )
 }
 
-const USERS_PER_PAGE = 20
 
 export function Admin() {
   const { t } = useTranslation('pages')
   const currentUser = useAuthStore((s) => s.user)
   const { data: stats } = useAdminStats()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = usePageSize('admin-users')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
 
@@ -484,16 +486,16 @@ export function Admin() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  const { data: users, isLoading } = useAdminUsers(page, USERS_PER_PAGE, search)
+  const { data: users, isLoading } = useAdminUsers(page, pageSize, search)
   const [feedbackFilter, setFeedbackFilter] = useState<FeedbackStatus | ''>('')
   const { data: feedbackItems, isLoading: feedbackLoading } = useAdminFeedback(
     feedbackFilter || undefined,
   )
 
   const total = users?.meta?.total ?? 0
-  const rangeStart = total === 0 ? 0 : (page - 1) * USERS_PER_PAGE + 1
-  const rangeEnd = Math.min(total, page * USERS_PER_PAGE)
-  const maxPage = Math.max(1, Math.ceil(total / USERS_PER_PAGE))
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1
+  const rangeEnd = Math.min(total, page * pageSize)
+  const maxPage = Math.max(1, Math.ceil(total / pageSize))
 
   // The role guard lives in AdminLayout (this page's shell) -- see
   // AdminLayout.tsx.
@@ -645,7 +647,14 @@ export function Admin() {
             ))}
             <div className="flex justify-between items-center mt-3.5 text-xs text-muted-foreground">
               <span>{t('admin.users.showingRange', { start: rangeStart, end: rangeEnd, total })}</span>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3">
+                <PageSizeSelect
+                  value={pageSize}
+                  onChange={(size) => {
+                    setPageSize(size)
+                    setPage(1)
+                  }}
+                />
                 <button
                   type="button"
                   disabled={page <= 1}
