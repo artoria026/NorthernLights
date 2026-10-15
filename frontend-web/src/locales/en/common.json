@@ -283,7 +283,7 @@
     "unexpectedError": "An unexpected error occurred"
   },
   "useAiChat": {
-    "defaultAttachmentMessage": "Here are my bank statements.",
+    "defaultAttachmentMessage": "Here are some files for you.",
     "attachmentSuffix": "attached: {{names}}",
     "streamingNotSupported": "The server doesn't support streaming",
     "couldNotSendMessage": "Couldn't send the message",

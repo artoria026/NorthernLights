@@ -8,27 +8,29 @@ from uuid import UUID
 import structlog
 from redis.asyncio import Redis
 
+from app.ai.attachments import ChatAttachment
 from app.ai.base import AIProviderError, get_ai_provider
 from app.ai.tools import TOOLS, execute_tool
 from app.ai.write_tools import (
-    PROPOSE_ACTION_NAME,
-    PROPOSE_ACTION_TOOL,
-    WRITE_TOOLS,
+    LOOKUP_TOOLS,
+    PROPOSE_ACTIONS_NAME,
+    PROPOSE_ACTIONS_TOOL,
+    WRITE_ACTION_NAMES,
     execute_write_tool,
 )
 from app.core.config import settings
 from app.core.database import rls_session
 from app.core.json_utils import json_safe
 from app.core.system_categories import system_category_names
-from app.services import cache_service, chat_service, engine_service
+from app.services import cache_service, chat_service, engine_service, proposal_service
 
 SYSTEM_PROMPT = """
 Eres un asesor financiero personal directo y honesto. Tienes acceso a los
 datos financieros reales del usuario en tiempo real mediante tus herramientas,
-y tambien puedes registrar informacion nueva por el (cuentas, deudas, gastos
-recurrentes y transacciones puntuales) cuando te lo pida -- incluyendo leer
-estados de cuenta en PDF que te adjunte (uno o varios meses de una tarjeta) y
-traer ese historico.
+y tambien puedes proponer registrar informacion nueva por el (cuentas, deudas,
+gastos recurrentes y transacciones puntuales) cuando te lo pida -- incluyendo
+leer estados de cuenta en PDF y capturas de pantalla que te adjunte -- pero
+NUNCA la registras tu: todo pasa siempre por la confirmacion del usuario.
 
 Tu trabajo:
 - Responder preguntas sobre el estado financiero con datos concretos
@@ -36,8 +38,9 @@ Tu trabajo:
 - Recomendar el maximo de gasto discrecional cuando se te pida
 - Advertir cuando algo no conviene, explicando con cifras
 - Generar planes de mejora cuando el usuario los solicite
-- Registrar cuentas, deudas, recurrentes y transacciones cuando el usuario te
-  pida agregarlas, o cuando adjunte un estado de cuenta en PDF
+- Proponer el registro de cuentas, deudas, recurrentes y transacciones cuando el
+  usuario te pida agregarlas, o cuando adjunte un estado de cuenta en PDF o
+  capturas de pantalla
 
 Reglas:
 - Usa tus tools para obtener datos actualizados antes de dar un numero
@@ -54,17 +57,25 @@ Reglas:
   ya exista algo parecido usa list_existing_accounts_and_debts
 - Nunca inventes una cifra, cuenta o categoria: si falta un dato importante o
   es ambiguo, preguntalo antes de crear nada
-- Antes de ejecutar una tool que crea algo (create_transaction, create_account,
-  create_debt, create_unplanned_debt, create_recurring_item), llama primero a
-  propose_action con un resumen corto y los campos clave (monto, cuenta,
-  categoria, fecha, etc.) -- eso le muestra al usuario una tarjeta con botones
-  de Confirmar/Cancelar, no hace falta que ademas lo preguntes en tu texto.
-  Espera al siguiente turno: si confirma, ejecuta la tool de escritura de
-  'action' con esos mismos datos y confirma con el resultado; si cancela, no
-  ejecutes nada y dile que no se registro. Excepcion: si el usuario ya te dio
-  todos los datos Y pidio explicitamente que lo registres ya (ej. "agrega un
-  gasto de 200 en comida hoy"), ejecuta la tool de escritura directo sin pasar
-  por propose_action
+- NUNCA registras nada directamente: no tienes ninguna tool que escriba. Para
+  crear cuentas, deudas, recurrentes o transacciones llama a propose_actions UNA
+  vez con TODOS los elementos (items). El usuario ve una tarjeta con cada
+  elemento y pulsa Confirmar o Cancelar; si confirma, el sistema registra
+  exactamente esos datos. No preguntes "¿lo registro?" en tu texto (la tarjeta
+  ya lo hace) y no digas que algo ya quedo registrado: hasta que el usuario
+  confirme, NO esta registrado. Esto aplica siempre, incluso si el usuario pide
+  "registralo ya" o adjunta un estado de cuenta
+- En el historial veras tus propuestas anteriores como "[Propuesta ...]" con su
+  estado actual (pendiente, confirmada, cancelada, fallida o expirada) y sus
+  elementos: usalo para saber que se registro de verdad. Si el usuario te pide
+  quitar, agregar o cambiar algo de una propuesta PENDIENTE (ej. "no agregues
+  la compra de cafe"), llama a propose_actions con la propuesta COMPLETA ya
+  corregida (todos los elementos que siguen valiendo, menos los quitados) y
+  pasa en `replaces` el id de la anterior: asi la anterior deja de poder
+  confirmarse y no se registra doble. Una propuesta cancelada, fallida,
+  expirada o reemplazada NO esta registrada
+- Si propose_actions devuelve un error, corrigelo (o preguntale al usuario el
+  dato que falte) y vuelve a llamarla con la lista completa de elementos
 - No existen tools para editar ni borrar nada: si el usuario pide corregir o
   eliminar un registro ya creado, dile que lo haga desde la pantalla
   correspondiente de la app
@@ -80,10 +91,10 @@ El usuario adjunto uno o mas PDFs con el detalle de movimientos de una
 tarjeta (estados de cuenta), normalmente varios meses seguidos. Lee la tabla
 de movimientos de cada PDF adjunto y clasifica cada renglon:
 - Cargo normal del periodo (una compra de una sola vez, un pago de servicio,
-  etc.) -> create_transaction, un llamado por renglon.
+  etc.) -> un elemento create_transaction por renglon.
 - Compra a MSI ("a X meses", "meses sin intereses", "compra diferida") que
-  aparece por PRIMERA VEZ en el lote de PDFs -> create_transaction por el
-  monto TOTAL de la compra (no la mensualidad), contra la TDC. Hoy no hay
+  aparece por PRIMERA VEZ en el lote de PDFs -> elemento create_transaction por
+  el monto TOTAL de la compra (no la mensualidad), contra la TDC. Hoy no hay
   tool para marcarla como MSI (el usuario puede hacerlo despues a mano desde
   Transacciones, eligiendo "a meses sin intereses" en el momento de la
   compra) -- menciona en tu resumen que esa compra vino marcada "a X meses"
@@ -99,13 +110,13 @@ de movimientos de cada PDF adjunto y clasifica cada renglon:
   comisiones: no asumas que categoria usar, pregunta antes de registrar algo
   ahi (podrian ya estar cubiertos por otro lado, ej. una transferencia desde
   el banco que ya se registro aparte).
-Los renglones de un estado de cuenta se registran directo
-(create_transaction / create_debt), SIN pasar por propose_action fila por
-fila -- adjuntar el estado ya es la confirmacion, y pedir un boton por cada
-movimiento haria inutilizable un estado con muchos renglones. Da tu resumen
-final en texto normal al terminar.
-Con varios PDFs adjuntos en el mismo mensaje, procesalos todos antes de dar
-tu resumen final, asi puedes cruzar referencias entre meses. Las categorias
+Nada se registra sin confirmacion: adjuntar el estado NO es confirmar. Pon los
+renglones en propose_actions -- una propuesta por cada PDF/mes (hasta 60
+elementos cada una; si un mes trae mas, parte en varias) -- y el usuario revisa
+y confirma cada una en su tarjeta. Despues da un resumen breve en texto: cuantos
+movimientos propusiste, el total, y lo que dejaste fuera y por que.
+Con varios PDFs adjuntos en el mismo mensaje, procesalos todos antes de
+proponer, asi puedes cruzar referencias entre meses. Las categorias
 del sistema ya existen, son fijas, y debes usar el nombre EXACTO (cada una vale en
 español o en ingles, 'Español / English'):
 - Gasto: {expense_categories}
@@ -117,19 +128,91 @@ STATEMENT_INSTRUCTIONS = STATEMENT_INSTRUCTIONS.replace(
     "{expense_categories}", system_category_names("expense")
 ).replace("{income_categories}", system_category_names("income"))
 
+# Added to SYSTEM_PROMPT ONLY on turns where the user attaches images (screenshots,
+# receipts) -- see chat(). Different from STATEMENT_INSTRUCTIONS on purpose: a
+# screenshot is loose context for what the user wrote, not a structured statement
+# to import in bulk.
+SCREENSHOT_INSTRUCTIONS = """
+El usuario adjunto una o mas capturas de pantalla (imagenes): por ejemplo los
+movimientos de la app de su banco, un recibo, un ticket o una lista de pagos.
+- El mensaje del usuario manda: dice que quiere hacer con las capturas (ej.
+  "son los gastos del viaje, ponlos en Salidas y viajes", o "solo dime cuanto
+  gaste"). La captura es el contexto: usa las dos cosas juntas. Si el mensaje
+  no dice que hacer, cuenta brevemente lo que ves y preguntale.
+- Extrae SOLO lo que se ve y es relevante. No inventes ni completes cifras,
+  fechas, comercios o cuentas que no esten visibles; si algo es ilegible o
+  ambiguo, dilo y preguntalo antes de proponer. Si la captura no tiene datos
+  financieros, dilo.
+- La cuenta: toma el nombre de la cuenta o los ultimos 4 digitos que se vean y
+  buscalos entre las cuentas del usuario (list_existing_accounts_and_debts); si
+  no estas seguro de cual es, preguntalo. Si la captura no muestra el año, usa
+  el de la fecha de hoy, salvo que no cuadre (entonces pregunta).
+- Para registrar algo usa propose_actions con TODOS los movimientos de las
+  capturas juntos: el usuario revisa y confirma en la tarjeta. Si un movimiento
+  se repite entre capturas o ya aparece registrado en tu contexto, no lo
+  propongas dos veces y mencionalo.
+- No repitas en tu texto datos sensibles de la captura (numeros de cuenta o
+  tarjeta completos, saldos que no vengan al caso): bastan los ultimos 4
+  digitos.
+- Las capturas no se guardan: solo cuentas con lo que extraigas ahora. En tu
+  resumen deja claro que leiste de cada una.
+Las categorias del sistema ya existen, son fijas, y debes usar el nombre EXACTO
+(cada una vale en español o en ingles, 'Español / English'):
+- Gasto: {expense_categories}
+- Ingreso: {income_categories}
+"""
+SCREENSHOT_INSTRUCTIONS = SCREENSHOT_INSTRUCTIONS.replace(
+    "{expense_categories}", system_category_names("expense")
+).replace("{income_categories}", system_category_names("income"))
+
 MAX_TOOL_ITERATIONS = 20
 
-# Names of the write tools (app/ai/write_tools.py) for dispatch
-# in the normal chat() -- see _run_tool_loop.
-WRITE_TOOL_NAMES = {t["name"] for t in WRITE_TOOLS}
+# Read-only lookups that share a module with the write actions
+# (list_existing_accounts_and_debts): the model may call them freely.
+LOOKUP_TOOL_NAMES = {t["name"] for t in LOOKUP_TOOLS}
 
 logger = structlog.get_logger(__name__)
 
 ToolExecutor = Callable[[str, dict], Awaitable[dict]]
 
 
-def _format_history(messages: list) -> list[dict]:
-    return [{"role": m.role, "content": m.content} for m in messages]
+def _format_history(messages: list, proposals: dict | None = None) -> list[dict]:
+    """Conversation turns for the model. An assistant turn that carried a proposal
+    also gets that proposal rendered with its CURRENT status: the stored text alone
+    would not tell the model what was proposed or whether the user confirmed it."""
+    proposals = proposals or {}
+    formatted = []
+    for m in messages:
+        content = m.content
+        if m.role == "assistant":
+            for call in m.tool_calls or []:
+                if call.get("tool") != PROPOSE_ACTIONS_NAME:
+                    continue
+                raw_id = (call.get("result") or {}).get("proposal_id", "")
+                try:
+                    proposal = proposals.get(UUID(raw_id))
+                except ValueError:
+                    proposal = None
+                if proposal is not None:
+                    content = f"{content}\n\n{proposal_service.render_for_model(proposal)}".strip()
+        formatted.append({"role": m.role, "content": content})
+    return formatted
+
+
+def _attachment_blocks(attachments: list[ChatAttachment]) -> list[dict]:
+    """Anthropic's native block shape (Claude takes it as is; Gemini translates it in
+    _build_contents): `document` for a PDF, `image` for a screenshot."""
+    return [
+        {
+            "type": "document" if attachment.is_pdf else "image",
+            "source": {
+                "type": "base64",
+                "media_type": attachment.media_type,
+                "data": base64.b64encode(attachment.data).decode("ascii"),
+            },
+        }
+        for attachment in attachments
+    ]
 
 
 async def _run_tool_loop(
@@ -261,19 +344,18 @@ async def chat(
     user_id: UUID,
     message: str,
     role: str = "user",
-    attachments: list[bytes] | None = None,
+    attachments: list[ChatAttachment] | None = None,
 ) -> AsyncGenerator[str, None]:
     """Opens its own RLS session (instead of receiving the request's) because
     `StreamingResponse` keeps reading this generator after the endpoint's
     FastAPI dependency has already closed -- same pattern that
     `rls_session` uses for Celery tasks.
 
-    `attachments`: PDFs already without a password (the router strips it before
-    reaching here, see app/ai/pdf_utils.py) -- bank statements that the user
-    attached in this turn from the same day-to-day chat (see
-    STATEMENT_INSTRUCTIONS). They're sent to the model as `document` blocks in
-    Anthropic's native shape (Claude passes them through as-is, no translation;
-    Gemini translates them to Part.from_bytes in _build_contents)."""
+    `attachments`: files attached in this turn (see app/ai/attachments.py): PDFs
+    already without a password -- bank statements, STATEMENT_INSTRUCTIONS -- and/or
+    images -- screenshots, SCREENSHOT_INSTRUCTIONS. They go to the model in Anthropic's
+    native block shape (Claude takes them as is; Gemini translates them in
+    _build_contents) and are never stored."""
     if role != "admin":
         can_query, _ = await cache_service.check_ai_rate_limit(
             redis, user_id, settings.AI_RATE_LIMIT_PER_USER_DAY
@@ -286,51 +368,56 @@ async def chat(
     async with rls_session(user_id) as session:
         try:
             history = await chat_service.get_recent_messages(session, user_id, limit_pairs=10)
+            proposals = await proposal_service.load_proposals(
+                session, user_id, proposal_service.proposal_ids_in(history)
+            )
 
             user_content: str | list[dict] = message
             if attachments:
-                user_content = [{"type": "text", "text": message}] + [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": base64.b64encode(pdf_bytes).decode("ascii"),
-                        },
-                    }
-                    for pdf_bytes in attachments
-                ]
-            messages = _format_history(history) + [{"role": "user", "content": user_content}]
+                # Files before the text: Claude reads images/documents best that way.
+                user_content = _attachment_blocks(attachments) + [{"type": "text", "text": message}]
+            messages = _format_history(history, proposals) + [
+                {"role": "user", "content": user_content}
+            ]
 
             snapshot = await cache_service.get_financial_snapshot(redis, user_id)
             if not snapshot:
                 snapshot = await _refresh_snapshot(session, redis, user_id)
 
+            has_pdf = any(a.is_pdf for a in attachments or [])
+            has_image = any(a.is_image for a in attachments or [])
             system = (
                 SYSTEM_PROMPT
-                + (f"\n\n{STATEMENT_INSTRUCTIONS}" if attachments else "")
+                + (f"\n\n{STATEMENT_INSTRUCTIONS}" if has_pdf else "")
+                + (f"\n\n{SCREENSHOT_INSTRUCTIONS}" if has_image else "")
                 + f"\n\nFecha de hoy: {date.today().isoformat()}"
                 + f"\n\nContexto financiero:\n{json.dumps(snapshot, default=str)}"
             )
             provider = get_ai_provider()
 
             async def execute(name: str, tool_input: dict) -> dict:
-                nonlocal snapshot
-                if name == PROPOSE_ACTION_NAME:
-                    # Doesn't touch the database -- just confirms back to the
-                    # model that the proposal got recorded in tool_calls
-                    # (see frontend: Advisor.tsx detects it there and draws the
-                    # card with the buttons, this alone doesn't execute anything).
-                    return {"proposed": True, **tool_input}
-                if name in WRITE_TOOL_NAMES:
-                    result = await execute_write_tool(session, user_id, name, tool_input, role)
-                    if "error" not in result:
-                        # The snapshot captured in `system` was already sent, but
-                        # the following read tools in this same turn
-                        # (e.g. get_financial_summary after creating an
-                        # expense) must see the fresh data.
-                        snapshot = await _refresh_snapshot(session, redis, user_id)
-                    return result
+                if name == PROPOSE_ACTIONS_NAME:
+                    # Writes nothing in the financial tables: validates the items and
+                    # stores the proposal (proposal_service). The frontend draws it as a
+                    # card with Confirm/Cancel; only the server, on confirm, runs it.
+                    return await proposal_service.create_proposal(
+                        session,
+                        user_id,
+                        tool_input.get("summary"),
+                        tool_input.get("items"),
+                        tool_input.get("replaces"),
+                    )
+                if name in WRITE_ACTION_NAMES:
+                    # Not offered to the model; defensive. The only way to register
+                    # something is to propose it and have the user confirm.
+                    return {
+                        "error": (
+                            "No puedes registrar directamente: usa propose_actions y el "
+                            "usuario confirma."
+                        )
+                    }
+                if name in LOOKUP_TOOL_NAMES:
+                    return await execute_write_tool(session, user_id, name, tool_input, role)
                 return await execute_tool(session, redis, user_id, name, tool_input, snapshot)
 
             full_response = ""
@@ -338,7 +425,7 @@ async def chat(
             async for kind, payload in _run_tool_loop(
                 provider,
                 messages,
-                TOOLS + WRITE_TOOLS + [PROPOSE_ACTION_TOOL],
+                TOOLS + LOOKUP_TOOLS + [PROPOSE_ACTIONS_TOOL],
                 system,
                 execute,
                 MAX_TOOL_ITERATIONS,

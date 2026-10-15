@@ -283,7 +283,7 @@
     "unexpectedError": "Ocurrió un error inesperado"
   },
   "useAiChat": {
-    "defaultAttachmentMessage": "Aquí están mis estados de cuenta.",
+    "defaultAttachmentMessage": "Aquí te dejo estos archivos.",
     "attachmentSuffix": "adjunto: {{names}}",
     "streamingNotSupported": "El servidor no soporta streaming",
     "couldNotSendMessage": "No se pudo enviar el mensaje",

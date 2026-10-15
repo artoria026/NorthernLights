@@ -278,7 +278,7 @@
         "Ask anything about your financial situation",
         "It can create transactions, accounts, debts, or recurring items for you -- it always asks you to confirm before saving anything",
         "It doesn't edit or delete anything that already exists, only creates",
-        "Attach PDF bank statements to bring in historical data",
+        "Attach screenshots or PDF bank statements to bring in data",
         "Ask it to save a plan and you'll see it later in Insights"
       ]
     },
@@ -288,8 +288,8 @@
         "text": "It doesn't just answer questions -- ask it to log an expense, an account, or a debt and it'll propose the action with a Confirm/Cancel card before saving it."
       },
       {
-        "title": "Bring in your bank statements",
-        "text": "Attach PDFs (even password-protected ones) -- it separates regular charges from installment purchases and avoids duplicates between statements from the same batch."
+        "title": "Bring in your screenshots and statements",
+        "text": "Attach screenshots (Ctrl+V works too) or PDFs; only password-protected PDFs ask for one, and each has its own. Nothing is registered until you confirm the card."
       },
       {
         "title": "More ways to bring in data",

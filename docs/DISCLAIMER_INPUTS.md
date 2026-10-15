@@ -57,10 +57,15 @@ read and create transactions via chat, including attaching PDFs of bank statemen
   behavior.
 - **AI Advisor chat**: the **full text of every message is stored permanently** in the
   database (with no automatic expiration) until the user manually deletes it from Settings or
-  the "clear history" button in the chat. Attached bank statement PDFs **are never stored**
-  (neither the file nor its password) — they're processed in memory and discarded after the
-  response; what can remain is the text extracted from them, if it ends up as part of a
-  created transaction/debt or in the saved chat message itself.
+  the "clear history" button in the chat. Attached bank statement PDFs and screenshots
+  **are never stored** (neither the file, the image nor the password) — they're processed in
+  memory and discarded after the response; what can remain is the text extracted from them,
+  if it ends up as part of a created transaction/debt or in the saved chat message itself.
+- **AI proposals** (`ai_proposals`): everything the Advisor wants to register (transactions,
+  accounts, debts, recurring items — also from statements) is stored as a proposal until the
+  user confirms or cancels it, so that confirming runs exactly what was shown. Expires after
+  24 h, deleted with the chat history / "erase data" / account deletion. It can contain
+  descriptions and amounts taken from a statement or screenshot.
 - **Feedback**: bug/suggestion messages the user sends from the app, visible to any platform
   administrator (not just the user themself).
 
@@ -78,6 +83,9 @@ is needed.
 - The **recent chat history** (last ~10 exchanges) is also resent on every call.
 - If the user attaches a **bank statement PDF**, that file (with its password already
   stripped) is sent directly to the AI provider so it can read it.
+- If the user attaches **screenshots/images**, they are sent to the provider with the message
+  as context. The browser shrinks and re-encodes them first (drops EXIF/GPS), but everything
+  visible in the image is shared.
 - The active provider is configurable (`AI_PROVIDER`: Gemini or Claude) — the project
   currently has credentials configured for both.
 - **In practice, this means sharing complete banking/financial data with an external AI
@@ -137,6 +145,7 @@ is needed.
   standard pattern, not exposed to the internet.)
 - **Bank statement PDF passwords are never stored** anywhere (not on disk, not in the
   database, not in logs) — they're used once in memory to open the file and then discarded.
+  A password is only asked for PDFs that are actually encrypted, per file.
 
 ---
 
@@ -187,5 +196,5 @@ is needed.
   for the pattern) makes sense, but for a new terms version, blocking use until accepted.
 - **AI Advisor specifically**: since it's the only point where financial data is shared with a
   third party (Google/Anthropic), a short, specific notice there is worth it (e.g. the first
-  time that screen is opened, or the first time a PDF is attached) in addition to the general
+  time that screen is opened, or the first time a PDF or image is attached) in addition to the general
   notice — it's not enough for it to be buried inside the general privacy notice.

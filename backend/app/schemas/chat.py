@@ -21,3 +21,20 @@ class AiUsageOut(BaseModel):
     remaining_today: int
     limit_per_day: int
     unlimited: bool = False
+
+
+class ProposalItemOut(BaseModel):
+    action: str
+    # [{"key": "amount", "value": "530"}]: raw values under stable keys; the app
+    # translates the labels and formats money/dates itself.
+    fields: list[dict[str, str]]
+
+
+class ProposalOut(BaseModel):
+    id: UUID
+    status: str
+    summary: str
+    items: list[ProposalItemOut]
+    error: str | None
+    created_at: datetime
+    resolved_at: datetime | None

@@ -419,3 +419,38 @@ export interface ApiSuccess<T> {
   data: T
   meta?: Meta
 }
+
+/** What the advisor wants to register. It is stored by the server and nothing happens
+ * until the user confirms (see backend/app/services/proposal_service.py). */
+export type ProposalStatus = 'pending' | 'confirmed' | 'cancelled' | 'failed' | 'expired' | 'superseded'
+
+export interface ProposalField {
+  /** Stable key (`amount`, `date`, `account`...): the app translates the label. */
+  key: string
+  value: string
+}
+
+export interface ProposalItem {
+  action: string
+  fields: ProposalField[]
+}
+
+export interface AiProposal {
+  id: string
+  status: ProposalStatus
+  summary: string
+  items: ProposalItem[]
+  error: string | null
+  created_at: string
+  resolved_at: string | null
+}
+
+/** The `propose_actions` entry of an assistant message's tool_calls, with the status
+ * the server had when the history was read. */
+export interface ProposalCallResult {
+  proposal_id: string
+  status: ProposalStatus
+  summary: string
+  items: ProposalItem[]
+  error?: string | null
+}

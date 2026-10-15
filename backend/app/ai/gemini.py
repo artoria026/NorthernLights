@@ -107,12 +107,12 @@ def _build_contents(messages: list[dict]) -> list[types.Content]:
                             name=name, response={"result": block["content"]}
                         )
                     )
-                elif block["type"] == "document":
+                elif block["type"] in ("document", "image"):
                     # Anthropic's native shape (advisor.py builds it this way so
                     # that Claude doesn't need translation) -- here it does
                     # need converting to Gemini's Part. Without this branch, an
-                    # attachment would be silently ignored (the for loop above has
-                    # no `else`).
+                    # attachment (a PDF `document` or a screenshot `image`) would be
+                    # silently ignored (the for loop above has no `else`).
                     source = block["source"]
                     parts.append(
                         types.Part.from_bytes(

@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     # frontend/src/lib/disclaimer.ts's, they must match) every time the
     # legal content changes materially. Don't confuse this with
     # AI_PROVIDER/etc: this isn't infra config, it's versioned content.
-    DISCLAIMER_VERSION: str = "2026-08-15"
+    DISCLAIMER_VERSION: str = "2026-10-15"
 
     # First admin user, created by the initial Alembic migration when both
     # ADMIN_EMAIL and ADMIN_PASSWORD are set (idempotent: never touches an
