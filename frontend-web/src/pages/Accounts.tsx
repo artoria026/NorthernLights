@@ -10,7 +10,6 @@ import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { ImportAccountsButton } from '@/components/nl/ImportAccountsButton'
 import { PayCreditCardForm } from '@/components/nl/PayCreditCardForm'
 import { CategoryBadge, HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
-import { categoryIcon } from '@/lib/categoryIcons'
 import { Sparkline } from '@/lib/charts'
 import { fileToNormalizedDataUrl, validateImageFile } from '@/lib/image'
 import {
@@ -40,7 +39,7 @@ import {
 import { useConfirmStore } from '@/stores/confirmStore'
 import { useTransactionModalStore } from '@/stores/transactionModalStore'
 import { useUiStore } from '@/stores/uiStore'
-import type { Account, Category, Transaction } from '@/types'
+import type { Account, Transaction } from '@/types'
 
 type Segment = 'ALL' | 'IN' | 'OUT'
 
@@ -214,52 +213,6 @@ function lineDirection(tx: Transaction, accountId: string, accountType: Account[
   const increases = (line.type === 'debit') === isDebitNormal
   if (accountType === 'liability') return increases ? 'out' : 'in'
   return increases ? 'in' : 'out'
-}
-
-function hexToRgba(hex: string, alpha: number) {
-  const n = parseInt(hex.slice(1), 16)
-  const r = (n >> 16) & 255
-  const g = (n >> 8) & 255
-  const b = n & 255
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`
-}
-
-/** Category pill with the parent integrated ("Proposal 3 -- breadcrumb with
- * › separator" from categoria-columna-propuestas.html) -- a single line
- * with the category's real color instead of two loose texts that don't
- * look connected. Only used here (an account's ledger); the rest of the
- * app keeps using CategoryBadge as-is, which doesn't need to show the
- * parent.
- *
- * The parent and the child are TWO spans, not a single one with truncate --
- * with long names, a single text truncates at the end and eats exactly what
- * matters most (the subcategory). Here only the parent shrinks/truncates
- * first (min-w-0 + flex-1); the child (shrink-0) stays complete unless the
- * whole pill no longer fits even with the parent at zero. */
-function CategoryBreadcrumb({ category, parentName }: { category: Category; parentName?: string }) {
-  const Icon = categoryIcon(category.icon)
-  return (
-    <span
-      className="inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5 text-[11px] font-medium"
-      style={{ background: hexToRgba(category.color, 0.14), border: `1px solid ${hexToRgba(category.color, 0.35)}` }}
-    >
-      <span
-        className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px]"
-        style={{ background: category.color }}
-      >
-        <Icon size={10} color="white" strokeWidth={2} />
-      </span>
-      <span className="flex min-w-0 items-center" style={{ color: category.color }}>
-        {parentName && (
-          <span className="min-w-0 truncate opacity-55">
-            {parentName}
-            <span> › </span>
-          </span>
-        )}
-        <span className="shrink-0 whitespace-nowrap">{category.name}</span>
-      </span>
-    </span>
-  )
 }
 
 interface WizardState {
@@ -1362,13 +1315,17 @@ export function Accounts() {
                   {visibleRows.map((tx) => {
                     const dir = lineDirection(tx, selectedAccount.id, selectedAccount.type)
                     const editable = isTransactionEditable(tx)
-                    // The parent only shows up if the transaction landed in a
-                    // subcategory -- a top-level category has no parent to
-                    // show, and keeps the usual pill.
+                    // Same plain badge as the Transactions screen (just the category's
+                    // name, no icon). The parent of a subcategory isn't lost: it's in the
+                    // tooltip.
                     const category = tx.category_id ? categoryById.get(tx.category_id) : undefined
                     const parent = category?.parent_id ? categoryById.get(category.parent_id) : undefined
                     const categoryCell = category ? (
-                      <CategoryBreadcrumb category={category} parentName={parent?.name} />
+                      <CategoryBadge
+                        name={category.name}
+                        color={category.color}
+                        title={parent ? `${parent.name} › ${category.name}` : category.name}
+                      />
                     ) : (
                       <CategoryBadge name={entryTypeLabel(tx.entry_type)} />
                     )

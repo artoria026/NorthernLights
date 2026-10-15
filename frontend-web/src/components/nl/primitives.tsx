@@ -308,10 +308,14 @@ export function ToggleSwitch({
  * -- pass it whenever you have category_id available. The name-based hash
  * (categoryColor) only applies as a fallback when there's no real category
  * behind it (e.g. "Transferencia"/"Préstamo" instead of a category). */
-export function CategoryBadge({ name, color }: { name: string; color?: string }) {
+/** Never wider than the cell it sits in: a long name is cut with an ellipsis (full
+ * text on hover, or `title` when the caller has a fuller label, e.g. the parent
+ * category) instead of pushing the neighbouring columns around. */
+export function CategoryBadge({ name, color, title }: { name: string; color?: string; title?: string }) {
   return (
     <span
-      className="inline-block border border-border rounded-full px-2.5 py-0.5 text-[11px] whitespace-nowrap"
+      title={title ?? name}
+      className="inline-block max-w-full truncate align-middle border border-border rounded-full px-2.5 py-0.5 text-[11px]"
       style={{ background: 'var(--nl-bg-input)', color: color ?? categoryColor(name) }}
     >
       {name}
