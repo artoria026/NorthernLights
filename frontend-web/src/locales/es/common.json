@@ -307,5 +307,8 @@
     "countdownLabel": "Tu sesión se cierra en {{time}}",
     "stay": "Seguir en sesión",
     "signOut": "Cerrar sesión"
+  },
+  "pageSize": {
+    "label": "Filas por página"
   }
 }

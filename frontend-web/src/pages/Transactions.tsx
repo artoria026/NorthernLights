@@ -5,6 +5,8 @@ import { useSearchParams } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
+import { PageSizeSelect } from '@/components/nl/PageSizeSelect'
+import { usePageSize } from '@/hooks/usePageSize'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { DemoFlow, HelpSection, HelpTip } from '@/components/nl/Help'
@@ -29,7 +31,6 @@ import { useUiStore } from '@/stores/uiStore'
 import type { Transaction } from '@/types'
 
 type TypeFilter = 'ALL' | 'INCOME' | 'EXPENSE' | 'TRANSFER'
-const PAGE_SIZE = 8
 
 // Transactions table (lg+): date | description | account | category | amount | actions.
 // The amount has a fixed width and the text columns use minmax(0, ...), so a long
@@ -375,7 +376,7 @@ function TransactionsHelp() {
 
 export function Transactions() {
   const { t } = useTranslation('pages')
-  const { data, isLoading, isError } = useTransactions({ per_page: 100 })
+  const { data, isLoading, isError } = useTransactions({ per_page: 500 })
   const { data: accounts } = useAccounts()
   const { data: allCategories } = useCategories()
   const categoryColorById = new Map((allCategories ?? []).map((c) => [c.id, c.color]))
@@ -396,6 +397,7 @@ export function Transactions() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = usePageSize('transactions')
 
   const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—'
   const txAccountId = (tx: Transaction) => tx.lines[0]?.account_id ?? ''
@@ -414,9 +416,9 @@ export function Transactions() {
     .filter((tx) => (typeFilter === 'ALL' ? true : txType(tx) === typeFilter))
     .sort((a, b) => (sortDir === 'asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)))
 
-  const maxPage = Math.max(0, Math.ceil(filtered.length / PAGE_SIZE) - 1)
+  const maxPage = Math.max(0, Math.ceil(filtered.length / pageSize) - 1)
   const clampedPage = Math.min(page, maxPage)
-  const pageRows = filtered.slice(clampedPage * PAGE_SIZE, clampedPage * PAGE_SIZE + PAGE_SIZE)
+  const pageRows = filtered.slice(clampedPage * pageSize, clampedPage * pageSize + pageSize)
 
   function resetPage() {
     setPage(0)
@@ -654,12 +656,19 @@ export function Transactions() {
           <div className="flex justify-between items-center mt-3.5 text-xs text-muted-foreground">
             <span>
               {t('transactions.pagination', {
-                from: filtered.length === 0 ? 0 : clampedPage * PAGE_SIZE + 1,
-                to: Math.min(filtered.length, clampedPage * PAGE_SIZE + PAGE_SIZE),
+                from: filtered.length === 0 ? 0 : clampedPage * pageSize + 1,
+                to: Math.min(filtered.length, clampedPage * pageSize + pageSize),
                 total: filtered.length,
               })}
             </span>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              <PageSizeSelect
+                value={pageSize}
+                onChange={(size) => {
+                  setPageSize(size)
+                  resetPage()
+                }}
+              />
               <button
                 type="button"
                 disabled={clampedPage === 0}

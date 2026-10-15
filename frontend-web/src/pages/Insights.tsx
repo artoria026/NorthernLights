@@ -17,6 +17,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { PageSizeSelect } from '@/components/nl/PageSizeSelect'
+import { PAGE_SIZE_OPTIONS, usePageSize } from '@/hooks/usePageSize'
 import { HEADER_SECTIONS, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import {
   useDismissInsight,
@@ -29,7 +31,6 @@ import {
 import { apiErrorMessage } from '@/services/api'
 import type { Insight, InsightCategory, InsightPriority, InsightStatus, InsightTrend } from '@/types'
 
-const HISTORY_PAGE_SIZE = 10
 
 const PRIORITY_SEVERITY: Record<InsightPriority, 'danger' | 'warning' | 'accent'> = {
   high: 'danger',
@@ -285,12 +286,13 @@ export function Insights() {
   const { t } = useTranslation('pages')
   const { data: active, isLoading } = useInsights()
   const [historyPage, setHistoryPage] = useState(1)
-  const { data: history } = useInsightHistory(historyPage, HISTORY_PAGE_SIZE)
+  const [pageSize, setPageSize] = usePageSize('insights-history')
+  const { data: history } = useInsightHistory(historyPage, pageSize)
   const generate = useGenerateInsights()
   const categoryLabels = buildCategoryLabels(t)
   const statusLabels = buildStatusLabels(t)
 
-  const totalHistoryPages = Math.max(1, Math.ceil((history?.meta?.total ?? 0) / HISTORY_PAGE_SIZE))
+  const totalHistoryPages = Math.max(1, Math.ceil((history?.meta?.total ?? 0) / pageSize))
 
   return (
     <div>
@@ -385,10 +387,17 @@ export function Insights() {
                 )
               })}
             </div>
-            {totalHistoryPages > 1 && (
+            {(history?.meta?.total ?? 0) > PAGE_SIZE_OPTIONS[0] && (
               <div className="flex justify-between items-center mt-3.5 text-xs text-muted-foreground">
                 <span>{t('insights.pageOf', { page: historyPage, total: totalHistoryPages })}</span>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
+                  <PageSizeSelect
+                    value={pageSize}
+                    onChange={(size) => {
+                      setPageSize(size)
+                      setHistoryPage(1)
+                    }}
+                  />
                   <button
                     type="button"
                     disabled={historyPage <= 1}

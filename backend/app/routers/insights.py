@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_rls_db
@@ -33,8 +33,8 @@ async def generate_insights(
 
 @router.get("/history")
 async def insight_history(
-    page: int = 1,
-    per_page: int = 20,
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=500),
     current_user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_rls_db),
 ) -> SuccessResponse:

@@ -23,7 +23,7 @@ router = APIRouter()
 @router.get("/users")
 async def list_users(
     page: int = Query(default=1, ge=1),
-    per_page: int = Query(default=20, ge=1, le=100),
+    per_page: int = Query(default=20, ge=1, le=500),
     search: str | None = Query(default=None, max_length=200),
     current_admin: CurrentUser = Depends(require_admin),
     session: AsyncSession = Depends(get_admin_db),
