@@ -80,6 +80,10 @@ function DashboardHelp() {
   )
 }
 
+// Recent-transactions table (lg+): name | amount | category | date. Amount and date are
+// fixed so the amount never moves; name and category are the ones that give way.
+const RECENT_TX_COLUMNS = 'lg:grid-cols-[minmax(0,2fr)_7rem_minmax(0,1.2fr)_5.5rem]'
+
 export function Dashboard() {
   const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
@@ -351,7 +355,12 @@ export function Dashboard() {
               {t('dashboard.recentTransactions.viewAll')}
             </Link>
           </div>
-          <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground pb-2">
+          {/* Same column template in the header and in every row (each row is its own
+              grid): amount and date have a fixed width, and name/category use
+              minmax(0, ...) so a long text is cut instead of widening its track --
+              a plain `fr` track can't be narrower than its content, which is what used
+              to shove the amount out of line. */}
+          <div className={`hidden lg:grid ${RECENT_TX_COLUMNS} gap-2 text-[11px] uppercase tracking-wide text-muted-foreground pb-2`}>
             <span>{t('dashboard.recentTransactions.columns.name')}</span>
             <span className="text-right">{t('dashboard.recentTransactions.columns.amount')}</span>
             <span>{t('dashboard.recentTransactions.columns.category')}</span>
@@ -359,20 +368,20 @@ export function Dashboard() {
           </div>
           {(recentTx?.data ?? []).slice(0, 6).map((tx) => (
             <div key={tx.id}>
-              <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 items-center py-2 border-t border-border text-[13px]">
-                <span className="truncate">{tx.description}</span>
+              <div className={`hidden lg:grid ${RECENT_TX_COLUMNS} gap-2 items-center py-2 border-t border-border text-[13px]`}>
+                <span className="truncate" title={tx.description}>{tx.description}</span>
                 <span
-                  className={`text-right ${isPositiveEntryType(tx.entry_type) ? 'text-[color:var(--nl-accent-ink)]' : ''}`}
+                  className={`text-right whitespace-nowrap ${isPositiveEntryType(tx.entry_type) ? 'text-[color:var(--nl-accent-ink)]' : ''}`}
                 >
                   {formatMoney(tx.amount ?? 0)}
                 </span>
-                <span>
+                <span className="min-w-0">
                   <CategoryBadge
                     name={tx.category_name ?? entryTypeLabel(tx.entry_type)}
                     color={tx.category_id ? categoryColorById.get(tx.category_id) : undefined}
                   />
                 </span>
-                <span className="text-muted-foreground">{tx.date}</span>
+                <span className="text-muted-foreground whitespace-nowrap">{tx.date}</span>
               </div>
               <div className="lg:hidden flex flex-col gap-1.5 py-2 border-t border-border text-[13px]">
                 <div className="flex items-center justify-between gap-2">

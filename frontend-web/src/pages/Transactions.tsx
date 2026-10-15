@@ -31,6 +31,12 @@ import type { Transaction } from '@/types'
 type TypeFilter = 'ALL' | 'INCOME' | 'EXPENSE' | 'TRANSFER'
 const PAGE_SIZE = 8
 
+// Transactions table (lg+): date | description | account | category | amount | actions.
+// The amount has a fixed width and the text columns use minmax(0, ...), so a long
+// description/account/category is cut instead of pushing the amount out of line.
+const TRANSACTION_COLUMNS =
+  'lg:grid-cols-[90px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_90px]'
+
 function formatMoney(value: string | null) {
   return value ? formatMoneyBase(value) : '—'
 }
@@ -248,18 +254,18 @@ function TransactionRow({
       {/* Table row -- lg+ only. The same info in 6 fixed-width columns
           doesn't fit on a phone, that's why there's a separate version
           below. */}
-      <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_1fr_1fr_90px] gap-2 items-center px-3 py-2.5 text-[13px] border-t border-border">
+      <div className={`hidden lg:grid ${TRANSACTION_COLUMNS} gap-2 items-center px-3 py-2.5 text-[13px] border-t border-border`}>
         <span className="text-muted-foreground">{tx.date}</span>
-        <span className="truncate">{tx.description}</span>
+        <span className="truncate" title={tx.description}>{tx.description}</span>
         <span className="text-muted-foreground truncate">{accountName}</span>
-        <span>
+        <span className="min-w-0">
           <CategoryBadge
             name={tx.category_name ?? entryTypeLabel(tx.entry_type)}
             color={tx.category_id ? categoryColorById.get(tx.category_id) : undefined}
           />
         </span>
         <span
-          className={`text-right ${isPositiveEntryType(tx.entry_type) ? 'text-[color:var(--nl-accent-ink)]' : ''}`}
+          className={`text-right whitespace-nowrap ${isPositiveEntryType(tx.entry_type) ? 'text-[color:var(--nl-accent-ink)]' : ''}`}
         >
           {formatMoney(tx.amount)}
         </span>
@@ -609,7 +615,7 @@ export function Transactions() {
           </div>
 
           <div className="bg-card border border-border rounded-md overflow-hidden">
-            <div className="hidden lg:grid grid-cols-[90px_2fr_1fr_1fr_1fr_90px] gap-2 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <div className={`hidden lg:grid ${TRANSACTION_COLUMNS} gap-2 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground`}>
               <button
                 type="button"
                 onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
