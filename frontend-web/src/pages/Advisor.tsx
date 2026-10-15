@@ -6,28 +6,35 @@ import {
   Copy,
   Paperclip,
   Plus,
-  Receipt,
   RotateCcw,
   Send,
   Sparkles,
   Trash2,
-  X,
+  Upload,
 } from 'lucide-react'
-import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, type ClipboardEvent, type DragEvent, type FormEvent, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { AttachmentTray } from '@/components/nl/AttachmentTray'
 import { BulkExcelImportCard } from '@/components/nl/BulkExcelImportCard'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, ViewHeader } from '@/components/nl/primitives'
+import { ProposalCard } from '@/components/nl/ProposalCard'
 import { useAiHistory, useAiUsage, useChatStream, useClearAiHistory } from '@/hooks/useAiChat'
+import { useAttachments } from '@/hooks/useAttachments'
+import { useResolveProposal } from '@/hooks/useProposals'
 import { useFinancialSnapshot } from '@/hooks/useEngine'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useCategories } from '@/hooks/useCategories'
+import { ACCEPT_ATTACHMENTS } from '@/lib/attachments'
 import { getExportPrompt } from '@/lib/importPrompt'
 import { amountColor, formatMoney, isPositiveEntryType } from '@/lib/utils'
+import { apiErrorMessage } from '@/services/api'
+import { useUiStore } from '@/stores/uiStore'
+import type { ProposalCallResult, ProposalStatus } from '@/types'
 
 /** Same thresholds already used by health_score in other screens: 70+ is
  * healthy (green), 40-69 fair (orange), under 40 poor (red). */
@@ -84,121 +91,15 @@ const MARKDOWN_COMPONENTS = {
   td: ({ ...props }) => <td className="border border-border px-2 py-1" {...props} />,
 }
 
-/** Tools that actually write (backend/app/ai/write_tools.py) -- if the
- * advisor's response carries any of these in tool_calls, it really
- * registered/created something. list_existing_accounts_and_debts is
- * read-only (the advisor uses it to look things up, it doesn't count as an
- * action) and create_insight already has its own notice (savedInsight), so
- * they're not listed here. */
-const WRITE_TOOLS = ['create_transaction', 'create_account', 'create_debt', 'create_unplanned_debt', 'create_recurring_item']
-
-function messageDidWrite(toolCalls: { tool: string; result: unknown }[] | undefined): boolean {
-  return !!toolCalls?.some((call) => WRITE_TOOLS.includes(call.tool))
-}
-
-/** propose_action (backend/app/ai/write_tools.py) doesn't write anything --
- * it's the tool the advisor calls to ask for confirmation BEFORE creating
- * something, instead of just asking in the text. If a message carries it,
- * it's rendered as a card with real Confirm/Cancel buttons instead of a
- * plain bubble. */
-interface ActionField {
-  label: string
-  value: string
-}
-interface ActionProposal {
-  action: string
-  summary: string
-  fields: ActionField[]
-}
-function findProposal(toolCalls: { tool: string; result: unknown }[] | undefined): ActionProposal | undefined {
-  const call = toolCalls?.find((c) => c.tool === 'propose_action')
-  return call?.result as ActionProposal | undefined
-}
-
-/** Financial action card -- "pending" carries the Confirm/Cancel buttons
- * (inert if `actionable` is false, e.g. the conversation already moved
- * on), "done" just wraps the advisor's confirmation text with the same
- * visual language. */
-function ActionCard({
-  variant,
-  summary,
-  fields,
-  content,
-  actionable,
-  onConfirm,
-  onCancel,
-}: {
-  variant: 'pending' | 'done'
-  summary?: string
-  fields?: ActionField[]
-  content?: string
-  actionable?: boolean
-  onConfirm?: () => void
-  onCancel?: () => void
-}) {
-  const { t } = useTranslation('pages')
-  const isPending = variant === 'pending'
-  const headerBg = isPending ? 'var(--nl-violet-soft-bg)' : 'var(--nl-accent-soft-bg)'
-  const headerInk = isPending ? 'var(--nl-violet-ink)' : 'var(--nl-accent-ink)'
-  return (
-    <div className="w-full max-w-[380px] rounded-[10px] border border-border overflow-hidden bg-card">
-      <div
-        className="flex items-center gap-2 px-3.5 py-2.5 text-[12px] font-semibold"
-        style={{ background: headerBg, color: headerInk }}
-      >
-        {isPending ? <Receipt size={13} className="flex-shrink-0" /> : <CheckCircle2 size={13} className="flex-shrink-0" />}
-        {isPending ? t('advisor.actionCard.confirmTitle') : t('advisor.actionCard.doneTitle')}
-      </div>
-      <div className="px-3.5 py-3 flex flex-col gap-2">
-        {summary && <p className="text-[12.5px]">{summary}</p>}
-        {content && (
-          <div className="text-sm">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
-              {content}
-            </ReactMarkdown>
-          </div>
-        )}
-        {fields && fields.length > 0 && (
-          <div className="flex flex-col gap-1.5 text-[12.5px] rounded-md p-2.5" style={{ background: 'var(--nl-bg-input)' }}>
-            {fields.map((f, i) => (
-              <div key={i} className="flex justify-between gap-3">
-                <span className="text-muted-foreground">{f.label}</span>
-                <span className="font-medium text-right">{f.value}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      {isPending && (
-        <div className="flex gap-2 px-3.5 py-3 border-t border-border">
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={!actionable}
-            className="flex-1 rounded-md py-2 text-[12.5px] font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40"
-            style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
-          >
-            <Check size={13} />
-            {t('advisor.actionCard.confirmButton')}
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={!actionable}
-            className="flex-1 rounded-md py-2 text-[12.5px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 flex items-center justify-center gap-1.5"
-          >
-            <X size={13} />
-            {t('advisor.actionCard.cancelButton')}
-          </button>
-        </div>
-      )}
-      {isPending && !actionable && (
-        <div className="px-3.5 py-2 text-[11px] text-muted-foreground border-t border-border">
-          {t('advisor.actionCard.inactiveNotice')}
-        </div>
-      )}
-    </div>
-  )
+/** The proposals an assistant message carries: the `propose_actions` calls the server
+ * stored (backend/app/services/proposal_service.py). The advisor registers nothing by
+ * itself -- each proposal is a card the user confirms or cancels. A call the advisor had
+ * to retry after a validation error has no `proposal_id` and isn't shown. */
+function findProposals(toolCalls: { tool: string; result: unknown }[] | undefined): ProposalCallResult[] {
+  return (toolCalls ?? [])
+    .filter((call) => call.tool === 'propose_actions')
+    .map((call) => call.result as ProposalCallResult)
+    .filter((result) => !!result?.proposal_id)
 }
 
 /** thinkBounce already existed in index.css (probably for this exact
@@ -270,13 +171,21 @@ export function Advisor() {
   const { messages, setMessages, sendMessage, isStreaming, error, canRetry, retryLast, savedInsight } =
     useChatStream()
   const [input, setInput] = useState('')
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([])
-  const [pdfPassword, setPdfPassword] = useState('')
+  const attachments = useAttachments()
+  const pushToast = useUiStore((s) => s.pushToast)
+  const resolveProposal = useResolveProposal()
+  // What the server answered when a proposal was confirmed/cancelled on this screen: it
+  // wins over the status the message was loaded with (which was pending).
+  const [proposalOverrides, setProposalOverrides] = useState<
+    Record<string, { status: ProposalStatus; error: string | null }>
+  >({})
+  const [busyProposal, setBusyProposal] = useState<{ id: string; action: 'confirm' | 'cancel' } | null>(null)
+  const [dragging, setDragging] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const seeded = useRef(false)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const pdfInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   // If the user scrolled up to reread the history, a new message (especially
   // one arriving via streaming) shouldn't yank them back down -- that's what
   // the old unconditional auto-scroll did. We only keep following the
@@ -296,6 +205,17 @@ export function Advisor() {
         .map((m) => ({ role: m.role, content: m.content, toolCalls: m.tool_calls ?? undefined })),
     )
   }, [history, messages.length, setMessages])
+
+  const messagesRef = useRef(messages)
+  messagesRef.current = messages
+  useEffect(
+    () => () => {
+      for (const message of messagesRef.current) {
+        for (const url of message.attachmentPreviews ?? []) URL.revokeObjectURL(url)
+      }
+    },
+    [],
+  )
 
   function scrollToBottom() {
     const el = scrollRef.current
@@ -325,14 +245,55 @@ export function Advisor() {
     }
   }, [messages])
 
-  function handlePdfChange(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? [])
-    if (files.length) setAttachedFiles((prev) => [...prev, ...files])
-    event.target.value = ''
+  /** Screenshots and PDFs from the file picker, a paste (Ctrl+V of a screenshot) or a drop:
+   * each is classified by its content; the ones that can't go say why. */
+  async function addFiles(files: File[]) {
+    if (files.length === 0) return
+    const rejected = await attachments.addFiles(files)
+    for (const file of rejected) {
+      pushToast(t(`advisor.attachErrors.${file.reason}`, { name: file.name }), 'error')
+    }
   }
 
-  function removeAttachedFile(index: number) {
-    setAttachedFiles((prev) => prev.filter((_, i) => i !== index))
+  function handleFilePick(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    void addFiles(files)
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLInputElement>) {
+    const files = Array.from(event.clipboardData.files)
+    if (files.length === 0) return // plain text: let the browser paste it
+    event.preventDefault()
+    void addFiles(files)
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>) {
+    if (!event.dataTransfer.types.includes('Files')) return
+    event.preventDefault()
+    if (!isStreaming) setDragging(true)
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false)
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault()
+    setDragging(false)
+    if (!isStreaming) void addFiles(Array.from(event.dataTransfer.files))
+  }
+
+  async function handleProposal(id: string, action: 'confirm' | 'cancel') {
+    setBusyProposal({ id, action })
+    try {
+      const proposal = await resolveProposal.mutateAsync({ id, action })
+      setProposalOverrides((prev) => ({ ...prev, [id]: { status: proposal.status, error: proposal.error } }))
+    } catch (err) {
+      pushToast(apiErrorMessage(err), 'error')
+    } finally {
+      setBusyProposal(null)
+    }
   }
 
   async function copyPrompt() {
@@ -343,19 +304,41 @@ export function Advisor() {
 
   async function send(text: string) {
     const message = text.trim()
-    const hasAttachments = attachedFiles.length > 0
+    const hasAttachments = attachments.items.length > 0
     if ((!message && !hasAttachments) || isStreaming) return
-    setInput('')
-    const files = attachedFiles
-    const password = pdfPassword
-    setAttachedFiles([])
-    setPdfPassword('')
+    // An encrypted PDF still waiting for its password would just be refused.
+    if (attachments.processing || attachments.missingPassword) return
     // The text shown in the bubble and the one actually sent to the backend
     // are no longer the same string -- useAiChat appends "(adjunto: ...)" to
     // THAT one so the server-side history keeps the context, but here on
     // screen the file name shows as a chip, not as text stuck to the
     // message.
-    await sendMessage(message, hasAttachments ? { files, password: password || undefined } : undefined)
+    if (!hasAttachments) {
+      setInput('')
+      await sendMessage(message)
+      return
+    }
+    const { files, passwords } = attachments.payload()
+    const previews = attachments.items.flatMap((item) => (item.previewUrl ? [item.previewUrl] : []))
+    // The text and the files stay in the box until the server accepts them: if it
+    // refuses one (say, a wrong password) nothing is lost and that file gets flagged.
+    const result = await sendMessage(
+      message,
+      { files, passwords },
+      {
+        previews,
+        onAccepted: () => {
+          setInput('')
+          attachments.clear({ keepPreviews: true })
+        },
+      },
+    )
+    if (!result.ok && result.attachmentProblem) {
+      const { code, index } = result.attachmentProblem
+      if ((code === 'PDF_PASSWORD_REQUIRED' || code === 'PDF_PASSWORD_INVALID') && index !== undefined) {
+        attachments.flagPasswordProblem(index)
+      }
+    }
   }
 
   function handleSubmit(event: FormEvent) {
@@ -363,20 +346,10 @@ export function Advisor() {
     void send(input)
   }
 
-  /** The propose_action card's buttons send a fixed text through the same
-   * chat, instead of making the user type "yes" -- that's what makes
-   * confirming unambiguous (the advisor doesn't have to interpret free
-   * text) without having to skip the normal conversational flow. */
-  function respondToProposal(confirmed: boolean) {
-    if (isStreaming) return
-    void sendMessage(
-      confirmed
-        ? 'Sí, confírmalo y regístralo tal cual lo propusiste.'
-        : 'No, cancela esa propuesta, no la registres.',
-    )
-  }
-
   function handleClear() {
+    for (const message of messages) {
+      for (const url of message.attachmentPreviews ?? []) URL.revokeObjectURL(url)
+    }
     seeded.current = true
     setMessages([])
     clearHistory.mutate()
@@ -449,7 +422,21 @@ export function Advisor() {
       />
 
       <div className="flex flex-col lg:flex-row lg:flex-1 lg:min-h-0">
-        <div className="relative flex flex-col h-[65vh] lg:h-auto lg:min-h-0 lg:flex-[0_0_60%] min-w-0">
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className="relative flex flex-col h-[65vh] lg:h-auto lg:min-h-0 lg:flex-[0_0_60%] min-w-0"
+        >
+          {dragging && (
+            <div
+              className="absolute inset-2 z-20 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-sm pointer-events-none"
+              style={{ background: 'var(--nl-violet-soft-bg)', color: 'var(--nl-violet-ink)', borderColor: 'var(--nl-violet)' }}
+            >
+              <Upload size={22} />
+              {t('advisor.attachments.dropHere')}
+            </div>
+          )}
           <div
             ref={scrollRef}
             onScroll={handleMessagesScroll}
@@ -463,9 +450,8 @@ export function Advisor() {
             ) : (
               messages.map((message, i) => {
                 const isLast = i === messages.length - 1
-                const didWrite = messageDidWrite(message.toolCalls)
-                const proposal = message.role === 'assistant' ? findProposal(message.toolCalls) : undefined
-                if (!message.content && !proposal && !didWrite && !(isStreaming && isLast)) return null
+                const proposals = message.role === 'assistant' ? findProposals(message.toolCalls) : []
+                if (!message.content && proposals.length === 0 && !(isStreaming && isLast)) return null
                 if (message.role === 'user') {
                   return (
                     <div
@@ -474,6 +460,18 @@ export function Advisor() {
                       style={{ background: 'var(--nl-violet-soft-bg)', color: 'var(--nl-violet-ink)' }}
                     >
                       {message.content}
+                      {message.attachmentPreviews && message.attachmentPreviews.length > 0 && (
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          {message.attachmentPreviews.map((url) => (
+                            <img
+                              key={url}
+                              src={url}
+                              alt=""
+                              className="h-16 w-16 rounded-md object-cover border border-border"
+                            />
+                          ))}
+                        </div>
+                      )}
                       {message.attachmentNames && message.attachmentNames.length > 0 && (
                         <div className="flex flex-wrap justify-end gap-1.5">
                           {message.attachmentNames.map((name, fi) => (
@@ -499,14 +497,13 @@ export function Advisor() {
                     <Sparkles size={12} style={{ color: 'var(--nl-accent-ink)' }} />
                   </span>
                 )
-                // Proposes an action (create_transaction, create_account, etc.)
-                // -- a card with real Confirm/Cancel buttons instead of waiting
-                // for the user to type "yes". Only clickable if it's the last
-                // message: as soon as the conversation moves on (the user
-                // already responded, via button or text) it becomes inert.
-                if (proposal) {
+                // The advisor proposes (it never registers by itself): a card per proposal
+                // with real Confirm/Cancel buttons. What it shows is what the server stored,
+                // and confirming runs exactly that. A pending proposal can be answered at any
+                // time (the server is the authority), not only while it is the last message.
+                if (proposals.length > 0) {
                   return (
-                    <div key={i} className="self-start max-w-[78%] flex gap-3">
+                    <div key={i} className="self-start max-w-[92%] lg:max-w-[84%] flex gap-3">
                       {avatar}
                       <div className="flex-1 min-w-0 flex flex-col gap-2">
                         {message.content && (
@@ -516,27 +513,21 @@ export function Advisor() {
                             </ReactMarkdown>
                           </div>
                         )}
-                        <ActionCard
-                          variant="pending"
-                          summary={proposal.summary}
-                          fields={proposal.fields}
-                          actionable={isLast && !isStreaming}
-                          onConfirm={() => respondToProposal(true)}
-                          onCancel={() => respondToProposal(false)}
-                        />
-                      </div>
-                    </div>
-                  )
-                }
-                // Already ran the corresponding write tool -- the same
-                // confirmation text from the advisor, but wrapped in the
-                // green card instead of a plain bubble with a badge.
-                if (didWrite) {
-                  return (
-                    <div key={i} className="self-start max-w-[78%] flex gap-3">
-                      {avatar}
-                      <div className="flex-1 min-w-0">
-                        <ActionCard variant="done" content={message.content || undefined} />
+                        {proposals.map((proposal) => {
+                          const resolved = proposalOverrides[proposal.proposal_id]
+                          return (
+                            <ProposalCard
+                              key={proposal.proposal_id}
+                              summary={proposal.summary}
+                              items={proposal.items}
+                              status={resolved?.status ?? proposal.status}
+                              error={resolved ? resolved.error : proposal.error}
+                              busy={busyProposal?.id === proposal.proposal_id ? busyProposal.action : null}
+                              onConfirm={() => void handleProposal(proposal.proposal_id, 'confirm')}
+                              onCancel={() => void handleProposal(proposal.proposal_id, 'cancel')}
+                            />
+                          )
+                        })}
                       </div>
                     </div>
                   )
@@ -602,50 +593,24 @@ export function Advisor() {
           )}
 
           <form onSubmit={handleSubmit} className="flex-shrink-0 border-t border-border px-4 lg:px-8 py-4 lg:py-5">
-            {attachedFiles.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {attachedFiles.map((file, i) => (
-                  <span
-                    key={`${file.name}-${i}`}
-                    className="flex items-center gap-1.5 rounded-full pl-2.5 pr-1.5 py-1 text-xs border border-border"
-                    style={{ background: 'var(--nl-bg-input)' }}
-                  >
-                    {file.name}
-                    <button
-                      type="button"
-                      onClick={() => removeAttachedFile(i)}
-                      className="text-muted-foreground hover:text-destructive"
-                      aria-label={t('advisor.removeAttachment', { name: file.name })}
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            {attachedFiles.length > 0 && (
-              <input
-                type="password"
-                value={pdfPassword}
-                onChange={(e) => setPdfPassword(e.target.value)}
-                disabled={isStreaming}
-                placeholder={t('advisor.pdfPasswordPlaceholder')}
-                className="w-full rounded-md border border-border p-2.5 text-sm outline-none focus:border-ring disabled:text-muted-foreground mb-2"
-                style={{ background: 'var(--nl-bg-input)' }}
-              />
-            )}
+            <AttachmentTray
+              items={attachments.items}
+              disabled={isStreaming}
+              onRemove={attachments.remove}
+              onPassword={attachments.setPassword}
+            />
             <div className="flex items-center gap-2 mb-3">
               <input
-                ref={pdfInputRef}
+                ref={fileInputRef}
                 type="file"
-                accept="application/pdf"
+                accept={ACCEPT_ATTACHMENTS}
                 multiple
-                onChange={handlePdfChange}
+                onChange={handleFilePick}
                 className="hidden"
               />
               <button
                 type="button"
-                onClick={() => pdfInputRef.current?.click()}
+                onClick={() => fileInputRef.current?.click()}
                 disabled={isStreaming}
                 title={t('advisor.attachTitle')}
                 data-tour="advisor:attach"
@@ -667,9 +632,10 @@ export function Advisor() {
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onPaste={handlePaste}
                   disabled={isStreaming}
                   placeholder={
-                    attachedFiles.length > 0
+                    attachments.items.length > 0
                       ? t('advisor.inputPlaceholderWithAttachment')
                       : t('advisor.inputPlaceholder')
                   }
@@ -678,7 +644,12 @@ export function Advisor() {
                 />
                 <button
                   type="submit"
-                  disabled={isStreaming || (!input.trim() && attachedFiles.length === 0)}
+                  disabled={
+                    isStreaming ||
+                    attachments.processing ||
+                    attachments.missingPassword ||
+                    (!input.trim() && attachments.items.length === 0)
+                  }
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md flex items-center justify-center disabled:opacity-40"
                   style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
                 >

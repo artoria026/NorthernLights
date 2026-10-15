@@ -121,15 +121,17 @@ _STATUS_CODES = {
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     # `detail` may be {"error": ..., "code": ...} when the client has to tell two
     # failures with the same status apart (e.g. SESSION_IDLE vs. an invalid session).
+    details: dict = {}
     if isinstance(exc.detail, dict):
         error = str(exc.detail.get("error", ""))
         code = str(exc.detail.get("code") or _STATUS_CODES.get(exc.status_code, "ERROR"))
+        details = exc.detail.get("details") or {}
     else:
         error = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
         code = _STATUS_CODES.get(exc.status_code, "ERROR")
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": error, "code": code, "details": {}},
+        content={"error": error, "code": code, "details": details},
     )
 
 

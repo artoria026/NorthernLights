@@ -1300,13 +1300,6 @@
       "usageToday": "{{remaining}}/{{limit}} today",
       "clearHistoryTitle": "Clear history"
     },
-    "actionCard": {
-      "confirmTitle": "Confirm action",
-      "doneTitle": "Action recorded",
-      "confirmButton": "Confirm",
-      "cancelButton": "Cancel",
-      "inactiveNotice": "This proposal is no longer active."
-    },
     "suggestions": {
       "budget": "How's my budget going?",
       "debtPriority": "Which debt should I pay off first?",
@@ -1320,10 +1313,9 @@
     "insightSaved": "Insight saved: {{title}}",
     "viewIt": "View it →",
     "removeAttachment": "Remove {{name}}",
-    "pdfPasswordPlaceholder": "PDF password (if any, same for all)",
-    "attachTitle": "Attach account statements as PDF",
+    "attachTitle": "Attach screenshots or bank statements (PDF)",
     "moreOptionsTitle": "More ways to bring in data (Excel, prompt for another AI)",
-    "inputPlaceholderWithAttachment": "Some context (e.g. \"this is 3 months of my Platinum credit card\")...",
+    "inputPlaceholderWithAttachment": "Some context (e.g. \"these are the trip expenses\")...",
     "inputPlaceholder": "Type your question...",
     "sidebar": {
       "financialSummary": "FINANCIAL SUMMARY",
@@ -1363,9 +1355,102 @@
       },
       "historicalData": {
         "heading": "Bringing in historical data",
-        "body": "The 📎 next to the message attaches account statements as PDF (works even if they're password-protected — type it once for the whole batch) — the assistant logs regular charges and installment purchases (MSI) at their full amount only once, without duplicating when that same installment shows up again in later statements. Marking a purchase as an installment plan to see its progress in Accounts is a separate step you do yourself when reviewing the transaction — the assistant doesn't do it on its own. The \"+\" button has two more ways in: uploading a pre-filled Excel file, or copying a prompt to paste into another AI (ChatGPT, Gemini) and bring back an already-structured summary."
+        "body": "The 📎 next to the message attaches screenshots or PDF bank statements (you can also paste a screenshot with Ctrl+V or drag it into the chat). If a PDF has a password, the field appears next to that file and each one has its own; screenshots and PDFs without a password ask for nothing. The assistant reads what's visible and uses your message as context (for example, \"these are the trip expenses\"), but it never registers anything on its own: it shows you a card with everything it proposes and nothing is saved until you press Confirm. In a statement it tells normal charges apart from installment purchases (MSI) and doesn't duplicate an installment that reappears in later statements. Marking a purchase as MSI to see its progress in Accounts is a separate step you do yourself. Screenshots and PDFs are not stored: they only travel to the AI provider so it can read them. The \"+\" has two more options: load a pre-filled Excel, or copy a prompt to paste into another AI (ChatGPT, Gemini) and bring back a structured summary."
       },
       "tip": "If you ask it to save a plan or recommendation, it creates it as an Insight you can view later in that section (we'll let you know right there in the chat when it happens). It can also create accounts, debts, recurring items, or log transactions if you dictate the details or attach a PDF — it always summarizes what it's about to save and waits for your confirmation before doing it. It can't edit or delete anything that already exists."
+    },
+    "attachments": {
+      "listLabel": "Attached files",
+      "passwordPlaceholder": "This PDF's password",
+      "passwordLabel": "Password for {{name}}",
+      "passwordWrong": "Wrong password",
+      "dropHere": "Drop your screenshots or PDFs here"
+    },
+    "attachErrors": {
+      "unsupported": "\"{{name}}\": only PDFs or images (PNG, JPG or WebP) can be attached.",
+      "heic": "\"{{name}}\" is a HEIC photo (iPhone) and can't be read. Send a screenshot (PNG/JPG) or export it as JPG.",
+      "tooLarge": "\"{{name}}\" is too large (max 15 MB per PDF and 5 MB per image).",
+      "tooMany": "\"{{name}}\" doesn't fit: at most 5 files per message.",
+      "unreadable": "I couldn't read \"{{name}}\". Try another image."
+    },
+    "proposal": {
+      "status": {
+        "pending": "Review before it's registered",
+        "confirmed": "Registered",
+        "cancelled": "Cancelled: nothing was registered",
+        "failed": "Couldn't register it: nothing was saved",
+        "expired": "Expired: nothing was registered",
+        "superseded": "Replaced by a corrected version: nothing was registered"
+      },
+      "confirmButton": "Confirm and register",
+      "cancelButton": "Cancel",
+      "failedHint": "Ask the advisor to fix it and propose it again.",
+      "expiredHint": "Ask the advisor to propose it again.",
+      "movements_one": "{{count}} transaction",
+      "movements_other": "{{count}} transactions",
+      "entryType": {
+        "expense": "Expenses",
+        "income": "Income"
+      },
+      "actions": {
+        "create_transaction": "Transaction",
+        "create_account": "Account",
+        "create_debt": "Debt with a payment plan",
+        "create_unplanned_debt": "Debt without a plan",
+        "create_recurring_item": "Recurring expense or income"
+      },
+      "fields": {
+        "date": "Date",
+        "description": "Description",
+        "category": "Category",
+        "amount": "Amount",
+        "account": "Account",
+        "entry_type": "Type",
+        "name": "Name",
+        "type": "Type",
+        "subtype": "Subtype",
+        "initial_balance": "Initial balance",
+        "currency": "Currency",
+        "credit_limit": "Credit limit",
+        "interest_rate": "Annual interest rate",
+        "billing_cycle_day": "Statement day",
+        "payment_due_day": "Payment due day",
+        "creditor": "Creditor",
+        "total_amount": "Total amount",
+        "current_balance": "Current balance",
+        "payment_amount": "Payment amount",
+        "payment_frequency": "Payment frequency",
+        "payment_day": "Payment day",
+        "next_payment_date": "Next payment",
+        "linked_account": "Linked account",
+        "item_type": "Type",
+        "frequency": "Frequency",
+        "frequency_day": "Day",
+        "next_date": "Next date"
+      },
+      "values": {
+        "asset": "Asset",
+        "liability": "Liability",
+        "cash": "Cash",
+        "checking": "Checking account",
+        "savings": "Savings",
+        "credit_card": "Credit card",
+        "personal_loan": "Personal loan",
+        "payroll_loan": "Payroll loan",
+        "informal": "Informal",
+        "civic": "Civic",
+        "loan_received": "Loan received",
+        "weekly": "Weekly",
+        "biweekly": "Every two weeks",
+        "monthly": "Monthly",
+        "bimonthly": "Every two months",
+        "annual": "Yearly",
+        "irregular": "Irregular",
+        "subscription": "Subscription",
+        "service": "Service",
+        "utility": "Utility",
+        "income": "Income"
+      }
     }
   },
   "admin": {

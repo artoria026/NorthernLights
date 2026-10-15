@@ -1300,13 +1300,6 @@
       "usageToday": "{{remaining}}/{{limit}} hoy",
       "clearHistoryTitle": "Limpiar historial"
     },
-    "actionCard": {
-      "confirmTitle": "Confirmar acción",
-      "doneTitle": "Acción registrada",
-      "confirmButton": "Confirmar",
-      "cancelButton": "Cancelar",
-      "inactiveNotice": "Esta propuesta ya no está activa."
-    },
     "suggestions": {
       "budget": "¿Cómo va mi presupuesto?",
       "debtPriority": "¿Qué deuda debería pagar primero?",
@@ -1320,10 +1313,9 @@
     "insightSaved": "Insight guardado: {{title}}",
     "viewIt": "Verlo →",
     "removeAttachment": "Quitar {{name}}",
-    "pdfPasswordPlaceholder": "Contraseña de los PDF (si tienen, misma para todos)",
-    "attachTitle": "Adjuntar estados de cuenta en PDF",
+    "attachTitle": "Adjuntar capturas de pantalla o estados de cuenta (PDF)",
     "moreOptionsTitle": "Más formas de traer datos (Excel, prompt para otra IA)",
-    "inputPlaceholderWithAttachment": "Algo de contexto (ej. \"son 3 meses de mi TDC Platino\")...",
+    "inputPlaceholderWithAttachment": "Algo de contexto (ej. \"son los gastos del viaje\")...",
     "inputPlaceholder": "Escribe tu pregunta...",
     "sidebar": {
       "financialSummary": "RESUMEN FINANCIERO",
@@ -1363,9 +1355,102 @@
       },
       "historicalData": {
         "heading": "Traer datos históricos",
-        "body": "El 📎 junto al mensaje adjunta estados de cuenta en PDF (funciona aunque tengan contraseña, escríbela una sola vez para todo el lote) — el asistente registra los cargos normales y las compras a meses (MSI) por su monto total una sola vez, sin duplicar cuando esa misma mensualidad reaparece en los estados siguientes. Marcar una compra como MSI para ver su progreso en Cuentas es un paso aparte que haces tú al revisar la transacción, el asistente no lo hace solo. El \"+\" tiene dos formas más: cargar un Excel prellenado, o copiar un prompt para pegarlo en otra IA (ChatGPT, Gemini) y traer de vuelta un resumen ya estructurado."
+        "body": "El 📎 junto al mensaje adjunta capturas de pantalla o estados de cuenta en PDF (también puedes pegar una captura con Ctrl+V o arrastrarla al chat). Si un PDF tiene contraseña, el campo aparece junto a ese archivo y cada uno lleva la suya; las capturas y los PDF sin clave no piden nada. El asistente lee lo que se ve y usa tu mensaje como contexto (por ejemplo, \"son los gastos del viaje\"), pero nunca registra nada por su cuenta: te muestra una tarjeta con todo lo que propone y solo se guarda cuando pulsas Confirmar. En un estado de cuenta distingue los cargos normales de las compras a meses (MSI) y no duplica una mensualidad que reaparece en los estados siguientes. Marcar una compra como MSI para ver su progreso en Cuentas es un paso aparte que haces tú. Las capturas y los PDF no se guardan: solo viajan al proveedor de IA para leerlos. El \"+\" tiene dos formas más: cargar un Excel prellenado, o copiar un prompt para pegarlo en otra IA (ChatGPT, Gemini) y traer de vuelta un resumen ya estructurado."
       },
       "tip": "Si le pides que guarde un plan o recomendación, lo crea como un Insight que puedes ver después en esa sección (te avisamos ahí mismo en el chat cuando pasa). También puede crear cuentas, deudas, recurrentes o registrar transacciones si le dictas los datos o le adjuntas un PDF — siempre te resume qué va a guardar y espera tu confirmación antes de hacerlo. No puede editar ni borrar nada ya existente."
+    },
+    "attachments": {
+      "listLabel": "Archivos adjuntos",
+      "passwordPlaceholder": "Contraseña de este PDF",
+      "passwordLabel": "Contraseña de {{name}}",
+      "passwordWrong": "Contraseña incorrecta",
+      "dropHere": "Suelta aquí tus capturas o PDF"
+    },
+    "attachErrors": {
+      "unsupported": "«{{name}}»: solo se pueden adjuntar PDF o imágenes (PNG, JPG o WebP).",
+      "heic": "«{{name}}» es una foto HEIC (iPhone) y no se puede leer. Manda una captura de pantalla (PNG/JPG) o expórtala como JPG.",
+      "tooLarge": "«{{name}}» pesa demasiado (máximo 15 MB por PDF y 5 MB por imagen).",
+      "tooMany": "«{{name}}» no cabe: máximo 5 archivos por mensaje.",
+      "unreadable": "No pude leer «{{name}}». Prueba con otra imagen."
+    },
+    "proposal": {
+      "status": {
+        "pending": "Revisa antes de registrar",
+        "confirmed": "Registrado",
+        "cancelled": "Cancelada: no se registró nada",
+        "failed": "No se pudo registrar: no se guardó nada",
+        "expired": "Expiró: no se registró nada",
+        "superseded": "Reemplazada por una versión corregida: no se registró nada"
+      },
+      "confirmButton": "Confirmar y registrar",
+      "cancelButton": "Cancelar",
+      "failedHint": "Pídele al asesor que lo corrija y te lo proponga de nuevo.",
+      "expiredHint": "Pídele al asesor que te la proponga de nuevo.",
+      "movements_one": "{{count}} movimiento",
+      "movements_other": "{{count}} movimientos",
+      "entryType": {
+        "expense": "Gastos",
+        "income": "Ingresos"
+      },
+      "actions": {
+        "create_transaction": "Transacción",
+        "create_account": "Cuenta",
+        "create_debt": "Deuda con plan de pago",
+        "create_unplanned_debt": "Deuda sin plan",
+        "create_recurring_item": "Gasto o ingreso recurrente"
+      },
+      "fields": {
+        "date": "Fecha",
+        "description": "Descripción",
+        "category": "Categoría",
+        "amount": "Monto",
+        "account": "Cuenta",
+        "entry_type": "Tipo",
+        "name": "Nombre",
+        "type": "Tipo",
+        "subtype": "Subtipo",
+        "initial_balance": "Saldo inicial",
+        "currency": "Moneda",
+        "credit_limit": "Límite de crédito",
+        "interest_rate": "Tasa de interés anual",
+        "billing_cycle_day": "Día de corte",
+        "payment_due_day": "Día límite de pago",
+        "creditor": "Acreedor",
+        "total_amount": "Monto total",
+        "current_balance": "Saldo actual",
+        "payment_amount": "Monto del pago",
+        "payment_frequency": "Frecuencia de pago",
+        "payment_day": "Día de pago",
+        "next_payment_date": "Próximo pago",
+        "linked_account": "Cuenta ligada",
+        "item_type": "Tipo",
+        "frequency": "Frecuencia",
+        "frequency_day": "Día",
+        "next_date": "Próxima fecha"
+      },
+      "values": {
+        "asset": "Activo",
+        "liability": "Pasivo",
+        "cash": "Efectivo",
+        "checking": "Cuenta de débito",
+        "savings": "Ahorro",
+        "credit_card": "Tarjeta de crédito",
+        "personal_loan": "Préstamo personal",
+        "payroll_loan": "Préstamo de nómina",
+        "informal": "Informal",
+        "civic": "Cívica",
+        "loan_received": "Préstamo recibido",
+        "weekly": "Semanal",
+        "biweekly": "Quincenal",
+        "monthly": "Mensual",
+        "bimonthly": "Bimestral",
+        "annual": "Anual",
+        "irregular": "Irregular",
+        "subscription": "Suscripción",
+        "service": "Servicio",
+        "utility": "Servicio básico",
+        "income": "Ingreso"
+      }
     }
   },
   "admin": {

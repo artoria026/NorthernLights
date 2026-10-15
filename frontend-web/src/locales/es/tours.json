@@ -278,7 +278,7 @@
         "Pregunta lo que quieras sobre tu situación financiera",
         "Puede crear transacciones, cuentas, deudas o recurrentes por ti -- siempre te pide confirmar antes de guardar nada",
         "No edita ni elimina nada que ya exista, solo crea",
-        "Adjunta estados de cuenta en PDF para traer datos históricos",
+        "Adjunta capturas de pantalla o estados de cuenta en PDF para traer datos",
         "Pídele que guarde un plan y lo verás después en Insights"
       ]
     },
@@ -288,8 +288,8 @@
         "text": "No solo responde preguntas -- pídele que registre un gasto, una cuenta o una deuda y te va a proponer la acción con una tarjeta de Confirmar/Cancelar antes de guardarla."
       },
       {
-        "title": "Trae tus estados de cuenta",
-        "text": "Adjunta PDFs (aunque tengan contraseña) -- separa cargos normales de compras a meses y evita duplicados entre estados del mismo lote."
+        "title": "Trae tus capturas y estados de cuenta",
+        "text": "Adjunta capturas (también con Ctrl+V) o PDFs; solo los PDF con contraseña la piden, y cada uno la suya. Nada se registra hasta que confirmas la tarjeta."
       },
       {
         "title": "Más formas de traer datos",

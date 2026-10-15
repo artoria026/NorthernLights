@@ -1,6 +1,6 @@
 # Aviso de Privacidad — NorthernLights
 
-**Última actualización:** 15 de agosto de 2026
+**Última actualización:** 15 de octubre de 2026
 
 ---
 
@@ -35,10 +35,18 @@ El texto completo de cada mensaje que envías al Asesor de IA **se guarda de for
 nuestra base de datos, sin fecha de expiración automática, hasta que tú lo borres manualmente desde
 Ajustes o el botón de "limpiar historial" dentro del chat.
 
-Los archivos PDF de estados de cuenta bancarios que adjuntes en el chat **nunca se almacenan** — ni
-el archivo ni su contraseña. Se procesan en memoria únicamente para esa respuesta y se descartan de
-inmediato después. La excepción es el texto que, como resultado de esa conversación, termine
-formando parte de una transacción o deuda que decidas crear, o del propio mensaje de chat guardado.
+Los archivos que adjuntes en el chat (PDF de estados de cuenta bancarios y capturas de pantalla)
+**nunca se almacenan** — ni el archivo, ni su contraseña, ni la imagen. Se procesan en memoria
+únicamente para esa respuesta y se descartan de inmediato después. La excepción es el texto que,
+como resultado de esa conversación, termine formando parte de una transacción o deuda que decidas
+crear, o del propio mensaje de chat guardado.
+
+Cuando el Asesor te propone registrar algo (movimientos, cuentas, deudas o gastos recurrentes,
+también al leer un estado de cuenta), **nada se registra sin que lo confirmes**. Para que lo que
+confirmas sea exactamente lo que se guarda, la propuesta (los datos que se registrarían) se guarda
+en nuestra base de datos hasta que la confirmes o la canceles; si no haces ninguna de las dos,
+caduca a las 24 horas. Se borra junto con tu historial de chat o con tus datos. La propuesta puede
+contener, por ejemplo, las descripciones y montos de los movimientos de un estado de cuenta.
 
 ### 2.4 Datos de dispositivo
 Nombre y tipo de dispositivo, y token de notificaciones push (una vez que esta función se active —
@@ -78,7 +86,11 @@ sobre tus finanzas. También reenviamos tu historial reciente de chat (los últi
 en cada llamada, para que la conversación tenga contexto.
 
 Si adjuntas un PDF de un estado de cuenta bancario, ese archivo (ya sin contraseña) se envía
-directamente al proveedor de IA activo para que pueda leerlo.
+directamente al proveedor de IA activo para que pueda leerlo. Lo mismo ocurre con las capturas de
+pantalla o imágenes que adjuntes: se envían al proveedor junto con tu mensaje, como contexto, para
+que las lea. Antes de salir de tu navegador, las imágenes se reducen y se vuelven a codificar, lo
+que elimina los metadatos que pudieran traer (como la ubicación de una foto), pero **todo lo que se
+vea en la imagen se comparte**: procura no incluir datos que no quieras compartir.
 
 El proveedor que procesa esta información puede ser **Google (Gemini)** o **Anthropic (Claude)**,
 según la configuración vigente de la app.
@@ -128,7 +140,8 @@ Preferimos ser precisos aquí en vez de prometer de más:
 - **La comunicación entre tu navegador y nuestros servidores viaja cifrada (HTTPS/TLS)** — la misma
   protección que representa el candado en tu navegador.
 - **Las contraseñas de tus PDFs de estados de cuenta nunca se guardan** en ningún lado — se usan una
-  sola vez para abrir el archivo y se descartan de inmediato.
+  sola vez para abrir el archivo y se descartan de inmediato. Solo se te pide contraseña para los PDF
+que están cifrados, archivo por archivo.
 
 ## 7. Acceso interno — panel de administrador
 
@@ -186,15 +199,16 @@ usa el formulario de feedback dentro de la app.
 ## Anexo — Aviso corto para la pantalla del Asesor de IA
 
 *Recomendación de implementación: mostrar este texto la primera vez que el usuario abre la pantalla
-del Asesor de IA, y de nuevo la primera vez que adjunta un PDF, como un modal o banner que requiera
+del Asesor de IA, y de nuevo la primera vez que adjunta un PDF o una imagen, como un modal o banner que requiera
 aceptación explícita — no basta con que quede enterrado dentro del aviso general.*
 
 > **Antes de continuar:** cada vez que uses el Asesor de IA, compartiremos con nuestro proveedor de
 > inteligencia artificial (Google Gemini o Anthropic Claude) un resumen de tu situación financiera
 > actual —cuentas, deudas, presupuesto y transacciones recientes— junto con tu mensaje, para que
-> pueda darte una respuesta útil. Si adjuntas un PDF de un estado de cuenta bancario, ese archivo
-> también se envía directamente al proveedor de IA para que lo lea; no lo almacenamos en ningún
-> momento. El texto de tu conversación con el Asesor se guarda de forma permanente hasta que tú lo
+> pueda darte una respuesta útil. Si adjuntas un PDF de un estado de cuenta bancario o una captura de
+> pantalla, ese archivo también se envía directamente al proveedor de IA para que lo lea (todo lo
+> que se vea en la imagen se comparte); no lo almacenamos en ningún momento. Nada se registra sin
+> que lo confirmes. El texto de tu conversación con el Asesor se guarda de forma permanente hasta que tú lo
 > borres desde Ajustes.
 >
 > Al continuar, aceptas que se comparta esta información con nuestro proveedor de IA en cada uso de

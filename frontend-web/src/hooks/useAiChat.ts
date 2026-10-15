@@ -45,9 +45,11 @@ export interface StreamingChatMessage {
    * are never persisted (see ChatAttachments), so this doesn't survive
    * a reload either: it's a convenience for the current session, not real history. */
   attachmentNames?: string[]
-  /** Filled in after the stream ends (see the fetch to /ai/history
-   * in sendMessage's finally) -- if it carries any of WRITE_TOOLS, this
-   * response actually recorded something, it's not just text proposing it. */
+  /** Object URLs of the screenshots sent, for thumbnails in the bubble (this session only). */
+  attachmentPreviews?: string[]
+  /** Filled in after the stream ends (see the fetch to /ai/history in sendMessage's
+   * finally). Nothing the advisor does is registered by itself: if it carries a
+   * `propose_actions` call, that is a proposal the user still has to confirm. */
   toolCalls?: { tool: string; result: unknown }[]
 }
 
@@ -57,11 +59,32 @@ export interface SavedInsightRef {
 }
 
 export interface ChatAttachments {
-  /** PDF account statements -- sent as-is, the backend strips the password
-   * before passing them to the model (they're never persisted). */
+  /** PDF statements and screenshots -- sent as they are; the backend strips each
+   * encrypted PDF's password before passing it to the model (nothing is persisted). */
   files: File[]
-  password?: string
+  /** Each file's password, aligned with `files` (null for the ones without one). */
+  passwords: (string | null)[]
 }
+
+/** Problems with a specific attachment that the backend reports with a code (see
+ * app/ai/attachments.py): the message wasn't sent, so the app keeps what the user
+ * attached and points at the file instead of showing a failed message. */
+const ATTACHMENT_ERROR_CODES = [
+  'PDF_PASSWORD_REQUIRED',
+  'PDF_PASSWORD_INVALID',
+  'UNSUPPORTED_ATTACHMENT',
+  'ATTACHMENT_TOO_LARGE',
+  'ATTACHMENTS_TOO_LARGE',
+]
+
+export interface AttachmentProblem {
+  code: string
+  /** Position of the file in `attachments.files`, when the problem is about one file. */
+  index?: number
+  filename?: string
+}
+
+export type SendResult = { ok: true } | { ok: false; attachmentProblem?: AttachmentProblem }
 
 export function useChatStream() {
   const { t } = useTranslation('common')
@@ -77,7 +100,11 @@ export function useChatStream() {
   const lastFailedMessageRef = useRef<string | null>(null)
 
   const sendMessage = useCallback(
-    async (message: string, attachments?: ChatAttachments) => {
+    async (
+      message: string,
+      attachments?: ChatAttachments,
+      options?: { onAccepted?: () => void; previews?: string[] },
+    ): Promise<SendResult> => {
       setError(null)
       setSavedInsight(null)
       const attachmentNames = attachments?.files.length ? attachments.files.map((f) => f.name) : undefined
@@ -92,13 +119,14 @@ export function useChatStream() {
         : displayMessage
       setMessages((prev) => [
         ...prev,
-        { role: 'user', content: displayMessage, attachmentNames },
+        { role: 'user', content: displayMessage, attachmentNames, attachmentPreviews: options?.previews },
         { role: 'assistant', content: '' },
       ])
       setIsStreaming(true)
 
       const token = useAuthStore.getState().accessToken
       let hadError = false
+      let attachmentProblem: AttachmentProblem | undefined
 
       try {
         // multipart/form-data always (not only when there are attachments): the
@@ -106,8 +134,10 @@ export function useChatStream() {
         // browser sets the Content-Type with the boundary on its own.
         const form = new FormData()
         form.append('message', networkMessage)
-        if (attachments?.password) form.append('pdf_password', attachments.password)
         for (const file of attachments?.files ?? []) form.append('attachments', file)
+        if (attachments?.passwords.some((p) => p)) {
+          form.append('file_passwords', JSON.stringify(attachments.passwords))
+        }
 
         const response = await fetch(`${api.defaults.baseURL}/ai/chat`, {
           method: 'POST',
@@ -117,8 +147,17 @@ export function useChatStream() {
         if (!response.body) throw new Error(t('useAiChat.streamingNotSupported'))
         if (!response.ok) {
           const body = await response.json().catch(() => null)
+          if (ATTACHMENT_ERROR_CODES.includes(body?.code)) {
+            attachmentProblem = {
+              code: body.code,
+              index: body.details?.index,
+              filename: body.details?.filename,
+            }
+          }
           throw new Error(body?.error ?? t('useAiChat.couldNotSendMessage'))
         }
+        // The server took the message (and its files): the caller can let go of them.
+        options?.onAccepted?.()
 
         const reader = response.body.getReader()
         const decoder = new TextDecoder()
@@ -155,7 +194,13 @@ export function useChatStream() {
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : t('useAiChat.connectionError'))
-        hadError = true
+        if (attachmentProblem) {
+          // Nothing was sent: take the (user, empty assistant) pair that was shown
+          // back out; the caller keeps the text and the files.
+          setMessages((prev) => prev.slice(0, -2))
+        } else {
+          hadError = true
+        }
       } finally {
         setIsStreaming(false)
         lastFailedMessageRef.current = hadError ? message : null
@@ -163,7 +208,7 @@ export function useChatStream() {
         queryClient.invalidateQueries({ queryKey: ['ai', 'usage'] })
         queryClient.invalidateQueries({ queryKey: ['insights'] })
 
-        if (!hadError) {
+        if (!hadError && !attachmentProblem) {
           try {
             const { data } = await api.get<ApiSuccess<ChatMessage[]>>('/ai/history', {
               params: { page: 1, per_page: 1 },
@@ -192,6 +237,7 @@ export function useChatStream() {
           }
         }
       }
+      return hadError || attachmentProblem ? { ok: false, attachmentProblem } : { ok: true }
     },
     [queryClient, t],
   )

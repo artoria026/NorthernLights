@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.ai_proposal import AiProposal
 from app.models.chat_message import ChatMessage
 
 
@@ -60,4 +61,6 @@ async def save_message(
 
 async def clear_history(session: AsyncSession, user_id: UUID) -> None:
     await session.execute(delete(ChatMessage).where(ChatMessage.user_id == user_id))
+    # The conversation's proposals go with it (a pending one would be orphaned).
+    await session.execute(delete(AiProposal).where(AiProposal.user_id == user_id))
     await session.flush()

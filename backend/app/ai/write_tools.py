@@ -3,9 +3,12 @@ recurring items, and transactions, always scoped to the authenticated
 user via RLS (same pattern as the RLS session that advisor.py opens).
 
 Separate from app/ai/tools.py on purpose (SRP): tools.py's tools are
-read-only (except create_insight). These are used both by the normal chat
-(`/ai/chat`, with explicit user confirmation before creating -- see
-SYSTEM_PROMPT in advisor.py) and by import mode (`/ai/import`).
+read-only (except create_insight).
+
+The advisor model does NOT get these tools: it can only call `propose_actions`
+(see below), which validates the items and stores them as an AiProposal. These
+functions are what the server runs, from proposal_service, when the user
+confirms: what the user saw is exactly what gets executed.
 """
 
 from decimal import Decimal, InvalidOperation
@@ -205,60 +208,111 @@ WRITE_TOOLS = [
 ]
 
 
-# Writes nothing -- see advisor.py, SYSTEM_PROMPT and execute() inside
-# chat(). The advisor calls it instead of just asking "confirm?" in the
-# text of its response: the frontend detects it in tool_calls and shows the
-# user a card with the data and Confirm/Cancel buttons (Advisor.tsx,
-# ActionCard) instead of depending on them typing "yes" in free text.
-PROPOSE_ACTION_NAME = "propose_action"
+# The model never writes. These are the actions a proposal can contain; the server
+# executes them only after the user confirms (proposal_service.confirm_proposal).
+WRITE_ACTION_NAMES = (
+    "create_transaction",
+    "create_account",
+    "create_debt",
+    "create_unplanned_debt",
+    "create_recurring_item",
+)
+WRITE_ACTION_TOOLS = [t for t in WRITE_TOOLS if t["name"] in WRITE_ACTION_NAMES]
+# Read-only lookups that live in this list (the advisor may call them freely).
+LOOKUP_TOOLS = [t for t in WRITE_TOOLS if t["name"] not in WRITE_ACTION_NAMES]
 
-PROPOSE_ACTION_TOOL = {
-    "name": PROPOSE_ACTION_NAME,
+MAX_PROPOSAL_ITEMS = 60
+
+
+def _argument_reference() -> str:
+    """One line per action with its fields (* = required), generated from the very
+    schemas execution validates against, so the tool description can't drift."""
+    lines = []
+    for tool in WRITE_ACTION_TOOLS:
+        schema = tool["input_schema"]
+        required = set(schema.get("required", []))
+        parts = []
+        for name, spec in schema["properties"].items():
+            kind = "|".join(spec["enum"]) if spec.get("enum") else spec.get("type", "string")
+            parts.append(f"{name}{'*' if name in required else ''}: {kind}")
+        lines.append(f"- {tool['name']}: {', '.join(parts)}")
+    return "\n".join(lines)
+
+
+def _merged_argument_properties() -> dict:
+    """Union of every action's fields, for the `arguments` object of an item. A
+    name shared by actions with different meaning (e.g. `type`) loses its enum and
+    description: the reference in the tool description says what each one accepts."""
+    merged: dict[str, dict] = {}
+    for tool in WRITE_ACTION_TOOLS:
+        for name, spec in tool["input_schema"]["properties"].items():
+            if name not in merged:
+                merged[name] = dict(spec)
+            elif merged[name] != spec:
+                merged[name] = {"type": merged[name].get("type", "string")}
+    return merged
+
+
+# Writes nothing -- see advisor.py and proposal_service.py. This is the ONLY way
+# the advisor can get something registered: it proposes, the frontend shows the user
+# a card with every item and Confirm/Cancel buttons (Advisor.tsx), and only when the
+# user confirms does the server execute the stored items.
+PROPOSE_ACTIONS_NAME = "propose_actions"
+
+PROPOSE_ACTIONS_TOOL = {
+    "name": PROPOSE_ACTIONS_NAME,
     "description": (
-        "Antes de ejecutar create_transaction, create_account, create_debt, "
-        "create_unplanned_debt o create_recurring_item, llama primero a esta "
-        "tool (salvo que el usuario ya te haya pedido explicitamente que "
-        "registres ya con todos los datos). No crea nada -- le muestra al "
-        "usuario una tarjeta con los datos y botones de Confirmar/Cancelar en "
-        "vez de que tengas que preguntarlo en tu texto. En tu siguiente turno: "
-        "si confirma, ejecuta la tool de escritura de 'action' con esos "
-        "mismos datos; si cancela, no ejecutes nada."
+        "Es tu UNICA forma de registrar algo: no tienes herramientas que escriban. "
+        "Propon aqui, en UNA sola llamada, todo lo que quieres registrar (cuentas, "
+        "deudas, gastos recurrentes, transacciones). No crea nada: guarda la "
+        "propuesta exactamente como la mandas y le muestra al usuario una tarjeta con "
+        "cada elemento y botones de Confirmar/Cancelar. Si confirma, el sistema "
+        "registra esos mismos datos tal cual (tu no vuelves a hacer nada); si cancela, "
+        "no se registra nada. No pidas confirmacion en tu texto. Valida todo antes de "
+        "guardar: si algun elemento tiene un error se devuelve y tienes que corregirlo "
+        f"y llamar de nuevo. Maximo {MAX_PROPOSAL_ITEMS} elementos por propuesta; si hay mas, "
+        "haz varias propuestas (por ejemplo, una por mes).\n"
+        "Campos de `arguments` segun `action` (* = requerido):\n" + _argument_reference()
     ),
     "input_schema": {
         "type": "object",
         "properties": {
-            "action": {
-                "type": "string",
-                "description": "Nombre exacto de la tool de escritura que se ejecutaria si se confirma",
-                "enum": [
-                    "create_transaction",
-                    "create_account",
-                    "create_debt",
-                    "create_unplanned_debt",
-                    "create_recurring_item",
-                ],
-            },
             "summary": {
                 "type": "string",
-                "description": "Una frase corta describiendo la accion, ej. 'Registrar gasto de comida'",
+                "description": "Una frase corta que describe toda la propuesta, ej. "
+                "'Registrar 12 gastos del estado de cuenta de septiembre'",
             },
-            "fields": {
+            "items": {
                 "type": "array",
-                "description": "Los datos a mostrar en la tarjeta, en el orden en que deben verse",
+                "minItems": 1,
+                "maxItems": MAX_PROPOSAL_ITEMS,
                 "items": {
                     "type": "object",
                     "properties": {
-                        "label": {"type": "string"},
-                        "value": {"type": "string"},
+                        "action": {"type": "string", "enum": list(WRITE_ACTION_NAMES)},
+                        "arguments": {
+                            "type": "object",
+                            "description": "Los campos de la accion elegida",
+                            "properties": _merged_argument_properties(),
+                        },
                     },
-                    "required": ["label", "value"],
+                    "required": ["action", "arguments"],
                 },
             },
         },
-        "required": ["action", "summary", "fields"],
+        "required": ["summary", "items"],
     },
 }
-
+PROPOSE_ACTIONS_TOOL["input_schema"]["properties"]["replaces"] = {
+    "type": "string",
+    "description": (
+        "Id (o sus primeros 8 caracteres) de una propuesta PENDIENTE que esta nueva "
+        "corrige: si el usuario pide quitar, agregar o cambiar algo de una propuesta "
+        "pendiente, manda aqui la propuesta COMPLETA ya corregida y el id de la "
+        "anterior; la anterior queda reemplazada y ya no se podra confirmar. "
+        "Omitelo si es una propuesta independiente."
+    ),
+}
 
 def _decimal(value: float | int | str | None) -> Decimal | None:
     if value is None:
@@ -316,6 +370,225 @@ def _format_validation_error(exc: ValidationError) -> str:
     return "Datos invalidos: " + "; ".join(parts)
 
 
+
+# -- display of an item in the proposal card: raw values under stable keys; the
+# frontend localizes the labels and formats money/dates (so the card follows the UI
+# language) --
+
+
+def _present(**values: object) -> list[dict]:
+    return [{"key": k, "value": str(v)} for k, v in values.items() if v not in (None, "")]
+
+
+def _transaction_model(tool_input: dict, account_id: UUID, category_id: UUID) -> TransactionCreate:
+    return TransactionCreate(
+        date=tool_input["date"],
+        description=tool_input["description"],
+        entry_type=tool_input["entry_type"],
+        category_id=category_id,
+        account_id=account_id,
+        amount=_decimal(tool_input["amount"]),
+    )
+
+
+def _account_model(tool_input: dict) -> AccountCreate:
+    return AccountCreate(
+        name=tool_input["name"],
+        type=tool_input["type"],
+        subtype=tool_input.get("subtype"),
+        initial_balance=_decimal(tool_input.get("initial_balance")) or Decimal(0),
+        currency=tool_input.get("currency", "MXN"),
+        credit_limit=_decimal(tool_input.get("credit_limit")),
+        interest_rate=_decimal(tool_input.get("interest_rate")),
+        billing_cycle_day=tool_input.get("billing_cycle_day"),
+        payment_due_day=tool_input.get("payment_due_day"),
+        notes=tool_input.get("notes"),
+    )
+
+
+def _debt_model(tool_input: dict, linked_account_id: UUID | None) -> DebtCreate:
+    return DebtCreate(
+        name=tool_input["name"],
+        creditor=tool_input.get("creditor"),
+        type=tool_input["type"],
+        total_amount=_decimal(tool_input["total_amount"]),
+        current_balance=_decimal(tool_input.get("current_balance")),
+        original_amount=_decimal(tool_input.get("original_amount")),
+        agreed_amount=_decimal(tool_input.get("agreed_amount")),
+        interest_rate=_decimal(tool_input.get("interest_rate")) or Decimal(0),
+        payment_amount=_decimal(tool_input.get("payment_amount")),
+        payment_frequency=tool_input.get("payment_frequency"),
+        payment_day=tool_input.get("payment_day"),
+        total_installments=tool_input.get("total_installments"),
+        next_payment_date=tool_input.get("next_payment_date"),
+        linked_account_id=linked_account_id,
+        notes=tool_input.get("notes"),
+    )
+
+
+def _unplanned_debt_model(tool_input: dict) -> UnplannedDebtCreate:
+    return UnplannedDebtCreate(
+        name=tool_input["name"],
+        creditor=tool_input.get("creditor"),
+        amount=_decimal(tool_input["amount"]),
+        notes=tool_input.get("notes"),
+    )
+
+
+def _recurring_model(tool_input: dict, account_id: UUID, category_id: UUID) -> RecurringItemCreate:
+    return RecurringItemCreate(
+        name=tool_input["name"],
+        item_type=tool_input["item_type"],
+        amount=_decimal(tool_input["amount"]),
+        frequency=tool_input["frequency"],
+        frequency_day=tool_input.get("frequency_day"),
+        account_id=account_id,
+        category_id=category_id,
+        next_date=tool_input["next_date"],
+        notes=tool_input.get("notes"),
+        url=tool_input.get("url"),
+    )
+
+
+def _check_against_schema(tool_name: str, tool_input: dict) -> str | None:
+    """Required fields and enum values, from the same schema the model was shown.
+    Returns a readable message, or None if it is fine."""
+    tool = next(t for t in WRITE_ACTION_TOOLS if t["name"] == tool_name)
+    schema = tool["input_schema"]
+    for field in schema.get("required", []):
+        if tool_input.get(field) in (None, ""):
+            return (
+                f"Falta el campo requerido '{field}' de '{tool_name}'. "
+                "Pidele ese dato al usuario antes de proponerlo."
+            )
+    for field, spec in schema["properties"].items():
+        value = tool_input.get(field)
+        if value is not None and spec.get("enum") and value not in spec["enum"]:
+            allowed = ", ".join(spec["enum"])
+            return f"'{field}' de '{tool_name}' debe ser uno de: {allowed} (recibi '{value}')."
+    return None
+
+
+async def prepare_write_tool(
+    session: AsyncSession, user_id: UUID, tool_name: str, tool_input: dict
+) -> dict:
+    """Dry run used when the advisor PROPOSES an item: checks everything the real
+    execution will check (required fields, enum values, that the account/category
+    exist, the same pydantic models) without writing, and returns the fields to show
+    in the card -- or {"error": ...} for the advisor to fix. Never raises."""
+    if tool_name not in WRITE_ACTION_NAMES:
+        return {"error": f"'{tool_name}' no es una accion que se pueda proponer."}
+    if not isinstance(tool_input, dict):
+        return {"error": f"Los 'arguments' de '{tool_name}' deben ser un objeto."}
+    try:
+        problem = _check_against_schema(tool_name, tool_input)
+        if problem:
+            return {"error": problem}
+        match tool_name:
+            case "create_transaction":
+                account_id = await _resolve_account_id(session, user_id, tool_input["account_name"])
+                if isinstance(account_id, dict):
+                    return account_id
+                category_id = await _resolve_category_id(
+                    session, user_id, tool_input["category_name"], tool_input["entry_type"]
+                )
+                if isinstance(category_id, dict):
+                    return category_id
+                _transaction_model(tool_input, account_id, category_id)
+                return {
+                    "fields": _present(
+                        date=tool_input["date"],
+                        entry_type=tool_input["entry_type"],
+                        amount=tool_input["amount"],
+                        description=tool_input["description"],
+                        account=tool_input["account_name"],
+                        category=tool_input["category_name"],
+                    )
+                }
+            case "create_account":
+                _account_model(tool_input)
+                return {
+                    "fields": _present(
+                        name=tool_input["name"],
+                        type=tool_input["type"],
+                        subtype=tool_input.get("subtype"),
+                        initial_balance=tool_input.get("initial_balance"),
+                        currency=tool_input.get("currency"),
+                        credit_limit=tool_input.get("credit_limit"),
+                        interest_rate=tool_input.get("interest_rate"),
+                        billing_cycle_day=tool_input.get("billing_cycle_day"),
+                        payment_due_day=tool_input.get("payment_due_day"),
+                    )
+                }
+            case "create_debt":
+                linked_account_id = None
+                if tool_input.get("linked_account_name"):
+                    resolved = await _resolve_account_id(
+                        session, user_id, tool_input["linked_account_name"]
+                    )
+                    if isinstance(resolved, dict):
+                        return resolved
+                    linked_account_id = resolved
+                _debt_model(tool_input, linked_account_id)
+                return {
+                    "fields": _present(
+                        name=tool_input["name"],
+                        creditor=tool_input.get("creditor"),
+                        type=tool_input["type"],
+                        total_amount=tool_input["total_amount"],
+                        current_balance=tool_input.get("current_balance"),
+                        payment_amount=tool_input.get("payment_amount"),
+                        payment_frequency=tool_input.get("payment_frequency"),
+                        payment_day=tool_input.get("payment_day"),
+                        next_payment_date=tool_input.get("next_payment_date"),
+                        interest_rate=tool_input.get("interest_rate"),
+                        linked_account=tool_input.get("linked_account_name"),
+                    )
+                }
+            case "create_unplanned_debt":
+                _unplanned_debt_model(tool_input)
+                return {
+                    "fields": _present(
+                        name=tool_input["name"],
+                        creditor=tool_input.get("creditor"),
+                        amount=tool_input["amount"],
+                    )
+                }
+            case "create_recurring_item":
+                account_id = await _resolve_account_id(session, user_id, tool_input["account_name"])
+                if isinstance(account_id, dict):
+                    return account_id
+                expected_type = "income" if tool_input["item_type"] == "income" else "expense"
+                category_id = await _resolve_category_id(
+                    session, user_id, tool_input["category_name"], expected_type
+                )
+                if isinstance(category_id, dict):
+                    return category_id
+                _recurring_model(tool_input, account_id, category_id)
+                return {
+                    "fields": _present(
+                        name=tool_input["name"],
+                        item_type=tool_input["item_type"],
+                        amount=tool_input["amount"],
+                        frequency=tool_input["frequency"],
+                        frequency_day=tool_input.get("frequency_day"),
+                        account=tool_input["account_name"],
+                        category=tool_input["category_name"],
+                        next_date=tool_input["next_date"],
+                    )
+                }
+    except ValidationError as e:
+        return {"error": _format_validation_error(e)}
+    except KeyError as e:
+        return {"error": f"Falta el campo requerido {e} para '{tool_name}'."}
+    except HTTPException as e:
+        return {"error": str(e.detail)}
+    except Exception:
+        logger.exception("prepare_write_tool_failed", tool=tool_name, user_id=str(user_id))
+        return {"error": f"No pude validar '{tool_name}' por un error inesperado del servidor."}
+    return {"error": f"Tool desconocido: {tool_name}"}
+
+
 async def execute_write_tool(
     session: AsyncSession, user_id: UUID, tool_name: str, tool_input: dict, role: str = "user"
 ) -> dict:
@@ -362,14 +635,7 @@ async def _dispatch_write_tool(
             entry = await transaction_service.create_transaction(
                 session,
                 user_id,
-                TransactionCreate(
-                    date=tool_input["date"],
-                    description=tool_input["description"],
-                    entry_type=tool_input["entry_type"],
-                    category_id=category_id,
-                    account_id=account_id,
-                    amount=_decimal(tool_input["amount"]),
-                ),
+                _transaction_model(tool_input, account_id, category_id),
             )
             return {"id": str(entry.id), "description": entry.description, "created": True}
         case "list_existing_accounts_and_debts":
@@ -404,18 +670,7 @@ async def _dispatch_write_tool(
             account = await account_service.create_account(
                 session,
                 user_id,
-                AccountCreate(
-                    name=tool_input["name"],
-                    type=tool_input["type"],
-                    subtype=tool_input.get("subtype"),
-                    initial_balance=_decimal(tool_input.get("initial_balance")) or Decimal(0),
-                    currency=tool_input.get("currency", "MXN"),
-                    credit_limit=_decimal(tool_input.get("credit_limit")),
-                    interest_rate=_decimal(tool_input.get("interest_rate")),
-                    billing_cycle_day=tool_input.get("billing_cycle_day"),
-                    payment_due_day=tool_input.get("payment_due_day"),
-                    notes=tool_input.get("notes"),
-                ),
+                _account_model(tool_input),
             )
             return {"id": str(account.id), "name": account.name, "created": True}
         case "create_debt":
@@ -431,23 +686,7 @@ async def _dispatch_write_tool(
             debt = await debt_service.create_debt(
                 session,
                 user_id,
-                DebtCreate(
-                    name=tool_input["name"],
-                    creditor=tool_input.get("creditor"),
-                    type=tool_input["type"],
-                    total_amount=_decimal(tool_input["total_amount"]),
-                    current_balance=_decimal(tool_input.get("current_balance")),
-                    original_amount=_decimal(tool_input.get("original_amount")),
-                    agreed_amount=_decimal(tool_input.get("agreed_amount")),
-                    interest_rate=_decimal(tool_input.get("interest_rate")) or Decimal(0),
-                    payment_amount=_decimal(tool_input.get("payment_amount")),
-                    payment_frequency=tool_input.get("payment_frequency"),
-                    payment_day=tool_input.get("payment_day"),
-                    total_installments=tool_input.get("total_installments"),
-                    next_payment_date=tool_input.get("next_payment_date"),
-                    linked_account_id=linked_account_id,
-                    notes=tool_input.get("notes"),
-                ),
+                _debt_model(tool_input, linked_account_id),
                 current_user_role=role,
             )
             return {"id": str(debt.id), "name": debt.name, "created": True}
@@ -455,12 +694,7 @@ async def _dispatch_write_tool(
             unplanned = await debt_service.create_unplanned_debt(
                 session,
                 user_id,
-                UnplannedDebtCreate(
-                    name=tool_input["name"],
-                    creditor=tool_input.get("creditor"),
-                    amount=_decimal(tool_input["amount"]),
-                    notes=tool_input.get("notes"),
-                ),
+                _unplanned_debt_model(tool_input),
             )
             return {"id": str(unplanned.id), "name": unplanned.name, "created": True}
         case "create_recurring_item":
@@ -476,18 +710,7 @@ async def _dispatch_write_tool(
             item = await recurring_service.create_recurring_item(
                 session,
                 user_id,
-                RecurringItemCreate(
-                    name=tool_input["name"],
-                    item_type=tool_input["item_type"],
-                    amount=_decimal(tool_input["amount"]),
-                    frequency=tool_input["frequency"],
-                    frequency_day=tool_input.get("frequency_day"),
-                    account_id=account_id,
-                    category_id=category_id,
-                    next_date=tool_input["next_date"],
-                    notes=tool_input.get("notes"),
-                    url=tool_input.get("url"),
-                ),
+                _recurring_model(tool_input, account_id, category_id),
             )
             return {"id": str(item.id), "name": item.name, "created": True}
         case _:

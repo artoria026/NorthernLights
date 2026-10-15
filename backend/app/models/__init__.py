@@ -1,4 +1,5 @@
 from app.models.account import Account
+from app.models.ai_proposal import AiProposal
 from app.models.budget import BudgetLimit, BudgetPeriod
 from app.models.category import Category
 from app.models.category_hide import CategoryHide
@@ -14,6 +15,7 @@ from app.models.user import Device, User
 
 __all__ = [
     "Account",
+    "AiProposal",
     "BudgetLimit",
     "BudgetPeriod",
     "Category",

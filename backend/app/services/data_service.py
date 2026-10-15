@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.redis import get_redis
 from app.core.security import verify_password
 from app.models.account import Account
+from app.models.ai_proposal import AiProposal
 from app.models.budget import BudgetLimit, BudgetPeriod
 from app.models.chat_message import ChatMessage
 from app.models.debt import Debt, UnplannedDebt
@@ -43,6 +44,8 @@ async def _erase_notifications(session: AsyncSession, user_id: UUID) -> None:
 
 async def _erase_chat(session: AsyncSession, user_id: UUID) -> None:
     await session.execute(delete(ChatMessage).where(ChatMessage.user_id == user_id))
+    # What the advisor proposed lives and dies with the conversation.
+    await session.execute(delete(AiProposal).where(AiProposal.user_id == user_id))
 
 
 async def _erase_reports(session: AsyncSession, user_id: UUID) -> None:
