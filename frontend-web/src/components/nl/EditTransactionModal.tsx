@@ -4,6 +4,7 @@ import { DialogCancelButton, DialogFooter, DialogPrimaryButton } from '@/compone
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
+import { TagPicker } from '@/components/nl/TagPicker'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useUpdateTransaction } from '@/hooks/useTransactions'
@@ -43,6 +44,7 @@ export function EditTransactionModal({
   const [accountId, setAccountId] = useState('')
   const [contraAccountId, setContraAccountId] = useState('')
   const [amount, setAmount] = useState('')
+  const [tagIds, setTagIds] = useState<string[]>([])
 
   useEffect(() => {
     if (!transaction || !accounts) return
@@ -51,6 +53,7 @@ export function EditTransactionModal({
     setNotes(transaction.notes ?? '')
     setCategoryId(transaction.category_id ?? '')
     setAmount(transaction.amount ?? '')
+    setTagIds(transaction.tags.map((tag) => tag.id))
 
     if (transaction.entry_type === 'transfer') {
       // Creation convention (see TransactionModals.tsx): destination=debit, origin=credit.
@@ -99,6 +102,7 @@ export function EditTransactionModal({
             category_id: categoryId,
             account_id: accountId,
             amount,
+            tag_ids: transaction.entry_type === 'expense' ? tagIds : undefined,
           },
         })
       }
@@ -214,6 +218,11 @@ export function EditTransactionModal({
                 className={`${selectClass} w-full py-2 resize-none`}
               />
             </Field>
+            {transaction?.entry_type === 'expense' && (
+              <Field label={t('tags.fieldLabel')}>
+                <TagPicker value={tagIds} onChange={setTagIds} />
+              </Field>
+            )}
 
             {updateTransaction.isError && (
               <p className="text-xs text-destructive">{apiErrorMessage(updateTransaction.error)}</p>

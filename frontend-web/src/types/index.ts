@@ -116,12 +116,39 @@ export interface InstallmentInfo {
   monthly_amount: string
 }
 
+/** A label the user creates to group expenses across categories (a trip, an event). */
+export interface Tag {
+  id: string
+  name: string
+  color: string
+}
+
+export interface TagWithStats extends Tag {
+  transaction_count: number
+  total_spent: string
+  first_date: string | null
+  last_date: string | null
+}
+
+export interface TagSummary {
+  tag: Tag
+  date_from: string | null
+  date_to: string | null
+  transaction_count: number
+  total_spent: string
+  average_per_transaction: string
+  first_date: string | null
+  last_date: string | null
+  by_category: { category: string; amount: string; count: number }[]
+  by_day: { date: string; amount: string }[]
+}
+
 export interface Transaction {
   id: string
   date: string
   description: string
   notes: string | null
-  tags: string[] | null
+  tags: Tag[]
   amount: string | null
   entry_type: EntryType
   category_id: string | null

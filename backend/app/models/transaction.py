@@ -2,12 +2,13 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import ARRAY, CheckConstraint, Date, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Index, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 from app.models.mixins import SoftDeleteMixin, TimestampMixin
+from app.models.tag import Tag  # noqa: F401  (relationship target)
 
 ENTRY_TYPES = (
     "expense",
@@ -58,7 +59,6 @@ class JournalEntry(Base, TimestampMixin, SoftDeleteMixin):
     date: Mapped[date] = mapped_column(Date, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    tags: Mapped[list[str] | None] = mapped_column(ARRAY(String), default=list)
     amount: Mapped[Decimal | None] = mapped_column(Numeric(15, 2), nullable=True)
 
     entry_type: Mapped[str] = mapped_column(String, nullable=False)
@@ -83,6 +83,9 @@ class JournalEntry(Base, TimestampMixin, SoftDeleteMixin):
 
     lines: Mapped[list["JournalLine"]] = relationship(
         back_populates="entry", cascade="all, delete-orphan"
+    )
+    tags: Mapped[list["Tag"]] = relationship(
+        secondary="journal_entry_tags", lazy="selectin", order_by="Tag.name"
     )
 
 

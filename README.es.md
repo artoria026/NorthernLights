@@ -81,6 +81,7 @@ northern_lights/
 | Asesor IA | `ai.py` | `chat_service.py`, `app/ai/*` | `Advisor` |
 | Notificaciones | `notifications.py` | `notification_service.py`, `push_service.py` | `Notifications` |
 | Importación masiva (Excel) | `bulk_import.py` | `bulk_import_service.py` | `Advisor` (tarjeta de Excel) |
+| Etiquetas (agrupar gastos entre categorías) | `tags.py` | `tag_service.py` | `Tags`, filtro en `Transactions`, sección en `Reports`, tarjeta en `Dashboard` |
 | Exportar/borrar mis datos | `data.py` | `data_service.py` | `Settings` |
 | Admin | `admin.py` | `admin_service.py` | `Admin` |
 | Feedback (bug/feature desde el modal de novedades) | `feedback.py` | `feedback_service.py` | — (modal, no página propia) |

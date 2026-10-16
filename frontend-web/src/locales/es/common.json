@@ -15,7 +15,8 @@
       "subscriptions": "Suscripciones",
       "insights": "Insights",
       "categories": "Categorías",
-      "goals": "Metas"
+      "goals": "Metas",
+      "tags": "Etiquetas"
     },
     "sections": {
       "main": "Principal",
@@ -310,5 +311,11 @@
   },
   "pageSize": {
     "label": "Filas por página"
+  },
+  "tags": {
+    "pickerLabel": "Etiquetas",
+    "newPlaceholder": "Nueva etiqueta (Enter para crearla)",
+    "create": "Crear etiqueta",
+    "fieldLabel": "Etiquetas (opcional)"
   }
 }

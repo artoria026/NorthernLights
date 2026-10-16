@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.transaction import ENTRY_TYPES
+from app.schemas.tag import MAX_TAGS_PER_TRANSACTION, TagOut
 
 
 class JournalLineIn(BaseModel):
@@ -27,7 +28,8 @@ class TransactionCreate(BaseModel):
     date: date_type
     description: str = Field(min_length=1)
     notes: str | None = None
-    tags: list[str] = []
+    # Only for expenses: labels the user created (see /tags).
+    tag_ids: list[UUID] = Field(default=[], max_length=MAX_TAGS_PER_TRANSACTION)
     entry_type: str = Field(pattern=f"^({'|'.join(ENTRY_TYPES)})$")
     category_id: UUID | None = None
     # Simple form (recommended for income/expense): the front never sees or
@@ -75,7 +77,7 @@ class TransactionUpdate(BaseModel):
     date: date_type | None = None
     description: str | None = None
     notes: str | None = None
-    tags: list[str] | None = None
+    tag_ids: list[UUID] | None = Field(default=None, max_length=MAX_TAGS_PER_TRANSACTION)
     category_id: UUID | None = None
     # Simple form (expense/income): same as in TransactionCreate, the front
     # never sees or picks the category's internal ledger account -- see
@@ -97,7 +99,7 @@ class TransactionOut(BaseModel):
     date: date_type
     description: str
     notes: str | None
-    tags: list[str] | None
+    tags: list[TagOut] = []
     amount: Decimal | None
     entry_type: str
     category_id: UUID | None

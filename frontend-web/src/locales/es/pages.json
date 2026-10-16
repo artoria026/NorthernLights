@@ -203,7 +203,11 @@
       "jue",
       "vie",
       "sáb"
-    ]
+    ],
+    "tags": {
+      "heading": "Etiquetas",
+      "viewAll": "Ver todas"
+    }
   },
   "accounts": {
     "title": "Cuentas",
@@ -477,6 +481,21 @@
         "body2": "Por tener más de dos movimientos internos, un gasto compartido ya no se puede editar después de creado (solo eliminar) — revisa los montos antes de guardarlo."
       },
       "tip": "Prestar dinero directo (sin compra de por medio) o que te presten a ti ya no vive aquí — está en <1>Deudas</1>, junto con todo lo demás que involucra deber dinero en cualquier dirección."
+    },
+    "tags": {
+      "filterAll": "Todas las etiquetas",
+      "selectRow": "Seleccionar {{description}}",
+      "selectPage": "Seleccionar los gastos de esta página",
+      "selected_one": "{{count}} gasto seleccionado",
+      "selected_other": "{{count}} gastos seleccionados",
+      "selectFiltered": "Seleccionar los {{count}} gastos filtrados",
+      "clearSelection": "Limpiar selección",
+      "add": "Agregar etiquetas",
+      "remove": "Quitar etiquetas",
+      "addDone_one": "Etiquetas agregadas a {{count}} gasto",
+      "addDone_other": "Etiquetas agregadas a {{count}} gastos",
+      "removeDone_one": "Etiquetas quitadas de {{count}} gasto",
+      "removeDone_other": "Etiquetas quitadas de {{count}} gastos"
     }
   },
   "settings": {
@@ -1287,7 +1306,10 @@
         "body": "Tasa de ahorro: rojo si es negativa (gastaste más de lo que ganaste), naranja por debajo del 10%, verde de ahí en adelante. DTI (deuda/ingreso): naranja desde 20%, rojo desde 36% — el umbral clásico de zona de riesgo en finanzas personales."
       },
       "tip": "Tasa de ahorro y DTI son indicadores del reporte cerrado, no del mes en curso — para eso usa la nota \"Mes en curso\" al final de la página."
-    }
+    },
+    "tagsHeading": "Gastos por etiqueta",
+    "tagsEmpty": "Aún no tienes etiquetas para analizar.",
+    "tagsCreate": "Crear una"
   },
   "advisor": {
     "title": "Asesor IA",
@@ -1607,5 +1629,49 @@
   "goals": {
     "title": "Metas",
     "comingSoon": "Próximamente — las metas de ahorro (por ejemplo, un enganche o un fondo de emergencia) todavía no son un módulo del backend. Cuando se construya, aquí podrás definir un monto objetivo, una aportación mensual, y ver la proyección de cuándo la alcanzas."
+  },
+  "tags": {
+    "title": "Etiquetas",
+    "subtitle": "Agrupa gastos de distintas categorías: un viaje, un evento, un proyecto",
+    "new": "Nueva etiqueta",
+    "empty": "Aún no tienes etiquetas. Crea una arriba o al registrar un gasto.",
+    "selectOne": "Crea o elige una etiqueta para ver cuánto sumó.",
+    "listCount_one": "{{count}} gasto",
+    "listCount_other": "{{count}} gastos",
+    "form": {
+      "namePlaceholder": "Ej: Vacaciones, Proyecto",
+      "nameLabel": "Nombre de la etiqueta",
+      "create": "Crear etiqueta",
+      "save": "Guardar",
+      "cancel": "Cancelar"
+    },
+    "actions": {
+      "edit": "Editar etiqueta",
+      "delete": "Eliminar etiqueta"
+    },
+    "confirmDelete": {
+      "title": "Eliminar etiqueta",
+      "message_one": "Se quitará «{{name}}» de {{count}} gasto. Los gastos se quedan como están.",
+      "message_other": "Se quitará «{{name}}» de {{count}} gastos. Los gastos se quedan como están.",
+      "confirm": "Eliminar"
+    },
+    "states": {
+      "loading": "Cargando…",
+      "error": "No se pudo cargar la etiqueta."
+    },
+    "summary": {
+      "period": "Periodo",
+      "from": "Desde",
+      "to": "Hasta",
+      "clearPeriod": "Quitar periodo",
+      "viewTransactions": "Ver transacciones",
+      "empty": "Esta etiqueta aún no tiene gastos en este periodo.",
+      "total": "Total gastado",
+      "count": "Gastos",
+      "average": "Promedio por gasto",
+      "dates": "Fechas",
+      "byCategory": "Por categoría",
+      "byDay": "Por día"
+    }
   }
 }

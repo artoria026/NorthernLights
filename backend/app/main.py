@@ -24,6 +24,7 @@ from app.routers import (
     notifications,
     recurring,
     reports,
+    tags,
     transactions,
 )
 
@@ -160,6 +161,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(accounts.router, prefix="/api/v1/accounts", tags=["accounts"])
 app.include_router(categories.router, prefix="/api/v1/categories", tags=["categories"])
 app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"])
+app.include_router(tags.router, prefix="/api/v1/tags", tags=["tags"])
 app.include_router(debts.router, prefix="/api/v1/debts", tags=["debts"])
 app.include_router(recurring.router, prefix="/api/v1/recurring-items", tags=["recurring"])
 app.include_router(budget.router, prefix="/api/v1/budget", tags=["budget"])

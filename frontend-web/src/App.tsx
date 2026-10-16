@@ -19,6 +19,7 @@ import { Advisor } from '@/pages/Advisor'
 import { AuthCallback } from '@/pages/AuthCallback'
 import { Budget } from '@/pages/Budget'
 import { Categorias } from '@/pages/Categorias'
+import { Tags } from '@/pages/Tags'
 import { Dashboard } from '@/pages/Dashboard'
 import { Debts } from '@/pages/Debts'
 import { Goals } from '@/pages/Goals'
@@ -91,6 +92,7 @@ function App() {
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/categories" element={<Categorias />} />
+              <Route path="/tags" element={<Tags />} />
               <Route path="/debts" element={<Debts />} />
               <Route path="/recurring" element={<Recurring />} />
               <Route path="/subscriptions" element={<Subscriptions />} />

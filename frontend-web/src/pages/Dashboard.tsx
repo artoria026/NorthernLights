@@ -13,6 +13,7 @@ import {
   isPositiveEntryType,
 } from '@/lib/utils'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { TagsOverviewCard } from '@/components/nl/TagsOverviewCard'
 import { CategoryBadge, HEADER_SECTIONS, Legend, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useBudgetCurrent, useBudgetWeekly } from '@/hooks/useBudget'
@@ -525,6 +526,8 @@ export function Dashboard() {
             <p className="text-sm text-muted-foreground py-6 text-center">{t('dashboard.netWorth.empty')}</p>
           )}
         </div>
+
+        <TagsOverviewCard />
 
         {topInsights.map((insight, i) => (
           <div

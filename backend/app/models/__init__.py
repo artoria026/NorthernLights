@@ -10,6 +10,7 @@ from app.models.insight import Insight, InsightReview
 from app.models.notification import Notification
 from app.models.recurring import RecurringItem
 from app.models.report import Report
+from app.models.tag import JournalEntryTag, Tag
 from app.models.transaction import JournalEntry, JournalLine
 from app.models.user import Device, User
 
@@ -29,10 +30,12 @@ __all__ = [
     "InsightReview",
     "InstallmentPlan",
     "JournalEntry",
+    "JournalEntryTag",
     "JournalLine",
     "Notification",
     "RecurringItem",
     "Report",
+    "Tag",
     "UnplannedDebt",
     "User",
 ]
