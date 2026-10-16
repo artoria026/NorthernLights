@@ -251,11 +251,28 @@ function TransactionRow({
       className="h-3.5 w-3.5 cursor-pointer accent-[var(--nl-accent)]"
     />
   ) : null
+  // In the table the first tag sits on the description's own line (the row keeps its
+  // height) and the rest collapse into "+N" with all the names on hover.
+  const [firstTag, ...otherTags] = tx.tags
+  const tagChipsInline = firstTag ? (
+    <span className="flex flex-shrink-0 items-center gap-1">
+      <TagChip name={firstTag.name} color={firstTag.color} compact />
+      {otherTags.length > 0 && (
+        <span
+          title={otherTags.map((tag) => tag.name).join(', ')}
+          className="rounded-full border border-border px-1.5 text-[10.5px] leading-4 text-muted-foreground"
+          style={{ background: 'var(--nl-bg-input)' }}
+        >
+          +{otherTags.length}
+        </span>
+      )}
+    </span>
+  ) : null
   const tagChips =
     tx.tags.length > 0 ? (
-      <span className="mt-1 flex flex-wrap gap-1">
+      <span className="flex flex-wrap gap-1">
         {tx.tags.map((tag) => (
-          <TagChip key={tag.id} name={tag.name} color={tag.color} />
+          <TagChip key={tag.id} name={tag.name} color={tag.color} compact />
         ))}
       </span>
     ) : null
@@ -283,9 +300,9 @@ function TransactionRow({
       <div className={`hidden lg:grid ${TRANSACTION_COLUMNS} gap-2 items-center px-3 py-2.5 text-[13px] border-t border-border`}>
         <span>{selectBox}</span>
         <span className="text-muted-foreground">{tx.date}</span>
-        <span className="min-w-0">
-          <span className="block truncate" title={tx.description}>{tx.description}</span>
-          {tagChips}
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0 truncate" title={tx.description}>{tx.description}</span>
+          {tagChipsInline}
         </span>
         <span className="text-muted-foreground truncate">{accountName}</span>
         <span className="min-w-0">
