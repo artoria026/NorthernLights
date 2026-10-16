@@ -15,6 +15,7 @@ import {
   Settings,
   Sun,
   Tag,
+  Tags,
   Target,
   TrendingUp,
   X,
@@ -127,7 +128,7 @@ export function AppSidebar() {
     await logout.mutateAsync()
     navigate('/login')
   }
-  const [moreOpen, setMoreOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(true)
   const [reportsOpen, setReportsOpen] = useState(true)
   // The full drawer (below) is "position: fixed" on mobile -- it doesn't push
   // content, it opens on top. It closes automatically on every route change so
@@ -311,6 +312,10 @@ export function AppSidebar() {
           <NavLink to="/categories" className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground py-1.5">
             <Tag size={14} strokeWidth={2} />
             {t('appSidebar.nav.categories')}
+          </NavLink>
+          <NavLink to="/tags" className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground py-1.5">
+            <Tags size={14} strokeWidth={2} />
+            {t('appSidebar.nav.tags')}
           </NavLink>
           <NavLink to="/goals" className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground py-1.5">
             <Target size={14} strokeWidth={2} />

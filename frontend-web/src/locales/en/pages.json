@@ -203,7 +203,11 @@
       "Thu",
       "Fri",
       "Sat"
-    ]
+    ],
+    "tags": {
+      "heading": "Tags",
+      "viewAll": "View all"
+    }
   },
   "accounts": {
     "title": "Accounts",
@@ -477,6 +481,21 @@
         "body2": "Because it involves more than two internal movements, a shared expense can no longer be edited once created (only deleted) — double check the amounts before saving it."
       },
       "tip": "Lending money directly (with no purchase involved), or someone lending to you, no longer lives here — it's in <1>Debts</1>, along with everything else that involves owing money in either direction."
+    },
+    "tags": {
+      "filterAll": "All tags",
+      "selectRow": "Select {{description}}",
+      "selectPage": "Select the expenses on this page",
+      "selected_one": "{{count}} expense selected",
+      "selected_other": "{{count}} expenses selected",
+      "selectFiltered": "Select all {{count}} filtered expenses",
+      "clearSelection": "Clear selection",
+      "add": "Add tags",
+      "remove": "Remove tags",
+      "addDone_one": "Tags added to {{count}} expense",
+      "addDone_other": "Tags added to {{count}} expenses",
+      "removeDone_one": "Tags removed from {{count}} expense",
+      "removeDone_other": "Tags removed from {{count}} expenses"
     }
   },
   "settings": {
@@ -1287,7 +1306,10 @@
         "body": "Savings rate: red if negative (you spent more than you earned), orange below 10%, green from there up. DTI (debt/income): orange from 20%, red from 36% — the classic \"risk zone\" threshold in personal finance."
       },
       "tip": "Savings rate and DTI are indicators for the closed report, not the current month — for that, use the \"Current month\" note at the bottom of the page."
-    }
+    },
+    "tagsHeading": "Spending by tag",
+    "tagsEmpty": "You have no tags to analyze yet.",
+    "tagsCreate": "Create one"
   },
   "advisor": {
     "title": "AI Advisor",
@@ -1607,5 +1629,49 @@
   "goals": {
     "title": "Goals",
     "comingSoon": "Coming soon — savings goals (for example, a down payment or an emergency fund) aren't a backend module yet. Once it's built, you'll be able to set a target amount, a monthly contribution, and see a projection of when you'll reach it."
+  },
+  "tags": {
+    "title": "Tags",
+    "subtitle": "Group expenses across categories: a trip, an event, a project",
+    "new": "New tag",
+    "empty": "You have no tags yet. Create one above or when you log an expense.",
+    "selectOne": "Create or pick a tag to see what it added up to.",
+    "listCount_one": "{{count}} expense",
+    "listCount_other": "{{count}} expenses",
+    "form": {
+      "namePlaceholder": "E.g.: Vacation, Project",
+      "nameLabel": "Tag name",
+      "create": "Create tag",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "actions": {
+      "edit": "Edit tag",
+      "delete": "Delete tag"
+    },
+    "confirmDelete": {
+      "title": "Delete tag",
+      "message_one": "\"{{name}}\" will be removed from {{count}} expense. The expenses stay as they are.",
+      "message_other": "\"{{name}}\" will be removed from {{count}} expenses. The expenses stay as they are.",
+      "confirm": "Delete"
+    },
+    "states": {
+      "loading": "Loading…",
+      "error": "The tag couldn't be loaded."
+    },
+    "summary": {
+      "period": "Period",
+      "from": "From",
+      "to": "To",
+      "clearPeriod": "Clear period",
+      "viewTransactions": "View transactions",
+      "empty": "This tag has no expenses in this period yet.",
+      "total": "Total spent",
+      "count": "Expenses",
+      "average": "Average per expense",
+      "dates": "Dates",
+      "byCategory": "By category",
+      "byDay": "By day"
+    }
   }
 }

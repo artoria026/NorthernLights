@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
 import { SegmentedControl } from '@/components/nl/primitives'
+import { TagPicker } from '@/components/nl/TagPicker'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useCreateTransaction } from '@/hooks/useTransactions'
@@ -28,6 +29,7 @@ interface FormState {
   notes: string
   isMsi: boolean
   installmentTotal: string
+  tagIds: string[]
 }
 
 function todayIso() {
@@ -47,6 +49,7 @@ function defaultForm(accountId?: string): FormState {
     notes: '',
     isMsi: false,
     installmentTotal: '',
+    tagIds: [],
   }
 }
 
@@ -121,6 +124,7 @@ export function TransactionModals() {
           category_id: form.categoryId,
           account_id: form.accountId,
           amount: form.amount,
+          tag_ids: form.type === 'expense' && form.tagIds.length > 0 ? form.tagIds : undefined,
           installment_total:
             form.type === 'expense' && form.isMsi ? parseInt(form.installmentTotal, 10) : undefined,
         })
@@ -422,6 +426,11 @@ function DetailedForm({
           className={`${selectClass} w-full py-2 resize-none`}
         />
       </Field>
+      {form.type === 'expense' && (
+        <Field label={t('tags.fieldLabel')}>
+          <TagPicker value={form.tagIds} onChange={(tagIds) => setForm({ ...form, tagIds })} />
+        </Field>
+      )}
 
       {canBeMsi && (
         <div className="flex flex-col gap-2">

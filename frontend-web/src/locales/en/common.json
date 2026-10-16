@@ -15,7 +15,8 @@
       "subscriptions": "Subscriptions",
       "insights": "Insights",
       "categories": "Categories",
-      "goals": "Goals"
+      "goals": "Goals",
+      "tags": "Tags"
     },
     "sections": {
       "main": "Main",
@@ -310,5 +311,11 @@
   },
   "pageSize": {
     "label": "Rows per page"
+  },
+  "tags": {
+    "pickerLabel": "Tags",
+    "newPlaceholder": "New tag (Enter to create it)",
+    "create": "Create tag",
+    "fieldLabel": "Tags (optional)"
   }
 }

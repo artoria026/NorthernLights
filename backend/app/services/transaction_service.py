@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.core.redis import get_redis
 from app.models.account import Account
 from app.models.debt import InstallmentPlan
+from app.models.tag import JournalEntryTag, Tag
 from app.models.transaction import JournalEntry, JournalLine
 from app.schemas.transaction import (
     InstallmentInfo,
@@ -76,6 +77,32 @@ async def to_transaction_out_list(
         item.installment = installments.get(entry.id)
         out.append(item)
     return out
+
+
+async def resolve_tags(
+    session: AsyncSession, user_id: UUID, entry_type: str, tag_ids: list[UUID] | None
+) -> list[Tag]:
+    """The user's tags behind these ids, in a stable order. Tags only apply to
+    expenses (that is what they group) and each one must be the user's own."""
+    unique_ids = list(dict.fromkeys(tag_ids or []))
+    if not unique_ids:
+        return []
+    if entry_type != "expense":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Las etiquetas solo se pueden poner a gastos"
+        )
+    tags = (
+        (
+            await session.execute(
+                select(Tag).where(Tag.user_id == user_id, Tag.id.in_(unique_ids)).order_by(Tag.name)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(tags) != len(unique_ids):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Etiqueta no encontrada")
+    return list(tags)
 
 
 async def _validate_category(
@@ -221,13 +248,14 @@ async def create_transaction(
         await _validate_installment_account(session, user_id, data.account_id)  # type: ignore[arg-type]
     resolved_lines = await _resolve_lines(session, user_id, data)
     await _validate_line_accounts(session, user_id, resolved_lines)
+    tags = await resolve_tags(session, user_id, data.entry_type, data.tag_ids)
 
     entry = JournalEntry(
         user_id=user_id,
         date=data.date,
         description=data.description,
         notes=data.notes,
-        tags=data.tags,
+        tags=tags,
         amount=_display_amount(resolved_lines),
         entry_type=data.entry_type,
         category_id=data.category_id,
@@ -346,7 +374,7 @@ async def list_transactions(
     date_to: date | None = None,
     status_: str | None = None,
     is_recurring: bool | None = None,
-    tags: list[str] | None = None,
+    tag_ids: list[UUID] | None = None,
     amount_min: Decimal | None = None,
     amount_max: Decimal | None = None,
     q: str | None = None,
@@ -372,8 +400,12 @@ async def list_transactions(
         query = query.where(JournalEntry.status == status_)
     if is_recurring is not None:
         query = query.where(JournalEntry.is_recurring == is_recurring)
-    if tags:
-        query = query.where(JournalEntry.tags.overlap(tags))
+    if tag_ids:
+        query = query.where(
+            JournalEntry.id.in_(
+                select(JournalEntryTag.entry_id).where(JournalEntryTag.tag_id.in_(tag_ids))
+            )
+        )
     if amount_min is not None:
         query = query.where(JournalEntry.amount >= amount_min)
     if amount_max is not None:
@@ -456,7 +488,7 @@ async def update_transaction(
         date=data.date or old_entry.date,
         description=data.description or old_entry.description,
         notes=data.notes if data.notes is not None else old_entry.notes,
-        tags=data.tags if data.tags is not None else (old_entry.tags or []),
+        tag_ids=data.tag_ids if data.tag_ids is not None else [t.id for t in old_entry.tags],
         entry_type=new_entry_type,
         category_id=new_category_id,
         account_id=new_account_id,
@@ -494,8 +526,8 @@ async def confirm_draft(
             entry.description = edits.description
         if edits.notes is not None:
             entry.notes = edits.notes
-        if edits.tags is not None:
-            entry.tags = edits.tags
+        if edits.tag_ids is not None:
+            entry.tags = await resolve_tags(session, user_id, entry.entry_type, edits.tag_ids)
         if edits.category_id is not None:
             await _validate_category(session, user_id, entry.entry_type, edits.category_id)
             entry.category_id = edits.category_id

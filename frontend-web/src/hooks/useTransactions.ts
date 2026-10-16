@@ -9,6 +9,8 @@ export interface TransactionFilters {
   account_id?: string
   date_from?: string
   date_to?: string
+  /** Only expenses carrying ANY of these tags. */
+  tag_ids?: string[]
 }
 
 export function useTransactions(filters: TransactionFilters = {}) {
@@ -17,7 +19,7 @@ export function useTransactions(filters: TransactionFilters = {}) {
     queryFn: async () => {
       const { data } = await api.get<ApiSuccess<Transaction[]> & { meta: Meta }>(
         '/transactions',
-        { params: filters },
+        { params: { ...filters, tag_ids: filters.tag_ids?.length ? filters.tag_ids.join(',') : undefined } },
       )
       return data
     },
@@ -28,7 +30,7 @@ export interface CreateTransactionInput {
   date: string
   description: string
   notes?: string
-  tags?: string[]
+  tag_ids?: string[]
   entry_type: EntryType
   category_id?: string | null
   /** Simple form (income/expense): the backend resolves only the category's
@@ -88,6 +90,8 @@ export interface UpdateTransactionInput {
   date?: string
   description?: string
   notes?: string
+  /** Replaces the transaction's tags; omit to leave them as they are. */
+  tag_ids?: string[]
   category_id?: string | null
   /** Simple form (expense/income): same pattern as create -- the backend
    * resolves the internal accounting account, the front end only sends the real account. */

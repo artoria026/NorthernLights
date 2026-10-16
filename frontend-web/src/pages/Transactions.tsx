@@ -6,6 +6,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategorySelect } from '@/components/nl/CategorySelect'
 import { PageSizeSelect } from '@/components/nl/PageSizeSelect'
+import { TagChip } from '@/components/nl/TagChip'
+import { TagPicker } from '@/components/nl/TagPicker'
+import { useBulkTag, useTags } from '@/hooks/useTags'
 import { usePageSize } from '@/hooks/usePageSize'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
@@ -32,11 +35,11 @@ import type { Transaction } from '@/types'
 
 type TypeFilter = 'ALL' | 'INCOME' | 'EXPENSE' | 'TRANSFER'
 
-// Transactions table (lg+): date | description | account | category | amount | actions.
+// Transactions table (lg+): select | date | description | account | category | amount | actions.
 // The amount has a fixed width and the text columns use minmax(0, ...), so a long
 // description/account/category is cut instead of pushing the amount out of line.
 const TRANSACTION_COLUMNS =
-  'lg:grid-cols-[90px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_90px]'
+  'lg:grid-cols-[20px_90px_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_7rem_90px]'
 
 function formatMoney(value: string | null) {
   return value ? formatMoneyBase(value) : '—'
@@ -223,17 +226,39 @@ function TransactionRow({
   accountName,
   categoryColorById,
   onEdit,
+  selected,
+  onToggleSelected,
 }: {
   tx: Transaction
   accountName: string
   categoryColorById: Map<string, string>
   onEdit: (tx: Transaction) => void
+  selected: boolean
+  /** Only expenses can be tagged, so only they can be selected. */
+  onToggleSelected?: (id: string) => void
 }) {
   const { t } = useTranslation('pages')
   const deleteTransaction = useDeleteTransaction()
   const pushToast = useUiStore((s) => s.pushToast)
   const confirm = useConfirmStore((s) => s.ask)
   const editable = isTransactionEditable(tx)
+  const selectBox = onToggleSelected ? (
+    <input
+      type="checkbox"
+      checked={selected}
+      onChange={() => onToggleSelected(tx.id)}
+      aria-label={t('transactions.tags.selectRow', { description: tx.description })}
+      className="h-3.5 w-3.5 cursor-pointer accent-[var(--nl-accent)]"
+    />
+  ) : null
+  const tagChips =
+    tx.tags.length > 0 ? (
+      <span className="mt-1 flex flex-wrap gap-1">
+        {tx.tags.map((tag) => (
+          <TagChip key={tag.id} name={tag.name} color={tag.color} />
+        ))}
+      </span>
+    ) : null
 
   async function handleDelete() {
     const ok = await confirm({
@@ -256,8 +281,12 @@ function TransactionRow({
           doesn't fit on a phone, that's why there's a separate version
           below. */}
       <div className={`hidden lg:grid ${TRANSACTION_COLUMNS} gap-2 items-center px-3 py-2.5 text-[13px] border-t border-border`}>
+        <span>{selectBox}</span>
         <span className="text-muted-foreground">{tx.date}</span>
-        <span className="truncate" title={tx.description}>{tx.description}</span>
+        <span className="min-w-0">
+          <span className="block truncate" title={tx.description}>{tx.description}</span>
+          {tagChips}
+        </span>
         <span className="text-muted-foreground truncate">{accountName}</span>
         <span className="min-w-0">
           <CategoryBadge
@@ -296,7 +325,10 @@ function TransactionRow({
       {/* Card -- mobile only */}
       <div className="lg:hidden flex flex-col gap-1.5 px-3 py-3 text-[13px] border-t border-border">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate font-medium">{tx.description}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            {selectBox}
+            <span className="truncate font-medium">{tx.description}</span>
+          </span>
           <span
             className={`flex-shrink-0 ${isPositiveEntryType(tx.entry_type) ? 'text-[color:var(--nl-accent-ink)]' : ''}`}
           >
@@ -313,6 +345,7 @@ function TransactionRow({
           </div>
           <span className="text-muted-foreground text-[12px] flex-shrink-0">{tx.date}</span>
         </div>
+        {tagChips}
         <div className="self-end flex items-center gap-0.5">
           {editable && (
             <button
@@ -398,6 +431,12 @@ export function Transactions() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = usePageSize('transactions')
+  const { data: allTags = [] } = useTags()
+  const bulkTag = useBulkTag()
+  const pushToast = useUiStore((s) => s.pushToast)
+  const [tagFilter, setTagFilter] = useState(() => searchParams.get('tag') ?? 'all')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkTagIds, setBulkTagIds] = useState<string[]>([])
 
   const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—'
   const txAccountId = (tx: Transaction) => tx.lines[0]?.account_id ?? ''
@@ -414,6 +453,7 @@ export function Transactions() {
     .filter((tx) => (dateFrom ? tx.date >= dateFrom : true))
     .filter((tx) => (dateTo ? tx.date <= dateTo : true))
     .filter((tx) => (typeFilter === 'ALL' ? true : txType(tx) === typeFilter))
+    .filter((tx) => (tagFilter === 'all' ? true : tx.tags.some((tag) => tag.id === tagFilter)))
     .sort((a, b) => (sortDir === 'asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)))
 
   const maxPage = Math.max(0, Math.ceil(filtered.length / pageSize) - 1)
@@ -422,6 +462,48 @@ export function Transactions() {
 
   function resetPage() {
     setPage(0)
+  }
+
+  // Only expenses can carry tags. Selection survives paging and filtering, but never
+  // points at a row that is gone.
+  const expenseIds = new Set((data?.data ?? []).filter((tx) => tx.entry_type === 'expense').map((tx) => tx.id))
+  const selectedExpenseIds = [...selectedIds].filter((id) => expenseIds.has(id))
+  const filteredExpenseIds = filtered.filter((tx) => tx.entry_type === 'expense').map((tx) => tx.id)
+  const pageExpenseIds = pageRows.filter((tx) => tx.entry_type === 'expense').map((tx) => tx.id)
+  const allPageSelected = pageExpenseIds.length > 0 && pageExpenseIds.every((id) => selectedIds.has(id))
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function togglePage() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      for (const id of pageExpenseIds) {
+        if (allPageSelected) next.delete(id)
+        else next.add(id)
+      }
+      return next
+    })
+  }
+
+  async function applyBulk(mode: 'add' | 'remove') {
+    if (selectedExpenseIds.length === 0 || bulkTagIds.length === 0) return
+    try {
+      await bulkTag.mutateAsync({
+        transaction_ids: selectedExpenseIds,
+        ...(mode === 'add' ? { add_tag_ids: bulkTagIds } : { remove_tag_ids: bulkTagIds }),
+      })
+      pushToast(t(`transactions.tags.${mode}Done`, { count: selectedExpenseIds.length }), 'success')
+      setSelectedIds(new Set())
+    } catch (error) {
+      pushToast(apiErrorMessage(error), 'error')
+    }
   }
 
   const selectedCalendarDate = dateFrom && dateFrom === dateTo ? dateFrom : null
@@ -583,6 +665,31 @@ export function Transactions() {
                 ))}
               </SelectContent>
             </Select>
+            {allTags.length > 0 && (
+              <Select
+                value={tagFilter}
+                onValueChange={(v) => {
+                  setTagFilter(v ?? 'all')
+                  resetPage()
+                }}
+              >
+                <SelectTrigger className="h-9 w-auto" data-tour="transactions:tag-filter">
+                  <SelectValue>
+                    {(v: string) =>
+                      v === 'all' ? t('transactions.tags.filterAll') : (allTags.find((tag) => tag.id === v)?.name ?? v)
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('transactions.tags.filterAll')}</SelectItem>
+                  {allTags.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      {tag.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <input
               type="date"
               value={dateFrom}
@@ -616,8 +723,70 @@ export function Transactions() {
             />
           </div>
 
+          {selectedExpenseIds.length > 0 && (
+            <div
+              className="bg-card border border-border rounded-md p-3.5 mb-4 flex flex-col gap-3"
+              data-tour="transactions:bulk-tags"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[13px]">
+                <span className="font-medium">
+                  {t('transactions.tags.selected', { count: selectedExpenseIds.length })}
+                </span>
+                <span className="flex items-center gap-3 text-xs">
+                  {selectedExpenseIds.length < filteredExpenseIds.length && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedIds(new Set(filteredExpenseIds))}
+                      className="text-[color:var(--nl-accent-ink)] hover:underline"
+                    >
+                      {t('transactions.tags.selectFiltered', { count: filteredExpenseIds.length })}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIds(new Set())}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    {t('transactions.tags.clearSelection')}
+                  </button>
+                </span>
+              </div>
+              <TagPicker value={bulkTagIds} onChange={setBulkTagIds} />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void applyBulk('add')}
+                  disabled={bulkTagIds.length === 0 || bulkTag.isPending}
+                  className="rounded-md px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-40"
+                  style={{ background: 'var(--nl-accent)', color: 'var(--nl-accent-fg)' }}
+                >
+                  {t('transactions.tags.add')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void applyBulk('remove')}
+                  disabled={bulkTagIds.length === 0 || bulkTag.isPending}
+                  className="rounded-md border border-border px-3 py-1.5 text-[12.5px] text-muted-foreground hover:text-foreground disabled:opacity-40"
+                >
+                  {t('transactions.tags.remove')}
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="bg-card border border-border rounded-md overflow-hidden">
             <div className={`hidden lg:grid ${TRANSACTION_COLUMNS} gap-2 px-3 py-2 text-[11px] uppercase tracking-wide text-muted-foreground`}>
+              <span>
+                {pageExpenseIds.length > 0 && (
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    onChange={togglePage}
+                    aria-label={t('transactions.tags.selectPage')}
+                    className="h-3.5 w-3.5 cursor-pointer accent-[var(--nl-accent)]"
+                  />
+                )}
+              </span>
               <button
                 type="button"
                 onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
@@ -648,6 +817,8 @@ export function Transactions() {
                   accountName={accountName(txAccountId(tx))}
                   categoryColorById={categoryColorById}
                   onEdit={setEditingTx}
+                  selected={selectedIds.has(tx.id)}
+                  onToggleSelected={tx.entry_type === 'expense' ? toggleSelected : undefined}
                 />
               ))
             )}

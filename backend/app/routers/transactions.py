@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_rls_db
@@ -28,6 +28,15 @@ async def _out_one(session: AsyncSession, entry: JournalEntry) -> TransactionOut
     return (await _out_many(session, [entry]))[0]
 
 
+def _parse_ids(raw: str | None) -> list[UUID] | None:
+    if not raw:
+        return None
+    try:
+        return [UUID(part) for part in raw.split(",") if part.strip()]
+    except ValueError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "tag_ids invalido") from None
+
+
 @router.get("")
 async def list_transactions(
     page: int = Query(default=1, ge=1),
@@ -39,7 +48,7 @@ async def list_transactions(
     date_to: date | None = None,
     status: str | None = None,
     is_recurring: bool | None = None,
-    tags: str | None = None,
+    tag_ids: str | None = Query(default=None, description="ids separados por coma (cualquiera)"),
     amount_min: Decimal | None = None,
     amount_max: Decimal | None = None,
     q: str | None = None,
@@ -58,7 +67,7 @@ async def list_transactions(
         date_to=date_to,
         status_=status,
         is_recurring=is_recurring,
-        tags=tags.split(",") if tags else None,
+        tag_ids=_parse_ids(tag_ids),
         amount_min=amount_min,
         amount_max=amount_max,
         q=q,
