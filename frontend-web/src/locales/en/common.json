@@ -159,7 +159,7 @@
     "saveButton": "Save"
   },
   "bulkExcelImportCard": {
-    "intro": "Been days without logging anything but have it all jotted down somewhere rough? Download the template, fill it in (it already comes with your accounts and categories as dropdowns) and upload it.",
+    "intro": "Been days without logging anything but have it all jotted down somewhere rough? Download the template, fill it in (it already comes with your accounts and categories as dropdowns) and upload it. Optionally add each expense's tags in the \"Etiquetas\" column (several separated by commas); they must already exist in Tags.",
     "generatingButton": "Generating...",
     "downloadTemplateButton": "Download template",
     "uploadingButton": "Uploading...",
