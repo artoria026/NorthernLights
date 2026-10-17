@@ -159,7 +159,7 @@
     "saveButton": "Guardar"
   },
   "bulkExcelImportCard": {
-    "intro": "¿Llevas días sin registrar nada pero tienes todo anotado de forma burda? Descarga la plantilla, llénala (ya trae tus cuentas y categorías como listas desplegables) y súbela.",
+    "intro": "¿Llevas días sin registrar nada pero tienes todo anotado de forma burda? Descarga la plantilla, llénala (ya trae tus cuentas y categorías como listas desplegables) y súbela. Si quieres, agrega las etiquetas de cada gasto en la columna «Etiquetas» (varias separadas por comas); deben existir ya en Etiquetas.",
     "generatingButton": "Generando...",
     "downloadTemplateButton": "Descargar plantilla",
     "uploadingButton": "Cargando...",

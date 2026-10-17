@@ -6,7 +6,7 @@ from app.core.database import get_rls_db
 from app.core.security import CurrentUser, get_current_user
 from app.schemas.bulk_import import BulkImportResult
 from app.schemas.common import SuccessResponse
-from app.services import account_service, bulk_import_service, category_service
+from app.services import account_service, bulk_import_service, category_service, tag_service
 
 router = APIRouter()
 
@@ -21,8 +21,9 @@ async def download_template(
     accounts = await account_service.list_accounts(session, current_user.id)
     income_categories = await category_service.list_categories(session, current_user.id, "income")
     expense_categories = await category_service.list_categories(session, current_user.id, "expense")
+    tags = await tag_service.list_tags(session, current_user.id)
     buf = bulk_import_service.build_template_workbook(
-        accounts, income_categories, expense_categories
+        accounts, income_categories, expense_categories, [t.name for t in tags]
     )
     return StreamingResponse(
         buf,

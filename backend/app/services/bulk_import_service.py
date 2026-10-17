@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from datetime import date as date_type
 from datetime import datetime
@@ -8,10 +9,12 @@ from uuid import UUID
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.worksheet.datavalidation import DataValidation
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.account import Account
 from app.models.category import Category
+from app.models.tag import Tag
 from app.schemas.transaction import TransactionCreate
 from app.services import account_service, category_service, transaction_service
 
@@ -31,10 +34,29 @@ BLOCK_HEADERS = ["Monto", "Descripción", "Fecha", "Cuenta", "Categoría"]
 INCOME_START_COL = 1  # A
 EXPENSE_START_COL = 7  # G
 
+# Optional column after the Expenses block (L): the tags of each expense, separated by
+# commas. Files made before it existed simply don't have it -- they keep working.
+TAGS_COL = 12  # L
+TAGS_HEADER = "Etiquetas"
+TAG_SEPARATORS = re.compile(r"[,;]")
+
 INCOME_FILL = PatternFill("solid", fgColor="B8CCE4")
 EXPENSE_FILL = PatternFill("solid", fgColor="E6B8B7")
 
-COLUMN_WIDTHS = {1: 12, 2: 30, 3: 14, 4: 20, 5: 24, 6: 3, 7: 12, 8: 30, 9: 14, 10: 20, 11: 24}
+COLUMN_WIDTHS = {
+    1: 12,
+    2: 30,
+    3: 14,
+    4: 20,
+    5: 24,
+    6: 3,
+    7: 12,
+    8: 30,
+    9: 14,
+    10: 20,
+    11: 24,
+    12: 28,
+}
 
 
 def _write_block(ws, start_col: int, title: str, fill: PatternFill) -> None:
@@ -53,16 +75,23 @@ def build_template_workbook(
     accounts: list[Account],
     income_categories: list[Category],
     expense_categories: list[Category],
+    tag_names: list[str] | None = None,
 ) -> BytesIO:
     """Downloadable template: two tables (Income/Expenses) with Account and
     Category as dropdown lists (referencing a hidden 'Listas' sheet
-    -- Excel doesn't support long inline lists beyond ~255 characters)."""
+    -- Excel doesn't support long inline lists beyond ~255 characters). The
+    Expenses block has an extra optional 'Etiquetas' column (several tags separated
+    by commas; the dropdown suggests the user's tags but doesn't force a single one)."""
     wb = Workbook()
     ws = wb.active
     ws.title = SHEET_NAME
 
     _write_block(ws, INCOME_START_COL, "Ingresos", INCOME_FILL)
     _write_block(ws, EXPENSE_START_COL, "Gastos", EXPENSE_FILL)
+    tags_header = ws.cell(row=HEADER_ROW, column=TAGS_COL, value=TAGS_HEADER)
+    tags_header.font = Font(bold=True)
+    tags_header.fill = EXPENSE_FILL
+    ws.cell(row=1, column=TAGS_COL).fill = EXPENSE_FILL
 
     for col, width in COLUMN_WIDTHS.items():
         ws.column_dimensions[chr(64 + col)].width = width
@@ -79,6 +108,9 @@ def build_template_workbook(
         lists_ws.cell(row=i, column=2, value=name)
     for i, name in enumerate(expense_names, start=1):
         lists_ws.cell(row=i, column=3, value=name)
+    tag_names = list(tag_names or [])
+    for i, name in enumerate(tag_names, start=1):
+        lists_ws.cell(row=i, column=4, value=name)
 
     def _range(col: str, count: int) -> str:
         return f"={LISTS_SHEET}!${col}$1:${col}${count}"
@@ -99,6 +131,16 @@ def build_template_workbook(
     )
     for dv in (dv_account_income, dv_cat_income, dv_account_expense, dv_cat_expense):
         ws.add_data_validation(dv)
+    if tag_names:
+        # Suggests the existing tags, but typing several separated by commas must not be rejected.
+        dv_tags = DataValidation(
+            type="list",
+            formula1=_range("D", len(tag_names)),
+            allow_blank=True,
+            showErrorMessage=False,
+        )
+        ws.add_data_validation(dv_tags)
+        dv_tags.add(f"L{FIRST_DATA_ROW}:L{last_row}")
     dv_account_income.add(f"D{FIRST_DATA_ROW}:D{last_row}")
     dv_cat_income.add(f"E{FIRST_DATA_ROW}:E{last_row}")
     dv_account_expense.add(f"J{FIRST_DATA_ROW}:J{last_row}")
@@ -123,6 +165,15 @@ class ParsedRow:
     account_name: str
     category_name: str
     row_number: int
+    tags: list[str] = field(default_factory=list)
+
+
+def _parse_tags(value: object) -> list[str]:
+    """'Viaje Mty, Choque' -> ['Viaje Mty', 'Choque'] (no blanks, no repeats, order kept)."""
+    if value is None:
+        return []
+    names = [part.strip() for part in TAG_SEPARATORS.split(str(value))]
+    return list(dict.fromkeys(name for name in names if name))
 
 
 @dataclass
@@ -192,6 +243,13 @@ def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int
             account_name=account_name,
             category_name=category_name,
             row_number=row_idx,
+            # Only expenses carry tags (the rest of the app enforces it too); the column
+            # may not exist in files made before it was added.
+            tags=(
+                _parse_tags(row_cells[TAGS_COL - 1].value)
+                if entry_type == "expense" and len(row_cells) >= TAGS_COL
+                else []
+            ),
         ),
         None,
     )
@@ -245,6 +303,10 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
     expense_categories = await category_service.list_categories(session, user_id, "expense")
 
     account_by_name = {a.name.strip().lower(): a.id for a in accounts}
+    tag_by_name = {
+        t.name.strip().lower(): t.id
+        for t in (await session.execute(select(Tag).where(Tag.user_id == user_id))).scalars()
+    }
     income_by_name = _category_lookup(income_categories)
     expense_by_name = _category_lookup(expense_categories)
 
@@ -276,6 +338,20 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
             )
             continue
 
+        unknown_tags = [name for name in row.tags if name.lower() not in tag_by_name]
+        if unknown_tags:
+            errors.append(
+                {
+                    "row": row.row_number,
+                    "block": block_label,
+                    "reason": (
+                        f"La etiqueta '{unknown_tags[0]}' no existe: créala en Etiquetas "
+                        "o corrige el nombre"
+                    ),
+                }
+            )
+            continue
+
         await transaction_service.create_transaction(
             session,
             user_id,
@@ -286,6 +362,7 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 category_id=category_id,
                 account_id=account_id,
                 amount=row.amount,
+                tag_ids=[tag_by_name[name.lower()] for name in row.tags],
             ),
         )
         created += 1

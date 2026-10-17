@@ -12,7 +12,12 @@ async def _register_and_login(client: AsyncClient) -> str:
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Test", "password": "supersecret123", "accept_disclaimer": True},
+        json={
+            "email": email,
+            "name": "Test",
+            "password": "supersecret123",
+            "accept_disclaimer": True,
+        },
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -48,6 +53,8 @@ def _build_upload(rows: list[dict]) -> bytes:
         ws[f"{cols[2]}{row_num}"] = row["date"]
         ws[f"{cols[3]}{row_num}"] = row["account"]
         ws[f"{cols[4]}{row_num}"] = row["category"]
+        if "tags" in row:
+            ws[f"L{row_num}"] = row["tags"]  # optional "Etiquetas" column of the Expenses block
         row_num += 1
 
     buf = BytesIO()
@@ -206,3 +213,150 @@ async def test_upload_rls_isolation(client: AsyncClient):
     )
     assert response.status_code == 200
     assert response.json()["data"]["created"] == 0  # A can't see B's account
+
+
+async def _get_category_names(client: AsyncClient, headers: dict, type_: str) -> str:
+    response = await client.get(f"/api/v1/categories?type={type_}", headers=headers)
+    return response.json()["data"][0]["name"]
+
+
+async def _create_tag(client: AsyncClient, headers: dict, name: str) -> str:
+    response = await client.post("/api/v1/tags", headers=headers, json={"name": name})
+    assert response.status_code == 201
+    return response.json()["data"]["id"]
+
+
+async def test_template_has_the_tags_column_and_suggests_the_users_tags(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    await _create_tag(client, headers, "Reparación choque")
+
+    response = await client.get("/api/v1/bulk-import/template", headers=headers)
+    wb = load_workbook(BytesIO(response.content))
+    ws = wb["Transacciones"]
+    assert ws["L2"].value == "Etiquetas"
+    assert len(ws.data_validations.dataValidation) == 5
+    assert wb["Listas"]["D1"].value == "Reparación choque"
+
+
+async def test_upload_puts_the_tags_of_each_expense(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    category = await _get_category_names(client, headers, "expense")
+    await _create_tag(client, headers, "Viaje Mty")
+    await _create_tag(client, headers, "Con pareja")
+
+    content = _build_upload(
+        [
+            {
+                "block": "expense",
+                "amount": 100,
+                "description": "Cena",
+                "date": "2026-10-12",
+                "account": "Santander",
+                "category": category,
+                "tags": "viaje mty, Con pareja",
+            },
+            {
+                "block": "expense",
+                "amount": 50,
+                "description": "Taxi",
+                "date": "2026-10-12",
+                "account": "Santander",
+                "category": category,
+                "tags": " Viaje Mty ; viaje mty ",
+            },
+            {
+                "block": "expense",
+                "amount": 30,
+                "description": "Sin etiquetas",
+                "date": "2026-10-12",
+                "account": "Santander",
+                "category": category,
+            },
+        ]
+    )
+    response = await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    assert response.json()["data"] == {"created": 3, "errors": []}
+
+    listed = await client.get("/api/v1/transactions?per_page=50", headers=headers)
+    tags = {t["description"]: sorted(x["name"] for x in t["tags"]) for t in listed.json()["data"]}
+    assert tags == {"Cena": ["Con pareja", "Viaje Mty"], "Taxi": ["Viaje Mty"], "Sin etiquetas": []}
+
+
+async def test_upload_rejects_the_row_with_an_unknown_tag_and_loads_the_rest(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    category = await _get_category_names(client, headers, "expense")
+    await _create_tag(client, headers, "Viaje Mty")
+
+    content = _build_upload(
+        [
+            {
+                "block": "expense",
+                "amount": 100,
+                "description": "Bien",
+                "date": "2026-10-12",
+                "account": "Santander",
+                "category": category,
+                "tags": "Viaje Mty",
+            },
+            {
+                "block": "expense",
+                "amount": 40,
+                "description": "Typo",
+                "date": "2026-10-12",
+                "account": "Santander",
+                "category": category,
+                "tags": "Viaje Mtyy",
+            },
+        ]
+    )
+    response = await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    data = response.json()["data"]
+    assert data["created"] == 1
+    assert len(data["errors"]) == 1
+    assert data["errors"][0]["row"] == 4 and "Viaje Mtyy" in data["errors"][0]["reason"]
+    listed = await client.get("/api/v1/transactions?per_page=50", headers=headers)
+    assert [t["description"] for t in listed.json()["data"]] == ["Bien"]
+
+
+async def test_tags_of_one_user_are_not_usable_by_another(client: AsyncClient):
+    other = {"Authorization": f"Bearer {await _register_and_login(client)}"}
+    await _create_tag(client, other, "Secreta")
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    category = await _get_category_names(client, headers, "expense")
+
+    content = _build_upload(
+        [
+            {
+                "block": "expense",
+                "amount": 10,
+                "description": "Ajena",
+                "date": "2026-10-12",
+                "account": "Santander",
+                "category": category,
+                "tags": "Secreta",
+            }
+        ]
+    )
+    response = await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    assert response.json()["data"]["created"] == 0
+    assert "Secreta" in response.json()["data"]["errors"][0]["reason"]
