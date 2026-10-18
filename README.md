@@ -80,7 +80,7 @@ northern_lights/
 | Reports | `reports.py` | `report_service.py`, `report_insight_service.py` | `Reports` |
 | AI advisor | `ai.py` | `chat_service.py`, `app/ai/*` | `Advisor` |
 | Notifications | `notifications.py` | `notification_service.py`, `push_service.py` | `Notifications` |
-| Bulk import (Excel) | `bulk_import.py` | `bulk_import_service.py` | `Advisor` (Excel card) |
+| Bulk import (Excel): template, preview before loading, load | `bulk_import.py` | `bulk_import_service.py` | `BulkImport` (under MORE: drag & drop, summary, confirm) |
 | Tags (group expenses across categories) | `tags.py` | `tag_service.py` | `Tags`, tag filter in `Transactions`, section in `Reports`, card in `Dashboard` |
 | Export/delete my data | `data.py` | `data_service.py` | `Settings` |
 | Admin | `admin.py` | `admin_service.py` | `Admin` |

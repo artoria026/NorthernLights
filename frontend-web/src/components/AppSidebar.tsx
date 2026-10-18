@@ -5,6 +5,7 @@ import {
   Building2,
   ChevronDown,
   Coins,
+  FileSpreadsheet,
   Home,
   LogOut,
   Menu,
@@ -320,6 +321,10 @@ export function AppSidebar() {
           <NavLink to="/goals" className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground py-1.5">
             <Target size={14} strokeWidth={2} />
             {t('appSidebar.nav.goals')}
+          </NavLink>
+          <NavLink to="/bulk-import" className="flex items-center gap-2 text-[13px] text-muted-foreground hover:text-foreground py-1.5">
+            <FileSpreadsheet size={14} strokeWidth={2} />
+            {t('appSidebar.nav.bulkImport')}
           </NavLink>
         </CollapsibleGroup>
 

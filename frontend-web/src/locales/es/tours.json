@@ -293,7 +293,7 @@
       },
       {
         "title": "Más formas de traer datos",
-        "text": "Importa desde Excel, o copia un prompt para pasarle tus datos desde otra IA (ChatGPT, Gemini) si ya los tienes ahí."
+        "text": "Copia un prompt para pasarle tus datos desde otra IA (ChatGPT, Gemini) si ya los tienes ahí. La carga de Excel tiene su propia pantalla en MÁS."
       },
       {
         "title": "Pregunta lo que quieras",

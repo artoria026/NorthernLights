@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.account import Account
 from app.models.category import Category
 from app.models.tag import Tag
+from app.models.transaction import JournalEntry
 from app.schemas.transaction import TransactionCreate
 from app.services import account_service, category_service, transaction_service
 
@@ -286,72 +287,91 @@ def parse_upload(content: bytes) -> ParseResult:
     return result
 
 
+def _category_names(category: Category) -> list[str]:
+    """Lowercased names a category answers to. A system category answers to its name
+    in either language, whatever the language of the template the file came from."""
+    return [n.strip().lower() for n in (category.name, category.name_en) if n]
+
+
 def _category_lookup(categories: list[Category]) -> dict[str, UUID]:
-    """Lowercased name -> id. A system category answers to its name in either
-    language, whatever the language of the template the file came from."""
-    lookup: dict[str, UUID] = {}
-    for c in categories:
-        for name in (c.name, c.name_en):
-            if name:
-                lookup[name.strip().lower()] = c.id
-    return lookup
+    """Lowercased name -> id (a system category answers to either language)."""
+    return {name: c.id for c in categories for name in _category_names(c)}
 
 
-async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: ParseResult) -> dict:
+@dataclass
+class ResolvedRow:
+    """A parsed row whose account, category and tags exist for this user."""
+
+    row: ParsedRow
+    account_id: UUID
+    account_name: str
+    category_id: UUID
+    category_name: str
+    tag_ids: list[UUID]
+    tag_names: list[str]
+
+
+async def resolve_rows(
+    session: AsyncSession, user_id: UUID, parsed: ParseResult
+) -> tuple[list[ResolvedRow], list[dict]]:
+    """Matches every parsed row against the user's accounts, categories and tags
+    WITHOUT writing anything. Rows that don't match go to the error list (with the
+    reason); the others come back ready to be created. Both the preview and the real
+    load go through here, so what the preview shows is what the load will do."""
     accounts = await account_service.list_accounts(session, user_id)
     income_categories = await category_service.list_categories(session, user_id, "income")
     expense_categories = await category_service.list_categories(session, user_id, "expense")
 
-    account_by_name = {a.name.strip().lower(): a.id for a in accounts}
-    tag_by_name = {
-        t.name.strip().lower(): t.id
-        for t in (await session.execute(select(Tag).where(Tag.user_id == user_id))).scalars()
+    account_by_name = {a.name.strip().lower(): a for a in accounts}
+    tags = (await session.execute(select(Tag).where(Tag.user_id == user_id))).scalars().all()
+    tag_by_name = {t.name.strip().lower(): t for t in tags}
+    category_by_type = {
+        "income": {n: c for c in income_categories for n in _category_names(c)},
+        "expense": {n: c for c in expense_categories for n in _category_names(c)},
     }
-    income_by_name = _category_lookup(income_categories)
-    expense_by_name = _category_lookup(expense_categories)
 
-    created = 0
+    resolved: list[ResolvedRow] = []
     errors = list(parsed.errors)
-
     for row in parsed.rows:
         block_label = "Ingreso" if row.entry_type == "income" else "Gasto"
-        account_id = account_by_name.get(row.account_name.strip().lower())
-        if account_id is None:
-            errors.append(
-                {
-                    "row": row.row_number,
-                    "block": block_label,
-                    "reason": f"La cuenta '{row.account_name}' no existe",
-                }
-            )
-            continue
 
-        cat_map = income_by_name if row.entry_type == "income" else expense_by_name
-        category_id = cat_map.get(row.category_name.strip().lower())
-        if category_id is None:
-            errors.append(
-                {
-                    "row": row.row_number,
-                    "block": block_label,
-                    "reason": f"La categoría '{row.category_name}' no existe",
-                }
-            )
-            continue
+        def fail(reason: str, row=row, block_label=block_label) -> None:
+            errors.append({"row": row.row_number, "block": block_label, "reason": reason})
 
+        account = account_by_name.get(row.account_name.strip().lower())
+        if account is None:
+            fail(f"La cuenta '{row.account_name}' no existe")
+            continue
+        category = category_by_type[row.entry_type].get(row.category_name.strip().lower())
+        if category is None:
+            fail(f"La categoría '{row.category_name}' no existe")
+            continue
         unknown_tags = [name for name in row.tags if name.lower() not in tag_by_name]
         if unknown_tags:
-            errors.append(
-                {
-                    "row": row.row_number,
-                    "block": block_label,
-                    "reason": (
-                        f"La etiqueta '{unknown_tags[0]}' no existe: créala en Etiquetas "
-                        "o corrige el nombre"
-                    ),
-                }
+            fail(
+                f"La etiqueta '{unknown_tags[0]}' no existe: créala en Etiquetas "
+                "o corrige el nombre"
             )
             continue
+        row_tags = [tag_by_name[name.lower()] for name in row.tags]
+        resolved.append(
+            ResolvedRow(
+                row=row,
+                account_id=account.id,
+                account_name=account.name,
+                category_id=category.id,
+                category_name=category.display_name,
+                tag_ids=[t.id for t in row_tags],
+                tag_names=[t.name for t in row_tags],
+            )
+        )
+    return resolved, errors
 
+
+async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: ParseResult) -> dict:
+    resolved, errors = await resolve_rows(session, user_id, parsed)
+    for item in resolved:
+        row = item.row
         await transaction_service.create_transaction(
             session,
             user_id,
@@ -359,12 +379,101 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 date=row.date,
                 description=row.description,
                 entry_type=row.entry_type,
-                category_id=category_id,
-                account_id=account_id,
+                category_id=item.category_id,
+                account_id=item.account_id,
                 amount=row.amount,
-                tag_ids=[tag_by_name[name.lower()] for name in row.tags],
+                tag_ids=item.tag_ids,
             ),
         )
-        created += 1
+    return {"created": len(resolved), "errors": errors}
 
-    return {"created": created, "errors": errors}
+
+async def _existing_keys(
+    session: AsyncSession, user_id: UUID, resolved: list[ResolvedRow]
+) -> set[tuple[date_type, Decimal, str, str]]:
+    """(date, amount, description, entry_type) of what the user already has in the
+    date range of the file, to warn about rows that look already loaded."""
+    if not resolved:
+        return set()
+    start = min(item.row.date for item in resolved)
+    end = max(item.row.date for item in resolved)
+    entries = (
+        (
+            await session.execute(
+                select(JournalEntry).where(
+                    JournalEntry.user_id == user_id,
+                    JournalEntry.deleted_at.is_(None),
+                    JournalEntry.date >= start,
+                    JournalEntry.date <= end,
+                    JournalEntry.entry_type.in_(("income", "expense")),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return {
+        (e.date, Decimal(e.amount or 0), (e.description or "").strip().lower(), e.entry_type)
+        for e in entries
+    }
+
+
+async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResult) -> dict:
+    """What loading this file would do, without doing it: totals, breakdowns, the rows
+    that would be rejected (with the reason) and the ones that look already loaded."""
+    resolved, errors = await resolve_rows(session, user_id, parsed)
+    existing = await _existing_keys(session, user_id, resolved)
+
+    by_type = {"income": [0, Decimal(0)], "expense": [0, Decimal(0)]}
+    by_account: dict[str, dict] = {}
+    by_category: dict[tuple[str, str], list] = {}
+    by_tag: dict[str, list] = {}
+    duplicates: list[dict] = []
+    for item in resolved:
+        row = item.row
+        by_type[row.entry_type][0] += 1
+        by_type[row.entry_type][1] += row.amount
+        acct = by_account.setdefault(
+            item.account_name,
+            {"name": item.account_name, "count": 0, "income": Decimal(0), "expense": Decimal(0)},
+        )
+        acct["count"] += 1
+        acct[row.entry_type] += row.amount
+        cat = by_category.setdefault((row.entry_type, item.category_name), [0, Decimal(0)])
+        cat[0] += 1
+        cat[1] += row.amount
+        for name in item.tag_names:
+            tag = by_tag.setdefault(name, [0, Decimal(0)])
+            tag[0] += 1
+            tag[1] += row.amount
+        key = (row.date, row.amount, row.description.strip().lower(), row.entry_type)
+        if key in existing:
+            duplicates.append(
+                {
+                    "row": row.row_number,
+                    "date": row.date,
+                    "amount": row.amount,
+                    "description": row.description,
+                }
+            )
+
+    dates = [item.row.date for item in resolved]
+    return {
+        "valid_rows": len(resolved),
+        "error_rows": len(errors),
+        "income": {"count": by_type["income"][0], "total": by_type["income"][1]},
+        "expense": {"count": by_type["expense"][0], "total": by_type["expense"][1]},
+        "date_from": min(dates) if dates else None,
+        "date_to": max(dates) if dates else None,
+        "by_account": sorted(by_account.values(), key=lambda a: -a["count"]),
+        "by_category": [
+            {"name": name, "type": type_, "count": v[0], "total": v[1]}
+            for (type_, name), v in sorted(by_category.items(), key=lambda kv: -kv[1][1])
+        ],
+        "by_tag": [
+            {"name": name, "count": v[0], "total": v[1]}
+            for name, v in sorted(by_tag.items(), key=lambda kv: -kv[1][1])
+        ],
+        "possible_duplicates": {"count": len(duplicates), "examples": duplicates[:5]},
+        "errors": errors,
+    }

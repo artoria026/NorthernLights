@@ -1336,7 +1336,7 @@
     "viewIt": "Verlo →",
     "removeAttachment": "Quitar {{name}}",
     "attachTitle": "Adjuntar capturas de pantalla o estados de cuenta (PDF)",
-    "moreOptionsTitle": "Más formas de traer datos (Excel, prompt para otra IA)",
+    "moreOptionsTitle": "Traer datos desde otra IA (prompt)",
     "inputPlaceholderWithAttachment": "Algo de contexto (ej. \"son los gastos del viaje\")...",
     "inputPlaceholder": "Escribe tu pregunta...",
     "sidebar": {
@@ -1352,7 +1352,6 @@
     },
     "dialog": {
       "title": "Más formas de traer datos",
-      "bulkExcelHeading": "Carga masiva desde Excel",
       "promptHeading": "Prompt para tu otro chat",
       "promptDescription": "Cópialo y pégalo en la conversación donde llevabas el registro de tus finanzas (ChatGPT, Gemini, etc.). Esa IA te devolverá un resumen que puedes pegar aquí en el chat.",
       "copyButton": "Copiar prompt",
@@ -1672,6 +1671,51 @@
       "dates": "Fechas",
       "byCategory": "Por categoría",
       "byDay": "Por día"
+    }
+  },
+  "bulkImport": {
+    "title": "Carga masiva",
+    "subtitle": "Sube un Excel con tus movimientos: primero ves un resumen y solo se guarda cuando confirmas",
+    "templateTitle": "1. Descarga la plantilla",
+    "templateBody": "Ya trae tus cuentas, categorías y etiquetas como listas. Ingresos en las columnas A–E, gastos en G–K, y una columna opcional «Etiquetas» (L) para los gastos.",
+    "downloadTemplate": "Descargar plantilla",
+    "generating": "Generando...",
+    "dropTitle": "2. Suelta tu archivo",
+    "dropHere": "Arrastra aquí tu archivo .xlsx o haz clic para elegirlo",
+    "dropHint": "Se revisa primero: no se guarda nada hasta que lo confirmes",
+    "reading": "Leyendo el archivo...",
+    "onlyXlsx": "Solo se pueden cargar archivos .xlsx.",
+    "summaryTitle": "3. Revisa y confirma",
+    "confirm_one": "Confirmar y cargar {{count}} movimiento",
+    "confirm_other": "Confirmar y cargar {{count}} movimientos",
+    "loading": "Cargando...",
+    "chooseAnother": "Elegir otro archivo",
+    "noUndo": "Cada movimiento queda registrado al confirmar. Si subes el mismo archivo dos veces, se duplica.",
+    "done_one": "Se registró {{count}} movimiento.",
+    "done_other": "Se registraron {{count}} movimientos.",
+    "loadAnother": "Cargar otro archivo",
+    "summary": {
+      "ready_one": "{{count}} movimiento listo para cargar",
+      "ready_other": "{{count}} movimientos listos para cargar",
+      "income": "Ingresos",
+      "expenses": "Gastos",
+      "net": "Neto",
+      "dates": "Fechas",
+      "movements_one": "{{count}} movimiento",
+      "movements_other": "{{count}} movimientos",
+      "byAccount": "Por cuenta",
+      "byCategory": "Por categoría",
+      "byTag": "Por etiqueta",
+      "moreCategories_one": "y {{count}} categoría más",
+      "moreCategories_other": "y {{count}} categorías más",
+      "duplicatesTitle_one": "{{count}} fila parece ya cargada",
+      "duplicatesTitle_other": "{{count}} filas parecen ya cargadas",
+      "duplicatesBody": "Hay movimientos con la misma fecha, monto y descripción. Si confirmas, se duplicarán.",
+      "errorsTitle_one": "{{count}} fila con problemas (no se cargará)",
+      "errorsTitle_other": "{{count}} filas con problemas (no se cargarán)",
+      "moreErrors_one": "y {{count}} más",
+      "moreErrors_other": "y {{count}} más",
+      "row": "Fila {{row}}"
     }
   }
 }

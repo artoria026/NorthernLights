@@ -1336,7 +1336,7 @@
     "viewIt": "View it →",
     "removeAttachment": "Remove {{name}}",
     "attachTitle": "Attach screenshots or bank statements (PDF)",
-    "moreOptionsTitle": "More ways to bring in data (Excel, prompt for another AI)",
+    "moreOptionsTitle": "Bring in data from another AI (prompt)",
     "inputPlaceholderWithAttachment": "Some context (e.g. \"these are the trip expenses\")...",
     "inputPlaceholder": "Type your question...",
     "sidebar": {
@@ -1352,7 +1352,6 @@
     },
     "dialog": {
       "title": "More ways to bring in data",
-      "bulkExcelHeading": "Bulk upload from Excel",
       "promptHeading": "Prompt for your other chat",
       "promptDescription": "Copy it and paste it into the conversation where you've been tracking your finances (ChatGPT, Gemini, etc.). That AI will give you back a summary you can paste here in the chat.",
       "copyButton": "Copy prompt",
@@ -1672,6 +1671,51 @@
       "dates": "Dates",
       "byCategory": "By category",
       "byDay": "By day"
+    }
+  },
+  "bulkImport": {
+    "title": "Bulk upload",
+    "subtitle": "Upload an Excel with your transactions: you see a summary first and nothing is saved until you confirm",
+    "templateTitle": "1. Download the template",
+    "templateBody": "It already comes with your accounts, categories and tags as lists. Income in columns A–E, expenses in G–K, and an optional \"Etiquetas\" (tags) column (L) for expenses.",
+    "downloadTemplate": "Download template",
+    "generating": "Generating...",
+    "dropTitle": "2. Drop your file",
+    "dropHere": "Drag your .xlsx file here or click to choose it",
+    "dropHint": "It is checked first: nothing is saved until you confirm",
+    "reading": "Reading the file...",
+    "onlyXlsx": "Only .xlsx files can be uploaded.",
+    "summaryTitle": "3. Review and confirm",
+    "confirm_one": "Confirm and load {{count}} transaction",
+    "confirm_other": "Confirm and load {{count}} transactions",
+    "loading": "Loading...",
+    "chooseAnother": "Choose another file",
+    "noUndo": "Each transaction is recorded when you confirm. Uploading the same file twice duplicates it.",
+    "done_one": "{{count}} transaction was recorded.",
+    "done_other": "{{count}} transactions were recorded.",
+    "loadAnother": "Upload another file",
+    "summary": {
+      "ready_one": "{{count}} transaction ready to load",
+      "ready_other": "{{count}} transactions ready to load",
+      "income": "Income",
+      "expenses": "Expenses",
+      "net": "Net",
+      "dates": "Dates",
+      "movements_one": "{{count}} transaction",
+      "movements_other": "{{count}} transactions",
+      "byAccount": "By account",
+      "byCategory": "By category",
+      "byTag": "By tag",
+      "moreCategories_one": "and {{count}} more category",
+      "moreCategories_other": "and {{count}} more categories",
+      "duplicatesTitle_one": "{{count}} row looks already loaded",
+      "duplicatesTitle_other": "{{count}} rows look already loaded",
+      "duplicatesBody": "There are transactions with the same date, amount and description. If you confirm, they will be duplicated.",
+      "errorsTitle_one": "{{count}} row with problems (it will not be loaded)",
+      "errorsTitle_other": "{{count}} rows with problems (they will not be loaded)",
+      "moreErrors_one": "and {{count}} more",
+      "moreErrors_other": "and {{count}} more",
+      "row": "Row {{row}}"
     }
   }
 }
