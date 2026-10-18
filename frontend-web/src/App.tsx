@@ -19,6 +19,7 @@ import { Advisor } from '@/pages/Advisor'
 import { AuthCallback } from '@/pages/AuthCallback'
 import { Budget } from '@/pages/Budget'
 import { Categorias } from '@/pages/Categorias'
+import { BulkImport } from '@/pages/BulkImport'
 import { Tags } from '@/pages/Tags'
 import { Dashboard } from '@/pages/Dashboard'
 import { Debts } from '@/pages/Debts'
@@ -93,6 +94,7 @@ function App() {
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/categories" element={<Categorias />} />
               <Route path="/tags" element={<Tags />} />
+              <Route path="/bulk-import" element={<BulkImport />} />
               <Route path="/debts" element={<Debts />} />
               <Route path="/recurring" element={<Recurring />} />
               <Route path="/subscriptions" element={<Subscriptions />} />

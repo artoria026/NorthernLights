@@ -80,7 +80,7 @@ northern_lights/
 | Reportes | `reports.py` | `report_service.py`, `report_insight_service.py` | `Reports` |
 | Asesor IA | `ai.py` | `chat_service.py`, `app/ai/*` | `Advisor` |
 | Notificaciones | `notifications.py` | `notification_service.py`, `push_service.py` | `Notifications` |
-| Importación masiva (Excel) | `bulk_import.py` | `bulk_import_service.py` | `Advisor` (tarjeta de Excel) |
+| Importación masiva (Excel): plantilla, vista previa antes de cargar, carga | `bulk_import.py` | `bulk_import_service.py` | `BulkImport` (en MÁS: arrastrar y soltar, resumen, confirmar) |
 | Etiquetas (agrupar gastos entre categorías) | `tags.py` | `tag_service.py` | `Tags`, filtro en `Transactions`, sección en `Reports`, tarjeta en `Dashboard` |
 | Exportar/borrar mis datos | `data.py` | `data_service.py` | `Settings` |
 | Admin | `admin.py` | `admin_service.py` | `Admin` |

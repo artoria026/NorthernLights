@@ -8,6 +8,23 @@ export interface BulkImportError {
   reason: string
 }
 
+export interface BulkImportPreview {
+  valid_rows: number
+  error_rows: number
+  income: { count: number; total: string }
+  expense: { count: number; total: string }
+  date_from: string | null
+  date_to: string | null
+  by_account: { name: string; count: number; income: string; expense: string }[]
+  by_category: { name: string; type: 'income' | 'expense'; count: number; total: string }[]
+  by_tag: { name: string; count: number; total: string }[]
+  possible_duplicates: {
+    count: number
+    examples: { row: number; date: string; amount: string; description: string }[]
+  }
+  errors: BulkImportError[]
+}
+
 export interface BulkImportResult {
   created: number
   errors: BulkImportError[]
@@ -27,6 +44,18 @@ export function useDownloadTemplate() {
   })
 }
 
+/** Reads the file and says what loading it would do. Nothing is saved. */
+export function usePreviewBulkImport() {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const { data } = await api.post<ApiSuccess<BulkImportPreview>>('/bulk-import/preview', formData)
+      return data.data
+    },
+  })
+}
+
 export function useUploadBulkImport() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -42,6 +71,7 @@ export function useUploadBulkImport() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['tags'] })
     },
   })
 }

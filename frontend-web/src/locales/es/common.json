@@ -16,7 +16,8 @@
       "insights": "Insights",
       "categories": "Categorías",
       "goals": "Metas",
-      "tags": "Etiquetas"
+      "tags": "Etiquetas",
+      "bulkImport": "Carga masiva"
     },
     "sections": {
       "main": "Principal",
@@ -157,19 +158,6 @@
     "dateFieldLabel": "Fecha",
     "notesFieldLabel": "Notas (opcional)",
     "saveButton": "Guardar"
-  },
-  "bulkExcelImportCard": {
-    "intro": "¿Llevas días sin registrar nada pero tienes todo anotado de forma burda? Descarga la plantilla, llénala (ya trae tus cuentas y categorías como listas desplegables) y súbela. Si quieres, agrega las etiquetas de cada gasto en la columna «Etiquetas» (varias separadas por comas); deben existir ya en Etiquetas.",
-    "generatingButton": "Generando...",
-    "downloadTemplateButton": "Descargar plantilla",
-    "uploadingButton": "Cargando...",
-    "uploadFileButton": "Cargar archivo",
-    "lastFile": "Último archivo: {{fileName}}",
-    "resultSummary_one": "Se registraron {{count}} movimiento.",
-    "resultSummary_other": "Se registraron {{count}} movimientos.",
-    "errorSummary_one": "{{count}} fila con problemas:",
-    "errorSummary_other": "{{count}} filas con problemas:",
-    "errorRow": "Fila {{row}}{{block}}: {{reason}}"
   },
   "help": {
     "thisScreenHelpTitle": "Ayuda de esta pantalla"

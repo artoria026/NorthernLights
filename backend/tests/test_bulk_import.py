@@ -360,3 +360,129 @@ async def test_tags_of_one_user_are_not_usable_by_another(client: AsyncClient):
     )
     assert response.json()["data"]["created"] == 0
     assert "Secreta" in response.json()["data"]["errors"][0]["reason"]
+
+
+async def _preview(client: AsyncClient, headers: dict, content: bytes) -> dict:
+    response = await client.post(
+        "/api/v1/bulk-import/preview",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["data"]
+
+
+async def test_preview_summarizes_the_file_without_saving_anything(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    income = await _get_category_names(client, headers, "income")
+    expense = await _get_category_names(client, headers, "expense")
+    await _create_tag(client, headers, "Viaje Mty")
+
+    content = _build_upload(
+        [
+            {
+                "block": "income",
+                "amount": 1000,
+                "description": "Nomina",
+                "date": "2026-10-01",
+                "account": "Santander",
+                "category": income,
+            },
+            {
+                "block": "expense",
+                "amount": 100,
+                "description": "Cena",
+                "date": "2026-10-12",
+                "account": "Santander",
+                "category": expense,
+                "tags": "Viaje Mty",
+            },
+            {
+                "block": "expense",
+                "amount": 50,
+                "description": "Taxi",
+                "date": "2026-10-13",
+                "account": "Santander",
+                "category": expense,
+                "tags": "Viaje Mty",
+            },
+            {
+                "block": "expense",
+                "amount": 20,
+                "description": "Mal",
+                "date": "2026-10-13",
+                "account": "NoExiste",
+                "category": expense,
+            },
+        ]
+    )
+    data = await _preview(client, headers, content)
+
+    assert data["valid_rows"] == 3 and data["error_rows"] == 1
+    assert (
+        data["income"] == {"count": 1, "total": "1000.00"} or float(data["income"]["total"]) == 1000
+    )
+    assert data["expense"]["count"] == 2 and float(data["expense"]["total"]) == 150
+    assert (data["date_from"], data["date_to"]) == ("2026-10-01", "2026-10-13")
+    assert [(a["name"], a["count"]) for a in data["by_account"]] == [("Santander", 3)]
+    assert [(t["name"], t["count"], float(t["total"])) for t in data["by_tag"]] == [
+        ("Viaje Mty", 2, 150.0)
+    ]
+    assert any(c["type"] == "expense" and c["count"] == 2 for c in data["by_category"])
+    assert data["errors"][0]["row"] == 6 and "NoExiste" in data["errors"][0]["reason"]
+    assert data["possible_duplicates"]["count"] == 0
+
+    # nothing was saved
+    listed = await client.get("/api/v1/transactions?per_page=50", headers=headers)
+    assert listed.json()["data"] == []
+
+
+async def test_preview_warns_about_rows_that_look_already_loaded(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    expense = await _get_category_names(client, headers, "expense")
+    rows = [
+        {
+            "block": "expense",
+            "amount": 100,
+            "description": "Cena",
+            "date": "2026-10-12",
+            "account": "Santander",
+            "category": expense,
+        },
+        {
+            "block": "expense",
+            "amount": 60,
+            "description": "Nueva",
+            "date": "2026-10-12",
+            "account": "Santander",
+            "category": expense,
+        },
+    ]
+    first = await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", _build_upload(rows[:1]), "application/octet-stream")},
+    )
+    assert first.json()["data"]["created"] == 1
+
+    data = await _preview(client, headers, _build_upload(rows))
+    assert data["valid_rows"] == 2
+    assert data["possible_duplicates"]["count"] == 1
+    example = data["possible_duplicates"]["examples"][0]
+    assert example["description"] == "Cena" and float(example["amount"]) == 100
+
+
+async def test_preview_of_a_file_without_the_sheet_reports_the_error(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    wb = Workbook()
+    wb.active.title = "OtraHoja"
+    buf = BytesIO()
+    wb.save(buf)
+    data = await _preview(client, headers, buf.getvalue())
+    assert data["valid_rows"] == 0 and data["error_rows"] == 1
+    assert "Transacciones" in data["errors"][0]["reason"]

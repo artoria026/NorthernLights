@@ -19,7 +19,6 @@ import remarkGfm from 'remark-gfm'
 import { Link } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { AttachmentTray } from '@/components/nl/AttachmentTray'
-import { BulkExcelImportCard } from '@/components/nl/BulkExcelImportCard'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, ViewHeader } from '@/components/nl/primitives'
 import { ProposalCard } from '@/components/nl/ProposalCard'
@@ -770,10 +769,6 @@ export function Advisor() {
           </DialogHeader>
           <div className="flex flex-col gap-5">
             <div>
-              <div className="text-[15px] font-semibold mb-1">{t('advisor.dialog.bulkExcelHeading')}</div>
-              <BulkExcelImportCard />
-            </div>
-            <div className="pt-4 border-t border-border">
               <div className="text-[15px] font-semibold mb-1">{t('advisor.dialog.promptHeading')}</div>
               <p className="text-sm text-muted-foreground mb-3">{t('advisor.dialog.promptDescription')}</p>
               <button

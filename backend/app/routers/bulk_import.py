@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_rls_db
 from app.core.security import CurrentUser, get_current_user
-from app.schemas.bulk_import import BulkImportResult
+from app.schemas.bulk_import import BulkImportPreview, BulkImportResult
 from app.schemas.common import SuccessResponse
 from app.services import account_service, bulk_import_service, category_service, tag_service
 
@@ -30,6 +30,19 @@ async def download_template(
         media_type=XLSX_MEDIA_TYPE,
         headers={"Content-Disposition": "attachment; filename=plantilla_transacciones.xlsx"},
     )
+
+
+@router.post("/preview")
+async def preview_bulk_import(
+    file: UploadFile = File(...),
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    """Reads the file and says what loading it would do, saving nothing."""
+    content = await file.read()
+    parsed = bulk_import_service.parse_upload(content)
+    preview = await bulk_import_service.build_preview(session, current_user.id, parsed)
+    return SuccessResponse(data=BulkImportPreview(**preview))
 
 
 @router.post("/upload")
