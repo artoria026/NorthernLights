@@ -474,8 +474,8 @@
         "text": "System categories can't be deleted, only deactivated for you (they stop showing up for you, without affecting anyone else). The ones you created can be edited or deleted entirely."
       },
       {
-        "title": "Breakdown by subcategory",
-        "text": "Each color in the bar is a different subcategory, compared against the category's direct spending. Hover to see the exact amount."
+        "title": "This month's budget",
+        "text": "If the category has a budget, the bar shows how much of this month's limit you have used; if not, it says \"No budget set\" (set it under Budget, on the parent category). The split by subcategory is shown when you expand it."
       },
       {
         "title": "Deactivated categories",

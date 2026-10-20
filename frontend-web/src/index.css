@@ -216,6 +216,20 @@
        vea "mas grande/desplazado" al comparar una pantalla contra otra. */
     scrollbar-gutter: stable;
   }
+  /* NORMA (toda pantalla nueva): todo lo que hace scroll vertical reserva el ancho del
+     scrollbar SIEMPRE. Si no, cuando el contenido crece lo bastante para que aparezca la
+     barra, esta le quita ~8px de ancho al contenedor y todo se "encoge" de golpe.
+     <html> solo cubre el scroll de la pagina; en escritorio quien hace scroll es <main>
+     (su overflow-x-hidden lo vuelve contenedor de scroll), y tambien lo hacen las listas
+     y modales con max-h + overflow-y-auto. Por eso la regla vive aqui y no en cada
+     componente: usa `overflow-y-auto` / `overflow-auto` y listo. Una lista flotante
+     (select, combobox) puede optar por no reservar con `[scrollbar-gutter:auto]`. */
+  main,
+  .overflow-y-auto,
+  .overflow-auto,
+  .overflow-y-scroll {
+    scrollbar-gutter: stable;
+  }
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;

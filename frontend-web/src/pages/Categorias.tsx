@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { type FormEvent, useId, useRef, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { ColorSwatchPicker } from '@/components/nl/ColorSwatchPicker'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
@@ -42,12 +43,13 @@ import {
   useReactivateCategory,
   useUpdateCategory,
 } from '@/hooks/useCategories'
+import { useBudgetCurrent } from '@/hooks/useBudget'
 import { useDismissable } from '@/hooks/useDismissable'
 import { apiErrorMessage } from '@/services/api'
 import { formatMoney, selectClass } from '@/lib/utils'
 import { useConfirmStore } from '@/stores/confirmStore'
 import { useUiStore } from '@/stores/uiStore'
-import type { Category } from '@/types'
+import type { BudgetCategoryBreakdown, Category } from '@/types'
 
 type CatType = 'income' | 'expense'
 
@@ -431,11 +433,49 @@ function AddSubcategoryRow({ parent }: { parent: Category }) {
   )
 }
 
+/** The card's budget line: how much of this month's limit is used, or a plain note that
+ * the category has no budget (not every category has one, so no bar is drawn for it). */
+function BudgetIndicator({ budget, tourTarget }: { budget: BudgetCategoryBreakdown | undefined; tourTarget?: boolean }) {
+  const { t } = useTranslation('pages')
+  const limit = Number(budget?.monthly_limit ?? 0)
+  const tour = tourTarget ? 'categories:segbar' : undefined
+  if (!budget || !(limit > 0)) {
+    return (
+      <div data-tour={tour}>
+        <Link to="/budget" className="block text-right text-[11px] italic leading-tight text-muted-foreground hover:text-foreground hover:underline">
+          {t('categories.budgetNotSet')}
+        </Link>
+      </div>
+    )
+  }
+  const spent = Number(budget.spent)
+  const pct = (spent / limit) * 100
+  const color = pct >= 100 ? 'var(--nl-danger)' : budget.alert ? 'var(--nl-warning, #f5a623)' : 'var(--nl-accent)'
+  return (
+    <div data-tour={tour} className="flex flex-col gap-1">
+      <div
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.min(100, Math.round(pct))}
+        className="h-1.5 overflow-hidden rounded-full"
+        style={{ background: 'var(--nl-bg-track)' }}
+      >
+        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${Math.min(100, pct)}%`, background: color }} />
+      </div>
+      <div className="text-right text-[11px] leading-tight text-muted-foreground">
+        {t('categories.budgetOf', { spent: formatMoney(budget.spent), limit: formatMoney(budget.monthly_limit), pct: Math.round(pct) })}
+      </div>
+    </div>
+  )
+}
+
 function CategoryCard({
   category,
   total,
   subcategories,
   subtotals,
+  budget,
   expanded,
   onToggleExpanded,
   onCollapse,
@@ -443,6 +483,8 @@ function CategoryCard({
 }: {
   category: Category
   total: string | undefined
+  /** This month's budget of the category, if it has one (undefined = no budget defined). */
+  budget?: BudgetCategoryBreakdown
   subcategories?: Category[]
   subtotals?: Map<string, string>
   /** Whether this card's subcategory panel is open. Owned by the page so only one
@@ -533,7 +575,7 @@ function CategoryCard({
       // `relative` anchors the floating panel; while it's open the card rises above
       // its neighbours (z-20) and squares its bottom corners so card + panel read
       // as one raised object.
-      className={`relative bg-card border border-border rounded-md p-4 flex flex-col gap-3 ${
+      className={`relative bg-card border border-border rounded-md px-3.5 py-3 flex flex-col gap-2 ${
         expanded && canHaveSubcategories ? 'z-20 rounded-b-none' : ''
       }`}
       data-tour={tourTarget ? 'categories:first-card' : undefined}
@@ -596,25 +638,28 @@ function CategoryCard({
           </div>
         )}
       </div>
-      <div className="text-[11px] text-muted-foreground">
-        {category.type === 'income' ? t('categories.receivedThisMonth') : t('categories.spentThisMonth')}
-      </div>
-      <div
-        className="text-[15px] font-medium"
-        style={{ color: category.type === 'income' ? 'var(--nl-accent-ink)' : undefined }}
-      >
-        {formatMoney(total ?? '0')}
-      </div>
-
-      {/* The bar is always visible when there's something to split (not
-          behind the toggle) -- gives the "how this is split" signal at a
-          glance, without having to expand. The row-by-row list stays
-          behind the toggle, same as before. */}
-      {showBar && (
-        <div data-tour={tourTarget ? 'categories:segbar' : undefined}>
-          <SegmentedSpendBar segments={segments} />
+      {/* Two columns so the card stays short: what was spent on the left and, on the right
+          (expense categories only), the budget line -- a progress bar when the category has a
+          budget for the month, or a note when it doesn't (no bar is drawn without one). The
+          split by subcategory lives inside the expanded panel. */}
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] text-muted-foreground">
+            {category.type === 'income' ? t('categories.receivedThisMonth') : t('categories.spentThisMonth')}
+          </div>
+          <div
+            className="text-[15px] font-medium leading-tight"
+            style={{ color: category.type === 'income' ? 'var(--nl-accent-ink)' : undefined }}
+          >
+            {formatMoney(total ?? '0')}
+          </div>
         </div>
-      )}
+        {category.type === 'expense' && (
+          <div className="min-w-0 flex-1 max-w-[58%]">
+            <BudgetIndicator budget={budget} tourTarget={tourTarget} />
+          </div>
+        )}
+      </div>
 
       {canHaveSubcategories && (
         <button
@@ -622,7 +667,7 @@ function CategoryCard({
           onClick={onToggleExpanded}
           aria-expanded={expanded}
           aria-controls={panelId}
-          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground -mt-1"
+          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground -mt-0.5"
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           {subcategoryList.length > 0
@@ -636,6 +681,11 @@ function CategoryCard({
           id={panelId}
           className="absolute -left-px -right-px top-[calc(100%+1px)] z-10 max-h-[min(60vh,28rem)] overflow-y-auto rounded-b-md border border-t-0 border-border bg-card px-4 pb-4 pt-3 shadow-lg shadow-black/30 animate-in fade-in-0 slide-in-from-top-1 duration-150"
         >
+          {showBar && (
+            <div className="mb-3">
+              <SegmentedSpendBar segments={segments} />
+            </div>
+          )}
           <div className="relative pl-4">
             {/* Tree trunk -- each row (SubcategoryRow/RemainderRow/
                 AddSubcategoryRow) draws its own horizontal branch (TreeTick)
@@ -777,6 +827,8 @@ export function Categorias() {
   const [openCardId, setOpenCardId] = useState<string | null>(null)
   const { data: categories, isLoading } = useCategories(type)
   const { data: summary } = useCategorySummary()
+  const { data: budgetCurrent } = useBudgetCurrent()
+  const budgetByCategory = new Map((budgetCurrent?.variable_categories ?? []).map((b) => [b.category_id, b]))
 
   const totalsByCategory = new Map((summary ?? []).map((s) => [s.category_id, s.total]))
   const topLevel = (categories ?? []).filter((c) => c.parent_id === null)
@@ -852,6 +904,7 @@ export function Categorias() {
               total={totalsByCategory.get(c.id)}
               subcategories={subcategoriesByParent.get(c.id)}
               subtotals={totalsByCategory}
+              budget={budgetByCategory.get(c.id)}
               expanded={openCardId === c.id}
               onToggleExpanded={() => setOpenCardId((current) => (current === c.id ? null : c.id))}
               onCollapse={() => setOpenCardId(null)}

@@ -124,7 +124,7 @@ export function CategorySelect({
             <Combobox.Empty className="empty:hidden px-3 py-6 text-center text-xs text-muted-foreground">
               {t('categorySelect.noResults')}
             </Combobox.Empty>
-            <Combobox.List className="max-h-64 overflow-y-auto p-1">
+            <Combobox.List className="max-h-64 overflow-y-auto [scrollbar-gutter:auto] p-1">
               {(group: CategoryGroup) => {
                 const hasChildren = group.items.length > 1
                 return (

@@ -10,6 +10,7 @@ import { TagChip } from '@/components/nl/TagChip'
 import { TagPicker } from '@/components/nl/TagPicker'
 import { useBulkTag, useTags } from '@/hooks/useTags'
 import { usePageSize } from '@/hooks/usePageSize'
+import { summarizeTransactions } from '@/lib/transactionTotals'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
 import { DemoFlow, HelpSection, HelpTip } from '@/components/nl/Help'
@@ -19,7 +20,7 @@ import { TransactionsCalendar } from '@/components/nl/TransactionsCalendar'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useDebts } from '@/hooks/useDebts'
-import { useCreateSplitExpense, useDeleteTransaction, useTransactions } from '@/hooks/useTransactions'
+import { useAllTransactions, useCreateSplitExpense, useDeleteTransaction } from '@/hooks/useTransactions'
 import { apiErrorMessage } from '@/services/api'
 import {
   entryTypeLabel,
@@ -219,6 +220,43 @@ function txType(tx: Transaction): TypeFilter {
   if (tx.entry_type === 'income') return 'INCOME'
   if (tx.entry_type === 'expense') return 'EXPENSE'
   return 'TRANSFER'
+}
+
+const TOTAL_TONE_COLOR = {
+  income: 'var(--nl-accent-ink)',
+  positive: 'var(--nl-accent-ink)',
+  expense: 'var(--nl-danger-ink)',
+  negative: 'var(--nl-danger-ink)',
+} as const
+
+function TotalChip({
+  label,
+  value,
+  count,
+  tone,
+}: {
+  label: string
+  value: string
+  count?: number
+  /** Color of the amount: income (green), expense (red), or by sign for the net -- green above
+   * zero, red below it and neutral at exactly zero. */
+  tone?: 'income' | 'expense' | 'positive' | 'negative' | 'neutral'
+}) {
+  const { t } = useTranslation('pages')
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd
+        className="font-semibold tabular-nums"
+        style={tone && tone !== 'neutral' ? { color: TOTAL_TONE_COLOR[tone] } : undefined}
+      >
+        {value}
+      </dd>
+      {count !== undefined && (
+        <dd className="text-[11px] text-muted-foreground">({t('transactions.totals.movements', { count })})</dd>
+      )}
+    </div>
+  )
 }
 
 function TransactionRow({
@@ -426,7 +464,7 @@ function TransactionsHelp() {
 
 export function Transactions() {
   const { t } = useTranslation('pages')
-  const { data, isLoading, isError } = useTransactions({ per_page: 500 })
+  const { data, isLoading, isError } = useAllTransactions()
   const { data: accounts } = useAccounts()
   const { data: allCategories } = useCategories()
   const categoryColorById = new Map((allCategories ?? []).map((c) => [c.id, c.color]))
@@ -473,6 +511,8 @@ export function Transactions() {
     .filter((tx) => (tagFilter === 'all' ? true : tx.tags.some((tag) => tag.id === tagFilter)))
     .sort((a, b) => (sortDir === 'asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date)))
 
+  // Totals of EVERYTHING the filters leave (not just the page on screen), so they always match.
+  const totals = summarizeTransactions(filtered)
   const maxPage = Math.max(0, Math.ceil(filtered.length / pageSize) - 1)
   const clampedPage = Math.min(page, maxPage)
   const pageRows = filtered.slice(clampedPage * pageSize, clampedPage * pageSize + pageSize)
@@ -523,10 +563,10 @@ export function Transactions() {
     }
   }
 
-  const selectedCalendarDate = dateFrom && dateFrom === dateTo ? dateFrom : null
-  function handleSelectCalendarDate(date: string | null) {
-    setDateFrom(date ?? '')
-    setDateTo(date ?? '')
+  const selectedCalendarRange = dateFrom && dateTo ? { from: dateFrom, to: dateTo } : null
+  function handleSelectCalendarRange(range: { from: string; to: string } | null) {
+    setDateFrom(range?.from ?? '')
+    setDateTo(range?.to ?? '')
     resetPage()
   }
 
@@ -725,19 +765,73 @@ export function Transactions() {
               }}
               className={`${selectClass} h-9`}
             />
-            <SegmentedControl
-              value={typeFilter}
-              onChange={(v: TypeFilter) => {
-                setTypeFilter(v)
-                resetPage()
-              }}
-              options={[
-                { value: 'ALL', label: t('transactions.filters.type.all') },
-                { value: 'INCOME', label: t('transactions.filters.type.income') },
-                { value: 'EXPENSE', label: t('transactions.filters.type.expense') },
-                { value: 'TRANSFER', label: t('transactions.filters.type.transfer') },
-              ]}
-            />
+            {/* Second row of the filters: the type selector on one side and, on the opposite side,
+                the totals of everything the filters leave (not just the page on screen). The type
+                filter decides which figures show: all for TODO, only the matching ones otherwise.
+                Hidden while nothing matches. */}
+            <div className="flex w-full flex-wrap items-center justify-between gap-x-6 gap-y-2">
+              <SegmentedControl
+                value={typeFilter}
+                onChange={(v: TypeFilter) => {
+                  setTypeFilter(v)
+                  resetPage()
+                }}
+                options={[
+                  { value: 'ALL', label: t('transactions.filters.type.all') },
+                  { value: 'INCOME', label: t('transactions.filters.type.income') },
+                  { value: 'EXPENSE', label: t('transactions.filters.type.expense') },
+                  { value: 'TRANSFER', label: t('transactions.filters.type.transfer') },
+                ]}
+              />
+              {filtered.length > 0 && (
+                <dl className="flex flex-wrap items-baseline justify-end gap-x-5 gap-y-1 text-[12px]" data-testid="transaction-totals">
+                  {(typeFilter === 'ALL' || typeFilter === 'INCOME') && (
+                    <TotalChip
+                      label={t('transactions.totals.income')}
+                      value={formatMoneyBase(totals.income.total)}
+                      count={totals.income.count}
+                      tone="income"
+                    />
+                  )}
+                  {(typeFilter === 'ALL' || typeFilter === 'EXPENSE') && (
+                    <TotalChip
+                      label={t('transactions.totals.expenses')}
+                      value={formatMoneyBase(totals.expense.total)}
+                      count={totals.expense.count}
+                      tone="expense"
+                    />
+                  )}
+                  {typeFilter === 'ALL' && (
+                    <TotalChip
+                      label={t('transactions.totals.net')}
+                      value={formatMoneyBase(totals.net)}
+                      tone={totals.net > 0 ? 'positive' : totals.net < 0 ? 'negative' : 'neutral'}
+                    />
+                  )}
+                  {((typeFilter === 'ALL' && totals.transfer.count > 0) || typeFilter === 'TRANSFER') && (
+                    <TotalChip
+                      label={t('transactions.totals.transfers')}
+                      value={formatMoneyBase(totals.transfer.total)}
+                      count={totals.transfer.count}
+                    />
+                  )}
+                  {typeFilter === 'INCOME' && totals.income.count > 0 && (
+                    <TotalChip
+                      label={t('transactions.totals.averageIncome')}
+                      value={formatMoneyBase(totals.income.total / totals.income.count)}
+                      tone="income"
+                    />
+                  )}
+                  {typeFilter === 'EXPENSE' && totals.expense.count > 0 && (
+                    <TotalChip
+                      label={t('transactions.totals.averageExpense')}
+                      value={formatMoneyBase(totals.expense.total / totals.expense.count)}
+                      tone="expense"
+                    />
+                  )}
+                </dl>
+              )}
+            </div>
           </div>
 
           {selectedExpenseIds.length > 0 && (
@@ -883,7 +977,7 @@ export function Transactions() {
           className="w-full lg:w-[260px] flex-shrink-0 bg-card border border-border rounded-md p-3"
           data-tour="transactions:calendar"
         >
-          <TransactionsCalendar selectedDate={selectedCalendarDate} onSelectDate={handleSelectCalendarDate} />
+          <TransactionsCalendar selectedRange={selectedCalendarRange} onSelectRange={handleSelectCalendarRange} />
         </div>
       </div>
 
