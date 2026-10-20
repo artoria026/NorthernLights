@@ -55,6 +55,9 @@ def _build_upload(rows: list[dict]) -> bytes:
         ws[f"{cols[4]}{row_num}"] = row["category"]
         if "tags" in row:
             ws[f"L{row_num}"] = row["tags"]  # optional "Etiquetas" column of the Expenses block
+        if "notes" in row:
+            # optional notes: "Notas" (M) for an expense, "Notas (ingresos)" (N) for an income
+            ws[f"{'M' if row['block'] == 'expense' else 'N'}{row_num}"] = row["notes"]
         row_num += 1
 
     buf = BytesIO()
@@ -486,3 +489,110 @@ async def test_preview_of_a_file_without_the_sheet_reports_the_error(client: Asy
     data = await _preview(client, headers, buf.getvalue())
     assert data["valid_rows"] == 0 and data["error_rows"] == 1
     assert "Transacciones" in data["errors"][0]["reason"]
+
+
+async def test_template_has_the_notes_columns(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+
+    response = await client.get("/api/v1/bulk-import/template", headers=headers)
+    ws = load_workbook(BytesIO(response.content))["Transacciones"]
+    assert ws["M2"].value == "Notas"
+    assert ws["N2"].value == "Notas (ingresos)"
+
+
+async def test_upload_saves_the_note_of_each_row(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    expense_category = await _get_category_names(client, headers, "expense")
+    income_category = await _get_category_names(client, headers, "income")
+
+    content = _build_upload(
+        [
+            {
+                "block": "expense",
+                "amount": 3000,
+                "description": "Placas del Lancer (parte 1)",
+                "date": "2026-03-05",
+                "account": "Santander",
+                "category": expense_category,
+                "notes": "  Pagadas con la TDC de Jose Manuel  ",
+            },
+            {
+                "block": "expense",
+                "amount": 10,
+                "description": "Sin nota",
+                "date": "2026-03-05",
+                "account": "Santander",
+                "category": expense_category,
+            },
+            {
+                "block": "expense",
+                "amount": 20,
+                "description": "Nota en blanco",
+                "date": "2026-03-05",
+                "account": "Santander",
+                "category": expense_category,
+                "notes": "   ",
+            },
+            {
+                "block": "income",
+                "amount": 2000,
+                "description": "Honorarios",
+                "date": "2026-03-06",
+                "account": "Santander",
+                "category": income_category,
+                "notes": "Pago semanal",
+            },
+        ]
+    )
+    response = await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    assert response.json()["data"] == {"created": 4, "errors": []}
+
+    listed = await client.get("/api/v1/transactions?per_page=50", headers=headers)
+    notes = {t["description"]: t["notes"] for t in listed.json()["data"]}
+    assert notes == {
+        "Placas del Lancer (parte 1)": "Pagadas con la TDC de Jose Manuel",
+        "Sin nota": None,
+        "Nota en blanco": None,
+        "Honorarios": "Pago semanal",
+    }
+
+
+async def test_a_row_with_an_income_and_an_expense_keeps_each_note_in_its_block(
+    client: AsyncClient,
+):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    expense_category = await _get_category_names(client, headers, "expense")
+    income_category = await _get_category_names(client, headers, "income")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Transacciones"
+    ws.append([])
+    ws.append(["Monto"])
+    ws.append(
+        [500, "Cobro", "2026-03-06", "Santander", income_category, None]
+        + [80, "Comida", "2026-03-06", "Santander", expense_category, None]
+        + ["nota del gasto", "nota del ingreso"]
+    )
+    buf = BytesIO()
+    wb.save(buf)
+    response = await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", buf.getvalue(), "application/octet-stream")},
+    )
+    assert response.json()["data"] == {"created": 2, "errors": []}
+
+    listed = await client.get("/api/v1/transactions?per_page=50", headers=headers)
+    notes = {t["description"]: t["notes"] for t in listed.json()["data"]}
+    assert notes == {"Cobro": "nota del ingreso", "Comida": "nota del gasto"}

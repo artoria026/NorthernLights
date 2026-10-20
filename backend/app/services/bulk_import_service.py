@@ -39,6 +39,14 @@ EXPENSE_START_COL = 7  # G
 # commas. Files made before it existed simply don't have it -- they keep working.
 TAGS_COL = 12  # L
 TAGS_HEADER = "Etiquetas"
+
+# Two more optional columns after the tags: a free-text note per transaction, one for
+# the Expenses block (M, next to its tags) and one for the Income block (N), because a
+# single row can hold an income and an expense at once. Old files don't have them.
+EXPENSE_NOTES_COL = 13  # M
+INCOME_NOTES_COL = 14  # N
+NOTES_HEADER = "Notas"
+INCOME_NOTES_HEADER = "Notas (ingresos)"
 TAG_SEPARATORS = re.compile(r"[,;]")
 
 INCOME_FILL = PatternFill("solid", fgColor="B8CCE4")
@@ -57,6 +65,8 @@ COLUMN_WIDTHS = {
     10: 20,
     11: 24,
     12: 28,
+    13: 40,
+    14: 40,
 }
 
 
@@ -93,6 +103,14 @@ def build_template_workbook(
     tags_header.font = Font(bold=True)
     tags_header.fill = EXPENSE_FILL
     ws.cell(row=1, column=TAGS_COL).fill = EXPENSE_FILL
+    for col, header, fill in (
+        (EXPENSE_NOTES_COL, NOTES_HEADER, EXPENSE_FILL),
+        (INCOME_NOTES_COL, INCOME_NOTES_HEADER, INCOME_FILL),
+    ):
+        notes_header = ws.cell(row=HEADER_ROW, column=col, value=header)
+        notes_header.font = Font(bold=True)
+        notes_header.fill = fill
+        ws.cell(row=1, column=col).fill = fill
 
     for col, width in COLUMN_WIDTHS.items():
         ws.column_dimensions[chr(64 + col)].width = width
@@ -167,6 +185,18 @@ class ParsedRow:
     category_name: str
     row_number: int
     tags: list[str] = field(default_factory=list)
+    notes: str | None = None
+
+
+def _parse_notes(row_cells: tuple, entry_type: str) -> str | None:
+    """The note of the row's block, or None when the cell is empty or the file is older
+    than the notes columns."""
+    col = EXPENSE_NOTES_COL if entry_type == "expense" else INCOME_NOTES_COL
+    if len(row_cells) < col:
+        return None
+    value = row_cells[col - 1].value
+    text = str(value).strip() if value is not None else ""
+    return text or None
 
 
 def _parse_tags(value: object) -> list[str]:
@@ -251,6 +281,7 @@ def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int
                 if entry_type == "expense" and len(row_cells) >= TAGS_COL
                 else []
             ),
+            notes=_parse_notes(row_cells, entry_type),
         ),
         None,
     )
@@ -383,6 +414,7 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 account_id=item.account_id,
                 amount=row.amount,
                 tag_ids=item.tag_ids,
+                notes=row.notes,
             ),
         )
     return {"created": len(resolved), "errors": errors}
