@@ -474,8 +474,8 @@
         "text": "Las categorías del sistema no se pueden eliminar, solo desactivar para ti (dejan de aparecerte, sin afectar a nadie más). Las que tú creaste sí se pueden editar o eliminar del todo."
       },
       {
-        "title": "Desglose por subcategoría",
-        "text": "Cada color de la barra es una subcategoría distinta, comparada contra el gasto directo de la categoría. Pasa el mouse para ver el monto exacto."
+        "title": "Presupuesto del mes",
+        "text": "Si la categoría tiene presupuesto, la barra muestra cuánto llevas del límite de este mes; si no, dice «Presupuesto no definido» (se define en Presupuesto, en la categoría padre). El desglose por subcategoría está al desplegarla."
       },
       {
         "title": "Categorías desactivadas",

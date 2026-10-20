@@ -496,6 +496,16 @@
       "addDone_other": "Tags added to {{count}} expenses",
       "removeDone_one": "Tags removed from {{count}} expense",
       "removeDone_other": "Tags removed from {{count}} expenses"
+    },
+    "totals": {
+      "income": "Income",
+      "expenses": "Expenses",
+      "net": "Net",
+      "transfers": "Transfers",
+      "averageIncome": "Average per income",
+      "averageExpense": "Average per expense",
+      "movements_one": "{{count}} tx",
+      "movements_other": "{{count}} tx"
     }
   },
   "settings": {
@@ -947,7 +957,9 @@
       "unmatched_one": "1 couldn't be matched: {{list}}.",
       "unmatched_other": "{{count}} couldn't be matched: {{list}}.",
       "invalidFile": "That file isn't valid JSON."
-    }
+    },
+    "budgetNotSet": "No budget set",
+    "budgetOf": "{{spent}} of {{limit}} · {{pct}}%"
   },
   "recurring": {
     "title": "Recurring Expenses",

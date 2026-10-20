@@ -496,6 +496,16 @@
       "addDone_other": "Etiquetas agregadas a {{count}} gastos",
       "removeDone_one": "Etiquetas quitadas de {{count}} gasto",
       "removeDone_other": "Etiquetas quitadas de {{count}} gastos"
+    },
+    "totals": {
+      "income": "Ingresos",
+      "expenses": "Gastos",
+      "net": "Neto",
+      "transfers": "Transferencias",
+      "averageIncome": "Promedio por ingreso",
+      "averageExpense": "Promedio por gasto",
+      "movements_one": "{{count}} mov.",
+      "movements_other": "{{count}} mov."
     }
   },
   "settings": {
@@ -947,7 +957,9 @@
       "unmatched_one": "1 no se pudo asociar: {{list}}.",
       "unmatched_other": "{{count}} no se pudieron asociar: {{list}}.",
       "invalidFile": "El archivo no es un JSON válido."
-    }
+    },
+    "budgetNotSet": "Presupuesto no definido",
+    "budgetOf": "{{spent}} de {{limit}} · {{pct}}%"
   },
   "recurring": {
     "title": "Gastos Recurrentes",

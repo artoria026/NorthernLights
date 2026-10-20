@@ -30,3 +30,16 @@ Before creating a new branch, follow [docs/CONVENTIONS.md](docs/CONVENTIONS.md):
   which lives in `frontend-web/src/lib/disclaimer.ts`).
 - [docs/DISCLAIMER_INPUTS.md](docs/DISCLAIMER_INPUTS.md) -- inventory of
   features/data used as input for the disclaimer.
+
+## Frontend: norma para toda pantalla
+
+- **El scrollbar nunca cambia el ancho del contenido.** Todo contenedor que hace scroll vertical
+  (`<main>`, listas y modales con `max-h` + `overflow-y-auto`) reserva el ancho de la barra
+  siempre (`scrollbar-gutter: stable`). La regla es **global**, en `frontend-web/src/index.css`
+  (selectores `main`, `.overflow-y-auto`, `.overflow-auto`, `.overflow-y-scroll`): al crear una
+  pantalla, un modal o una lista con scroll, usa esas clases y no pongas nada más. Solo una
+  lista flotante (select, combobox) puede optar por no reservar con `[scrollbar-gutter:auto]`.
+  Si haces un contenedor que scrollea de otra forma (p. ej. `overflow: scroll` en CSS propio),
+  agrégale `scrollbar-gutter: stable`.
+- Verifícalo pasando de una pantalla corta (Cuentas) a una larga (Transacciones): ningún
+  encabezado, tarjeta ni filtro debe cambiar de ancho ni moverse.

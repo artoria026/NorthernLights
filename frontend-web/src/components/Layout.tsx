@@ -56,6 +56,8 @@ export function Layout() {
           // like "ghosting" but was real content, not a paint glitch). A
           // margin-top on a normal wrapper (not the scroll container) gives
           // the same visual spacing without carrying that offset along.
+          // The scrollbar's width is reserved by the global rule in index.css (`main`): on desktop
+          // <main> is the element that scrolls (overflow-x-hidden makes it a scroll container).
           className="flex-1 lg:min-h-0 flex flex-col px-4 pb-20 lg:px-8 lg:pb-8 max-w-[1600px] w-full mx-auto overflow-x-hidden"
           style={{ animation: 'fadeInView 150ms ease' }}
         >
