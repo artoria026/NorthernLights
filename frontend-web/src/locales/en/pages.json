@@ -1689,7 +1689,7 @@
     "title": "Bulk upload",
     "subtitle": "Upload an Excel with your transactions: you see a summary first and nothing is saved until you confirm",
     "templateTitle": "1. Download the template",
-    "templateBody": "It already comes with your accounts, categories and tags as lists. Income in columns A–E, expenses in G–K, and an optional \"Etiquetas\" (tags) column (L) for expenses.",
+    "templateBody": "It already comes with your accounts, categories and tags as lists. Income in columns A–E, expenses in G–K, and optional columns: \"Etiquetas\" (tags, L) and \"Notas\" (notes, M) for expenses, and \"Notas (ingresos)\" (income notes, N) for income.",
     "downloadTemplate": "Download template",
     "generating": "Generating...",
     "dropTitle": "2. Drop your file",

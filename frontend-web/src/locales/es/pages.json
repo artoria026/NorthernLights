@@ -1689,7 +1689,7 @@
     "title": "Carga masiva",
     "subtitle": "Sube un Excel con tus movimientos: primero ves un resumen y solo se guarda cuando confirmas",
     "templateTitle": "1. Descarga la plantilla",
-    "templateBody": "Ya trae tus cuentas, categorías y etiquetas como listas. Ingresos en las columnas A–E, gastos en G–K, y una columna opcional «Etiquetas» (L) para los gastos.",
+    "templateBody": "Ya trae tus cuentas, categorías y etiquetas como listas. Ingresos en las columnas A–E, gastos en G–K, y columnas opcionales: «Etiquetas» (L) y «Notas» (M) para los gastos, y «Notas (ingresos)» (N) para los ingresos.",
     "downloadTemplate": "Descargar plantilla",
     "generating": "Generando...",
     "dropTitle": "2. Suelta tu archivo",
