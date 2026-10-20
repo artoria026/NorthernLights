@@ -494,7 +494,10 @@ export function Transactions() {
   const [bulkTagIds, setBulkTagIds] = useState<string[]>([])
 
   const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—'
-  const txAccountId = (tx: Transaction) => tx.lines[0]?.account_id ?? ''
+  // Expenses store [category ledger, paying account], so lines[0] is an internal
+  // account that useAccounts() never returns: pick the first real account instead.
+  const txAccountId = (tx: Transaction) =>
+    tx.lines.find((l) => accounts?.some((a) => a.id === l.account_id))?.account_id ?? ''
 
   const categoryOptions = useMemo(() => {
     const names = new Set((data?.data ?? []).map((tx) => tx.entry_type))
