@@ -486,7 +486,37 @@ async def update_debt(
 ) -> Debt:
     debt = await get_debt(session, user_id, debt_id)
     previous_balance = debt.current_balance
-    for field, value in data.model_dump(exclude_unset=True).items():
+    changes = data.model_dump(exclude_unset=True)
+    if changes.get("name") is None:
+        changes.pop("name", None)  # a debt always keeps a name
+    if changes.get("type") is None:
+        changes.pop("type", None)  # nor can it lose its type
+    new_name = changes.get("name", debt.name)
+    new_type = changes.get("type", debt.type)
+    if (
+        new_type == "informal"
+        and debt.status != "completed"
+        and (new_name != debt.name or new_type != debt.type)
+    ):
+        # One active informal debt per person (see create_debt): renaming or retyping one into
+        # an existing person's debt would break that.
+        clash = await session.execute(
+            select(Debt.id).where(
+                Debt.user_id == user_id,
+                Debt.id != debt.id,
+                Debt.direction == debt.direction,
+                Debt.type == "informal",
+                Debt.status != "completed",
+                Debt.deleted_at.is_(None),
+                func.lower(Debt.name) == new_name.strip().lower(),
+            )
+        )
+        if clash.first() is not None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"Ya tienes una deuda informal activa con {new_name.strip()}",
+            )
+    for field, value in changes.items():
         setattr(debt, field, value)
     await session.flush()
     if debt.current_balance != previous_balance:
@@ -504,12 +534,34 @@ async def update_debt(
 
 async def delete_debt(session: AsyncSession, user_id: UUID, debt_id: UUID) -> None:
     debt = await get_debt(session, user_id, debt_id)
-    if debt.current_balance != 0:
+    if debt.current_balance != 0 and await _has_transactions(session, debt):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"No se puede eliminar una deuda con saldo pendiente (balance={debt.current_balance})",
+            "No se puede eliminar una deuda con saldo pendiente que ya tiene transacciones "
+            f"(balance={debt.current_balance})",
         )
     debt.deleted_at = datetime.now(UTC)
+    await session.flush()
+    await cache_service.invalidate_snapshot_for(user_id)
+
+
+async def _has_transactions(session: AsyncSession, debt: Debt) -> bool:
+    """Whether money ever moved through the debt: a loan or repayment (or a draft of one) tied to
+    a transaction. A debt with only its opening balance or corrections has none, so it can be
+    deleted and loaded again."""
+    movement = await session.execute(
+        select(DebtMovement.id)
+        .where(DebtMovement.debt_id == debt.id, DebtMovement.journal_entry_id.is_not(None))
+        .limit(1)
+    )
+    if movement.first() is not None:
+        return True
+    entry = await session.execute(
+        select(JournalEntry.id)
+        .where(JournalEntry.debt_id == debt.id, JournalEntry.deleted_at.is_(None))
+        .limit(1)
+    )
+    return entry.first() is not None
 
 
 async def _resolve_debt_side_account(session: AsyncSession, user_id: UUID, debt: Debt) -> UUID:

@@ -227,6 +227,7 @@ export interface Debt {
   paid_installments: number
   status: 'active' | 'completed' | 'negotiating'
   linked_account_id: string | null
+  payment_source_account_id: string | null
   start_date: string | null
   estimated_end_date: string | null
   next_payment_date: string | null

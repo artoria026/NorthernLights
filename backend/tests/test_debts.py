@@ -15,7 +15,12 @@ async def _register_and_login(client: AsyncClient) -> str:
     email = f"{uuid.uuid4()}@example.com"
     await client.post(
         "/api/v1/auth/register",
-        json={"email": email, "name": "Test", "password": "supersecret123", "accept_disclaimer": True},
+        json={
+            "email": email,
+            "name": "Test",
+            "password": "supersecret123",
+            "accept_disclaimer": True,
+        },
     )
     login = await client.post(
         "/api/v1/auth/login", json={"email": email, "password": "supersecret123"}
@@ -114,7 +119,9 @@ async def test_register_payment_updates_balances_and_creates_journal_entry(clien
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
 
-    payable_id = await _create_account(client, headers, name="Prestamo vinculado", initial_balance="0")
+    payable_id = await _create_account(
+        client, headers, name="Prestamo vinculado", initial_balance="0"
+    )
     bank_id = await _create_account(client, headers, name="Banco", initial_balance="5000")
 
     debt = await client.post(
@@ -232,16 +239,49 @@ async def test_shared_debt_fields_ignored_for_non_admin(client: AsyncClient):
     assert debt.json()["data"]["responsible_party"] is None
 
 
-async def test_delete_debt_with_balance_conflicts(client: AsyncClient):
+async def test_a_debt_with_only_its_opening_balance_can_be_deleted_and_loaded_again(
+    client: AsyncClient,
+):
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}
+    payload = {
+        "name": "Pavimento",
+        "type": "informal",
+        "direction": "owed_by_me",
+        "total_amount": "49218.75",
+    }
+    first = await client.post("/api/v1/debts", headers=headers, json=payload)
+    debt_id = first.json()["data"]["id"]
 
+    response = await client.delete(f"/api/v1/debts/{debt_id}", headers=headers)
+    assert response.status_code == 200, response.text
+    assert (await client.get("/api/v1/debts", headers=headers)).json()["data"] == []
+    # the name is free again
+    again = await client.post("/api/v1/debts", headers=headers, json=payload)
+    assert again.status_code == 201
+
+
+async def test_a_debt_with_balance_and_transactions_cannot_be_deleted(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank = await _create_account(client, headers, name="Banco", initial_balance="5000")
     debt = await client.post(
         "/api/v1/debts",
         headers=headers,
-        json={"name": "Deuda activa", "type": "personal_loan", "total_amount": "100.00"},
+        json={
+            "name": "Pavimento",
+            "type": "informal",
+            "direction": "owed_by_me",
+            "total_amount": "1000.00",
+        },
     )
     debt_id = debt.json()["data"]["id"]
+    paid = await client.post(
+        f"/api/v1/debts/{debt_id}/payments",
+        headers=headers,
+        json={"account_id": bank, "amount": "100.00", "date": "2026-10-01"},
+    )
+    assert paid.status_code in (200, 201), paid.text
 
     response = await client.delete(f"/api/v1/debts/{debt_id}", headers=headers)
     assert response.status_code == 409
@@ -288,6 +328,90 @@ async def test_update_debt_rejects_negative_current_balance(client: AsyncClient)
         f"/api/v1/debts/{debt_id}", headers=headers, json={"current_balance": "-1"}
     )
     assert response.status_code == 422
+
+
+async def test_update_debt_changes_its_type_name_creditor_and_plan(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank = await _create_account(client, headers, name="Banco", initial_balance="5000")
+
+    debt = await client.post(
+        "/api/v1/debts",
+        headers=headers,
+        json={
+            "name": "Pavimento",
+            "type": "informal",
+            "direction": "owed_by_me",
+            "total_amount": "49218.75",
+        },
+    )
+    debt_id = debt.json()["data"]["id"]
+
+    updated = await client.put(
+        f"/api/v1/debts/{debt_id}",
+        headers=headers,
+        json={
+            "name": "Pavimento calle Educación Física",
+            "type": "civic",
+            "creditor": "Consejo de Urbanización Municipal",
+            "payment_amount": "1000.00",
+            "payment_frequency": "monthly",
+            "payment_day": 17,
+            "next_payment_date": "2026-11-17",
+            "payment_source_account_id": bank,
+        },
+    )
+    assert updated.status_code == 200, updated.text
+    data = updated.json()["data"]
+    assert data["name"] == "Pavimento calle Educación Física"
+    assert data["type"] == "civic"
+    assert data["creditor"] == "Consejo de Urbanización Municipal"
+    assert data["payment_amount"] == "1000.00"
+    assert data["payment_source_account_id"] == bank
+    assert data["current_balance"] == "49218.75"  # no balance step: the history stays as it was
+
+    movements = (await client.get(f"/api/v1/debts/{debt_id}/movements", headers=headers)).json()
+    assert [m["kind"] for m in movements["data"]] == ["opening"]
+
+
+async def test_update_debt_rejects_an_unknown_type_and_a_blank_name(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    debt = await client.post(
+        "/api/v1/debts",
+        headers=headers,
+        json={"name": "Prestamo", "type": "personal_loan", "total_amount": "1000.00"},
+    )
+    debt_id = debt.json()["data"]["id"]
+
+    bad_type = await client.put(
+        f"/api/v1/debts/{debt_id}", headers=headers, json={"type": "mortgage"}
+    )
+    blank_name = await client.put(f"/api/v1/debts/{debt_id}", headers=headers, json={"name": ""})
+    assert bad_type.status_code == 422
+    assert blank_name.status_code == 422
+
+
+async def test_retyping_a_debt_to_informal_cannot_duplicate_an_active_persons_debt(
+    client: AsyncClient,
+):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await client.post(
+        "/api/v1/debts",
+        headers=headers,
+        json={"name": "Carmen", "type": "informal", "total_amount": "300.00"},
+    )
+    other = await client.post(
+        "/api/v1/debts",
+        headers=headers,
+        json={"name": "Carmen", "type": "personal_loan", "total_amount": "500.00"},
+    )
+
+    response = await client.put(
+        f"/api/v1/debts/{other.json()['data']['id']}", headers=headers, json={"type": "informal"}
+    )
+    assert response.status_code == 409
 
 
 async def test_simulate_and_summary(client: AsyncClient):

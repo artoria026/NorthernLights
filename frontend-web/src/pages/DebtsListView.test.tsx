@@ -10,6 +10,7 @@ vi.mock('@/hooks/useAuth', () => ({
   useUpdateSettings: () => ({ mutate: (input: unknown) => mocks.saved.push(input) }),
 }))
 vi.mock('@/hooks/useDebts', () => ({
+  useDeleteDebt: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDebtSummary: () => ({ data: undefined }),
   useUnplannedDebts: () => ({ data: [], isLoading: false }),
   useDebts: (direction: string) => {
