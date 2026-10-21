@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from io import BytesIO
 
 import pytest
@@ -46,12 +47,13 @@ def _build_upload(rows: list[dict]) -> bytes:
 
     row_num = 3
     for row in rows:
-        start_col = "A" if row["block"] == "income" else "G"
+        start_col = {"income": "A", "expense": "G", "card_payment": "P"}[row["block"]]
         cols = [chr(ord(start_col) + i) for i in range(5)]
         ws[f"{cols[0]}{row_num}"] = row["amount"]
         ws[f"{cols[1]}{row_num}"] = row["description"]
         ws[f"{cols[2]}{row_num}"] = row["date"]
         ws[f"{cols[3]}{row_num}"] = row["account"]
+        # in a card payment block the last column is the card, not a category
         ws[f"{cols[4]}{row_num}"] = row["category"]
         if "tags" in row:
             ws[f"L{row_num}"] = row["tags"]  # optional "Etiquetas" column of the Expenses block
@@ -80,7 +82,7 @@ async def test_download_template_is_valid_xlsx_with_dropdowns(client: AsyncClien
     ws = wb["Transacciones"]
     assert ws["A2"].value == "Monto"
     assert ws["G2"].value == "Monto"
-    assert len(ws.data_validations.dataValidation) == 4
+    assert len(ws.data_validations.dataValidation) == 6
 
 
 async def test_upload_creates_valid_rows_and_reports_row_errors(client: AsyncClient):
@@ -239,7 +241,7 @@ async def test_template_has_the_tags_column_and_suggests_the_users_tags(client: 
     wb = load_workbook(BytesIO(response.content))
     ws = wb["Transacciones"]
     assert ws["L2"].value == "Etiquetas"
-    assert len(ws.data_validations.dataValidation) == 5
+    assert len(ws.data_validations.dataValidation) == 7
     assert wb["Listas"]["D1"].value == "Reparación choque"
 
 
@@ -596,3 +598,196 @@ async def test_a_row_with_an_income_and_an_expense_keeps_each_note_in_its_block(
     listed = await client.get("/api/v1/transactions?per_page=50", headers=headers)
     notes = {t["description"]: t["notes"] for t in listed.json()["data"]}
     assert notes == {"Cobro": "nota del ingreso", "Comida": "nota del gasto"}
+
+
+async def _create_card(client: AsyncClient, headers: dict, initial_balance: str) -> str:
+    return await _create_account(
+        client,
+        headers,
+        name="Stori",
+        type="liability",
+        subtype="credit_card",
+        initial_balance=initial_balance,
+    )
+
+
+async def _get_balance(client: AsyncClient, headers: dict, account_id: str) -> str:
+    response = await client.get(f"/api/v1/accounts/{account_id}", headers=headers)
+    return response.json()["data"]["balance"]
+
+
+async def test_template_has_the_card_payments_block(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    await _create_card(client, headers, "0")
+
+    response = await client.get("/api/v1/bulk-import/template", headers=headers)
+    wb = load_workbook(BytesIO(response.content))
+    ws = wb["Transacciones"]
+    assert [ws.cell(row=2, column=c).value for c in range(16, 21)] == [
+        "Monto",
+        "Descripción",
+        "Fecha",
+        "Cuenta origen",
+        "Tarjeta",
+    ]
+    assert ws["P1"].value == "Pagos de tarjeta"
+    # source accounts (only money accounts) and cards, as dropdown lists
+    assert wb["Listas"]["E1"].value == "Santander"
+    assert wb["Listas"]["F1"].value == "Stori"
+
+
+async def test_upload_registers_card_payments_as_transfers(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank = await _create_account(client, headers, initial_balance="5000")
+    card = await _create_account(
+        client,
+        headers,
+        name="Stori",
+        type="liability",
+        subtype="credit_card",
+        initial_balance="1000",
+    )
+
+    content = _build_upload(
+        [
+            {
+                "block": "card_payment",
+                "amount": 240,
+                "description": "Pago a Stori",
+                "date": "2026-08-10",
+                "account": "Santander",
+                "category": "Stori",
+            },
+            {
+                "block": "card_payment",
+                "amount": 150,
+                "description": "",
+                "date": "2026-08-12",
+                "account": "Santander",
+                "category": "stori",
+            },
+        ]
+    )
+    response = await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    assert response.json()["data"] == {"created": 2, "errors": []}
+
+    # the money leaves the bank and the card owes less; nothing counts as income/expense
+    assert Decimal(await _get_balance(client, headers, bank)) == Decimal("4610")
+    assert Decimal(await _get_balance(client, headers, card)) == Decimal("610")
+    listed = await client.get("/api/v1/transactions?per_page=50", headers=headers)
+    rows = {t["date"]: t for t in listed.json()["data"]}
+    assert {t["entry_type"] for t in rows.values()} == {"transfer"}
+    assert rows["2026-08-12"]["description"] == "Pago de tarjeta"
+
+
+async def test_card_payment_rows_with_a_wrong_source_or_card_are_rejected(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    await _create_account(
+        client,
+        headers,
+        name="Stori",
+        type="liability",
+        subtype="credit_card",
+        initial_balance="500",
+    )
+
+    def payment(**overrides):
+        row = {
+            "block": "card_payment",
+            "amount": 100,
+            "description": "Pago",
+            "date": "2026-08-10",
+            "account": "Santander",
+            "category": "Stori",
+        }
+        return {**row, **overrides}
+
+    content = _build_upload(
+        [
+            payment(category="Santander"),  # the "card" is a bank account
+            payment(account="Stori"),  # the source is a credit card
+            payment(category="NoExiste"),
+            payment(),  # this one is fine
+        ]
+    )
+    response = await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    data = response.json()["data"]
+    assert data["created"] == 1
+    assert [e["row"] for e in data["errors"]] == [3, 4, 5]
+    assert all(e["block"] == "Pago de tarjeta" for e in data["errors"])
+
+
+async def test_preview_counts_card_payments_apart_from_income_and_expenses(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank = await _create_account(client, headers, initial_balance="5000")
+    card = await _create_account(
+        client,
+        headers,
+        name="Stori",
+        type="liability",
+        subtype="credit_card",
+        initial_balance="1000",
+    )
+    expense = await _get_category_names(client, headers, "expense")
+
+    content = _build_upload(
+        [
+            {
+                "block": "expense",
+                "amount": 80,
+                "description": "Comida",
+                "date": "2026-08-10",
+                "account": "Santander",
+                "category": expense,
+            },
+            {
+                "block": "card_payment",
+                "amount": 240,
+                "description": "Pago a Stori",
+                "date": "2026-08-10",
+                "account": "Santander",
+                "category": "Stori",
+            },
+        ]
+    )
+    response = await client.post(
+        "/api/v1/bulk-import/preview",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    data = response.json()["data"]
+    assert data["valid_rows"] == 2
+    assert data["expense"] == {"count": 1, "total": "80"}
+    assert data["income"] == {"count": 0, "total": "0"}
+    assert data["card_payment"] == {"count": 1, "total": "240"}
+    assert [c["name"] for c in data["by_category"]] == [expense]
+    # nothing was saved by the preview
+    assert Decimal(await _get_balance(client, headers, bank)) == Decimal("5000")
+    assert Decimal(await _get_balance(client, headers, card)) == Decimal("1000")
+
+    # after loading, the same file warns that the payment looks already loaded
+    await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    again = await client.post(
+        "/api/v1/bulk-import/preview",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    assert again.json()["data"]["possible_duplicates"]["count"] == 2

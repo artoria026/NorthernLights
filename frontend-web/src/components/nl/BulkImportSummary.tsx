@@ -20,7 +20,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
  * wrong or looks already loaded. Shown BEFORE anything is saved. */
 export function BulkImportSummary({ preview }: { preview: BulkImportPreview }) {
   const { t } = useTranslation('pages')
-  const { income, expense, possible_duplicates: dupes } = preview
+  const { income, expense, card_payment: cardPayment, possible_duplicates: dupes } = preview
   const categories = preview.by_category.slice(0, MAX_CATEGORIES)
   const hiddenCategories = preview.by_category.length - categories.length
 
@@ -46,6 +46,13 @@ export function BulkImportSummary({ preview }: { preview: BulkImportPreview }) {
           label={t('bulkImport.summary.net')}
           value={formatMoney(Number(income.total) - Number(expense.total))}
         />
+        {cardPayment.count > 0 && (
+          <Stat
+            label={t('bulkImport.summary.cardPayments')}
+            value={formatMoney(cardPayment.total)}
+            sub={t('bulkImport.summary.movements', { count: cardPayment.count })}
+          />
+        )}
         <Stat
           label={t('bulkImport.summary.dates')}
           value={

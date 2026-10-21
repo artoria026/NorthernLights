@@ -59,6 +59,8 @@ class BulkImportPreview(BaseModel):
     error_rows: int
     income: PreviewTotal
     expense: PreviewTotal
+    # Payments to credit cards (transfers): neither income nor expense.
+    card_payment: PreviewTotal = PreviewTotal(count=0, total=Decimal(0))
     date_from: date | None
     date_to: date | None
     by_account: list[PreviewAccount]

@@ -13,6 +13,7 @@ export interface BulkImportPreview {
   error_rows: number
   income: { count: number; total: string }
   expense: { count: number; total: string }
+  card_payment: { count: number; total: string }
   date_from: string | null
   date_to: string | null
   by_account: { name: string; count: number; income: string; expense: string }[]
