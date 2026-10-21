@@ -903,19 +903,14 @@ export function EditDebtForm({ debt, onDone }: { debt: Debt; onDone: () => void 
   )
 }
 
-/** The buttons of a debt (history, lend/borrow more, correct, collect/pay) with their dialogs.
- * Shared by the card view and the list view so both do exactly the same things. */
-function DebtActions({ debt, className = '' }: { debt: Debt; className?: string }) {
+/** Edit and delete a debt: icon buttons in the corner, like the ones of a transaction, apart
+ * from the actions that move money through it (DebtActions). */
+function DebtManageActions({ debt }: { debt: Debt }) {
   const { t } = useTranslation('pages')
-  const [payOpen, setPayOpen] = useState(false)
-  const [correctOpen, setCorrectOpen] = useState(false)
-  const [lendOpen, setLendOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const deleteDebt = useDeleteDebt()
   const confirm = useConfirmStore((s) => s.ask)
   const pushToast = useUiStore((s) => s.pushToast)
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const isReceivable = debt.direction === 'owed_to_me'
 
   async function handleDelete() {
     const ok = await confirm({
@@ -934,16 +929,16 @@ function DebtActions({ debt, className = '' }: { debt: Debt; className?: string 
   }
 
   return (
-    <div className={`flex flex-wrap items-center gap-1 ${className}`}>
+    <span className="flex flex-shrink-0 items-center gap-0.5">
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogTrigger
           render={
             <button
               type="button"
-              className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
+              title={t('debts.card.editButton')}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-info/10 hover:text-info"
             >
-              <Pencil size={11} />
-              {t('debts.card.editButton')}
+              <Pencil size={13} />
             </button>
           }
         />
@@ -957,11 +952,28 @@ function DebtActions({ debt, className = '' }: { debt: Debt; className?: string 
       <button
         type="button"
         onClick={handleDelete}
-        className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-destructive"
+        disabled={deleteDebt.isPending}
+        title={t('debts.card.deleteButton')}
+        className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
       >
-        <Trash2 size={11} />
-        {t('debts.card.deleteButton')}
+        <Trash2 size={13} />
       </button>
+    </span>
+  )
+}
+
+/** The buttons of a debt (history, lend/borrow more, correct, collect/pay) with their dialogs.
+ * Shared by the card view and the list view so both do exactly the same things. */
+function DebtActions({ debt, className = '' }: { debt: Debt; className?: string }) {
+  const { t } = useTranslation('pages')
+  const [payOpen, setPayOpen] = useState(false)
+  const [correctOpen, setCorrectOpen] = useState(false)
+  const [lendOpen, setLendOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const isReceivable = debt.direction === 'owed_to_me'
+
+  return (
+    <div className={`flex flex-wrap items-center gap-1 ${className}`}>
       {debt.status !== 'negotiating' && (
         <div className="flex items-center gap-1 flex-shrink-0">
           <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
@@ -1095,6 +1107,7 @@ function DebtCard({ debt }: { debt: Debt }) {
         >
           {isReceivable ? t('debts.card.receivableBadge') : debtTypeLabel(debt.type)}
         </span>
+        <DebtManageActions debt={debt} />
       </div>
       <div className="flex items-center gap-3 mb-2">
         <Donut
@@ -1211,9 +1224,10 @@ function DebtRow({ debt }: { debt: Debt }) {
         >
           <TypeIcon size={13} />
         </span>
-        <span className="truncate text-[13px] font-semibold" title={debt.name}>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold" title={debt.name}>
           {debt.name}
         </span>
+        <DebtManageActions debt={debt} />
       </div>
       <RowFigure label={isReceivable ? t('debts.list.lent') : t('debts.list.borrowed')} value={formatMoney(debt.total_amount)} />
       <RowFigure label={isReceivable ? t('debts.list.collected') : t('debts.list.paid')} value={formatMoney(String(paid))} />

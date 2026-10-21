@@ -89,6 +89,35 @@ DEBT_PLAN_HEADERS = {
     DEBT_PLAN_ACCOUNT_COL: "Cuenta de pago",
 }
 DEBT_FREQUENCY_OPTIONS = ["Mensual", "Quincenal", "Semanal"]
+# Optional kind of the debt (AI), read when the row creates it. Empty = informal, what a
+# person's loan has always been in this block.
+DEBT_TYPE_COL = 35  # AI
+DEBT_TYPE_HEADER = "Tipo"
+DEBT_TYPE_OPTIONS = [
+    "Préstamo informal",
+    "Préstamo personal",
+    "Crédito de nómina",
+    "Crédito cívico",
+    "Préstamo recibido",
+]
+_DEBT_TYPES = {
+    "": "informal",
+    "préstamo informal": "informal",
+    "prestamo informal": "informal",
+    "informal": "informal",
+    "préstamo personal": "personal_loan",
+    "prestamo personal": "personal_loan",
+    "personal_loan": "personal_loan",
+    "crédito de nómina": "payroll_loan",
+    "credito de nomina": "payroll_loan",
+    "payroll_loan": "payroll_loan",
+    "crédito cívico": "civic",
+    "credito civico": "civic",
+    "civic": "civic",
+    "préstamo recibido": "loan_received",
+    "prestamo recibido": "loan_received",
+    "loan_received": "loan_received",
+}
 _DEBT_FREQUENCIES = {
     "mensual": "monthly",
     "monthly": "monthly",
@@ -155,6 +184,7 @@ COLUMN_WIDTHS = {
     32: 12,
     33: 14,
     34: 20,
+    35: 20,
 }
 
 
@@ -208,7 +238,7 @@ def build_template_workbook(
         debt_header.font = Font(bold=True)
         debt_header.fill = DEBT_FILL
         ws.cell(row=1, column=col).fill = DEBT_FILL
-    for col, header in DEBT_PLAN_HEADERS.items():
+    for col, header in (*DEBT_PLAN_HEADERS.items(), (DEBT_TYPE_COL, DEBT_TYPE_HEADER)):
         plan_header = ws.cell(row=HEADER_ROW, column=col, value=header)
         plan_header.font = Font(bold=True)
         plan_header.fill = DEBT_FILL
@@ -286,10 +316,14 @@ def build_template_workbook(
     dv_debt_plan_account = DataValidation(
         type="list", formula1=_range("E", len(source_names)), allow_blank=True
     )
+    dv_debt_type = DataValidation(
+        type="list", formula1='"' + ",".join(DEBT_TYPE_OPTIONS) + '"', allow_blank=True
+    )
     dv_debt_frequency = DataValidation(
         type="list", formula1='"' + ",".join(DEBT_FREQUENCY_OPTIONS) + '"', allow_blank=True
     )
     for dv in (
+        dv_debt_type,
         dv_debt_plan_account,
         dv_debt_frequency,
         dv_account_income,
@@ -323,6 +357,7 @@ def build_template_workbook(
     dv_debt_account.add(f"AA{FIRST_DATA_ROW}:AA{last_row}")
     dv_debt_direction.add(f"AC{FIRST_DATA_ROW}:AC{last_row}")
     dv_debt_frequency.add(f"AE{FIRST_DATA_ROW}:AE{last_row}")
+    dv_debt_type.add(f"AI{FIRST_DATA_ROW}:AI{last_row}")
     dv_debt_plan_account.add(f"AH{FIRST_DATA_ROW}:AH{last_row}")
 
     for row in range(FIRST_DATA_ROW, last_row + 1):
@@ -364,6 +399,8 @@ class ParsedRow:
     plan_day: int | None = None
     plan_next_date: date_type | None = None
     plan_account_name: str = ""
+    # Only for entry_type 'debt': the kind of the debt the row creates (informal by default).
+    debt_type: str = "informal"
 
 
 def _parse_notes(row_cells: tuple, entry_type: str) -> str | None:
@@ -583,6 +620,9 @@ def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
         return error("Fecha inválida o vacía")
     if direction is None:
         return error("Dirección inválida: usa Me deben o Debo")
+    debt_type = _DEBT_TYPES.get(str(_debt_cell(row_cells, DEBT_TYPE_COL) or "").strip().lower())
+    if debt_type is None:
+        return error("Tipo inválido: usa " + ", ".join(DEBT_TYPE_OPTIONS))
     plan, plan_error = _parse_debt_plan(row_cells)
     if plan_error:
         return error(plan_error)
@@ -598,6 +638,7 @@ def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
             notes=str(concept).strip() if concept else None,
             debt_kind=movement,
             debt_direction=direction,
+            debt_type=debt_type,
             **plan,
         ),
         None,
@@ -777,7 +818,6 @@ async def _open_debt_states(session: AsyncSession, user_id: UUID) -> dict[tuple[
                 select(Debt)
                 .where(
                     Debt.user_id == user_id,
-                    Debt.type == "informal",
                     Debt.deleted_at.is_(None),
                     Debt.status.in_(("active", "completed")),
                 )
@@ -889,7 +929,6 @@ async def _find_debt(session: AsyncSession, user_id: UUID, person: str, directio
                 select(Debt)
                 .where(
                     Debt.user_id == user_id,
-                    Debt.type == "informal",
                     Debt.direction == direction,
                     Debt.deleted_at.is_(None),
                     Debt.status.in_(("active", "completed")),
@@ -913,7 +952,7 @@ async def _apply_debt_row(session: AsyncSession, user_id: UUID, item: ResolvedRo
             user_id,
             DebtCreate(
                 name=row.description,
-                type="informal",
+                type=row.debt_type,
                 direction=row.debt_direction,
                 total_amount=row.amount,
                 funding_account_id=item.account_id if item.debt_action == "create" else None,
