@@ -1,5 +1,5 @@
 import { Check, Download, FileSpreadsheet, RotateCcw, Upload } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BulkImportSummary } from '@/components/nl/BulkImportSummary'
 import { DialogCancelButton, DialogPrimaryButton } from '@/components/nl/DialogActions'
@@ -21,6 +21,9 @@ type Step =
 
 /** Bulk load from an Excel file, in three steps: pick the file (drop it here), read
  * the summary of what it would do -- nothing is saved yet -- and confirm. */
+/** How long the "loaded" summary stays before the screen clears itself for the next file. */
+export const AUTO_RESET_MS = 15_000
+
 export function BulkImport() {
   const { t } = useTranslation('pages')
   const downloadTemplate = useDownloadTemplate()
@@ -33,6 +36,16 @@ export function BulkImport() {
     uploadFile.reset()
     setStep({ name: 'pick' })
   }
+
+  // A clean load clears itself so the next file can go straight in. A load with rejected rows
+  // stays until the user dismisses it: those rows are what they still have to read and fix.
+  const cleanLoad = step.name === 'done' && step.result.errors.length === 0
+  useEffect(() => {
+    if (!cleanLoad) return
+    const timer = setTimeout(reset, AUTO_RESET_MS)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleanLoad])
 
   function handleFile(file: File) {
     uploadFile.reset()

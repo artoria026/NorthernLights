@@ -317,6 +317,30 @@ async def test_update_settings_toggles_debt_trouble_mode(client: AsyncClient):
     assert response.json()["data"]["debt_trouble_mode"] is True
 
 
+async def test_debts_screen_choices_are_saved_on_the_account(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    me = (await client.get("/api/v1/auth/me", headers=headers)).json()["data"]
+    assert (me["debts_view"], me["debts_direction"]) == ("cards", "owed_by_me")
+
+    saved = await client.put(
+        "/api/v1/auth/settings",
+        headers=headers,
+        json={"debts_view": "list", "debts_direction": "owed_to_me"},
+    )
+    assert saved.status_code == 200
+    saved_data = saved.json()["data"]
+    assert (saved_data["debts_view"], saved_data["debts_direction"]) == ("list", "owed_to_me")
+    # they stay after a new session and don't touch the other preferences
+    me = (await client.get("/api/v1/auth/me", headers=headers)).json()["data"]
+    assert (me["debts_view"], me["debts_direction"]) == ("list", "owed_to_me")
+    assert me["theme"] == "dark"
+
+    for bad in ({"debts_view": "grid"}, {"debts_direction": "both"}):
+        rejected = await client.put("/api/v1/auth/settings", headers=headers, json=bad)
+        assert rejected.status_code == 422
+
+
 async def test_new_account_has_no_seen_changelog_version(client: AsyncClient):
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}

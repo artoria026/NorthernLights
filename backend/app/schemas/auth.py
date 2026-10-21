@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
-from app.models.user import LOCALES, PAY_CYCLES, THEMES
+from app.models.user import DEBTS_DIRECTIONS, DEBTS_VIEWS, LOCALES, PAY_CYCLES, THEMES
 from app.schemas.common import IMAGE_DATA_URL_MAX_LENGTH, IMAGE_DATA_URL_PATTERN
 
 
@@ -79,6 +79,8 @@ class UpdateSettingsRequest(BaseModel):
     push_notifications: bool | None = None
     pay_cycle: str | None = Field(default=None, pattern=f"^({'|'.join(PAY_CYCLES)})$")
     debt_trouble_mode: bool | None = None
+    debts_view: str | None = Field(default=None, pattern=f"^({'|'.join(DEBTS_VIEWS)})$")
+    debts_direction: str | None = Field(default=None, pattern=f"^({'|'.join(DEBTS_DIRECTIONS)})$")
     last_seen_changelog_version: str | None = None
 
 
@@ -95,6 +97,8 @@ class UserOut(BaseModel):
     push_notifications: bool
     pay_cycle: str
     debt_trouble_mode: bool
+    debts_view: str
+    debts_direction: str
     last_seen_changelog_version: str | None
     accepted_disclaimer_version: str | None
     # Always = settings.DISCLAIMER_VERSION -- sent together with the field

@@ -7,6 +7,8 @@ import {
   HandCoins,
   History,
   Landmark,
+  LayoutGrid,
+  List,
   Plus,
   Scale,
   TrendingDown,
@@ -26,6 +28,7 @@ import { DemoSteps, HelpSection, HelpTip } from '@/components/nl/Help'
 import { HEADER_SECTIONS, SegmentedControl, ViewHeader } from '@/components/nl/primitives'
 import { Donut } from '@/lib/charts'
 import { useAccounts } from '@/hooks/useAccounts'
+import { useUpdateSettings } from '@/hooks/useAuth'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
 import {
   type ActivateDebtInput,
@@ -732,12 +735,117 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
   )
 }
 
-function DebtCard({ debt }: { debt: Debt }) {
+/** The buttons of a debt (history, lend/borrow more, correct, collect/pay) with their dialogs.
+ * Shared by the card view and the list view so both do exactly the same things. */
+function DebtActions({ debt, className = '' }: { debt: Debt; className?: string }) {
   const { t } = useTranslation('pages')
   const [payOpen, setPayOpen] = useState(false)
   const [correctOpen, setCorrectOpen] = useState(false)
   const [lendOpen, setLendOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const isReceivable = debt.direction === 'owed_to_me'
+
+  return (
+    <div className={`flex flex-wrap items-center gap-1 ${className}`}>
+      {debt.status !== 'negotiating' && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+            <DialogTrigger
+              render={
+                <button
+                  type="button"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
+                >
+                  <History size={11} />
+                  {t('debts.card.historyButton')}
+                </button>
+              }
+            />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t('debts.card.historyDialogTitle', { name: debt.name })}</DialogTitle>
+              </DialogHeader>
+              <DebtHistory debt={debt} />
+            </DialogContent>
+          </Dialog>
+          <Dialog open={lendOpen} onOpenChange={setLendOpen}>
+            <DialogTrigger
+              render={
+                <button
+                  type="button"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
+                >
+                  <Plus size={11} />
+                  {isReceivable ? t('debts.card.lendMoreButton') : t('debts.card.borrowMoreButton')}
+                </button>
+              }
+            />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {isReceivable
+                    ? t('debts.card.lendMoreDialogTitle', { name: debt.name })
+                    : t('debts.card.borrowMoreDialogTitle', { name: debt.name })}
+                </DialogTitle>
+              </DialogHeader>
+              <IncreaseDebtForm debt={debt} onDone={() => setLendOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+      {debt.status === 'active' && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <Dialog open={correctOpen} onOpenChange={setCorrectOpen}>
+            <DialogTrigger
+              render={
+                <button
+                  type="button"
+                  data-tour="debts:correct-balance"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
+                >
+                  <Scale size={11} />
+                  {t('debts.card.correctButton')}
+                </button>
+              }
+            />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t('debts.card.correctDialogTitle', { name: debt.name })}</DialogTitle>
+              </DialogHeader>
+              <CorrectBalanceForm debt={debt} onDone={() => setCorrectOpen(false)} />
+            </DialogContent>
+          </Dialog>
+          <Dialog open={payOpen} onOpenChange={setPayOpen}>
+            <DialogTrigger
+              render={
+                <button
+                  type="button"
+                  className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
+                >
+                  <Check size={11} />
+                  {isReceivable ? t('debts.card.collectButton') : t('debts.card.payButton')}
+                </button>
+              }
+            />
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {isReceivable
+                    ? t('debts.card.collectionDialogTitle', { name: debt.name })
+                    : t('debts.card.paymentDialogTitle', { name: debt.name })}
+                </DialogTitle>
+              </DialogHeader>
+              <RegisterPaymentForm debt={debt} onDone={() => setPayOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DebtCard({ debt }: { debt: Debt }) {
+  const { t } = useTranslation('pages')
   const isReceivable = debt.direction === 'owed_to_me'
   const paidRatio = Number(debt.total_amount) > 0 ? 1 - Number(debt.current_balance) / Number(debt.total_amount) : 0
   const apr = debt.interest_rate ? Number(debt.interest_rate) * 100 : 0
@@ -808,104 +916,168 @@ function DebtCard({ debt }: { debt: Debt }) {
             ? t('debts.card.completed')
             : t('debts.card.nextPayment', { date: debt.next_payment_date ?? '—' })}
         </div>
-        {debt.status !== 'negotiating' && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
-              <DialogTrigger
-                render={
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
-                  >
-                    <History size={11} />
-                    {t('debts.card.historyButton')}
-                  </button>
-                }
-              />
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t('debts.card.historyDialogTitle', { name: debt.name })}</DialogTitle>
-                </DialogHeader>
-                <DebtHistory debt={debt} />
-              </DialogContent>
-            </Dialog>
-            <Dialog open={lendOpen} onOpenChange={setLendOpen}>
-              <DialogTrigger
-                render={
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
-                  >
-                    <Plus size={11} />
-                    {isReceivable ? t('debts.card.lendMoreButton') : t('debts.card.borrowMoreButton')}
-                  </button>
-                }
-              />
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {isReceivable
-                      ? t('debts.card.lendMoreDialogTitle', { name: debt.name })
-                      : t('debts.card.borrowMoreDialogTitle', { name: debt.name })}
-                  </DialogTitle>
-                </DialogHeader>
-                <IncreaseDebtForm debt={debt} onDone={() => setLendOpen(false)} />
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
-        {debt.status === 'active' && (
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Dialog open={correctOpen} onOpenChange={setCorrectOpen}>
-              <DialogTrigger
-                render={
-                  <button
-                    type="button"
-                    data-tour="debts:correct-balance"
-                    className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
-                  >
-                    <Scale size={11} />
-                    {t('debts.card.correctButton')}
-                  </button>
-                }
-              />
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t('debts.card.correctDialogTitle', { name: debt.name })}</DialogTitle>
-                </DialogHeader>
-                <CorrectBalanceForm debt={debt} onDone={() => setCorrectOpen(false)} />
-              </DialogContent>
-            </Dialog>
-            <Dialog open={payOpen} onOpenChange={setPayOpen}>
-              <DialogTrigger
-                render={
-                  <button
-                    type="button"
-                    className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
-                  >
-                    <Check size={11} />
-                    {isReceivable ? t('debts.card.collectButton') : t('debts.card.payButton')}
-                  </button>
-                }
-              />
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {isReceivable
-                      ? t('debts.card.collectionDialogTitle', { name: debt.name })
-                      : t('debts.card.paymentDialogTitle', { name: debt.name })}
-                  </DialogTitle>
-                </DialogHeader>
-                <RegisterPaymentForm debt={debt} onDone={() => setPayOpen(false)} />
-              </DialogContent>
-            </Dialog>
-          </div>
-        )}
+        <DebtActions debt={debt} />
         {debt.status === 'completed' && (
           <span className="rounded-full px-2 py-0.5 text-[9px]" style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}>
             {t('debts.card.completed')}
           </span>
         )}
+      </div>
+    </div>
+  )
+}
+
+export type DebtsView = 'cards' | 'list'
+
+/** List / cards switch, like the one in Google Drive: two icon buttons in a pill, the chosen one
+ * highlighted with a check. */
+export function DebtsViewToggle({ value, onChange }: { value: DebtsView; onChange: (v: DebtsView) => void }) {
+  const { t } = useTranslation('pages')
+  const options: { value: DebtsView; icon: LucideIcon; label: string }[] = [
+    { value: 'list', icon: List, label: t('debts.view.list') },
+    { value: 'cards', icon: LayoutGrid, label: t('debts.view.cards') },
+  ]
+  return (
+    <div role="group" aria-label={t('debts.view.label')} className="inline-flex overflow-hidden rounded-full border border-border">
+      {options.map(({ value: v, icon: Icon, label }) => {
+        const active = value === v
+        return (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={active}
+            aria-label={label}
+            title={label}
+            onClick={() => onChange(v)}
+            className="flex h-8 items-center gap-1 px-3 transition-colors"
+            style={{
+              background: active ? 'var(--nl-accent-soft-bg)' : 'transparent',
+              color: active ? 'var(--nl-accent-ink)' : 'var(--nl-text-secondary)',
+            }}
+          >
+            {active && <Check size={13} />}
+            <Icon size={15} />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** One row of the list view: who, how much was lent/owed, how much came back, what is left
+ * and the same actions as the card. */
+// Header and rows share ONE template so every column lines up: person, three amounts, progress,
+// and a fixed-width actions column (an `auto` one would size itself per row and shift the rest).
+const DEBT_LIST_GRID =
+  'lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.1fr)_330px]'
+
+function DebtRow({ debt }: { debt: Debt }) {
+  const { t } = useTranslation('pages')
+  const isReceivable = debt.direction === 'owed_to_me'
+  const total = Number(debt.total_amount)
+  const left = Number(debt.current_balance)
+  const paid = Math.max(total - left, 0)
+  const ratio = total > 0 ? Math.min(paid / total, 1) : 0
+  const balanceColor = isReceivable ? 'var(--nl-accent-ink)' : 'var(--nl-danger-ink)'
+  const TypeIcon = isReceivable ? Users : DEBT_TYPE_ICONS[debt.type]
+  const typeColor = isReceivable
+    ? { bg: 'var(--nl-accent-soft-bg)', ink: 'var(--nl-accent-ink)' }
+    : DEBT_TYPE_COLORS[debt.type]
+
+  return (
+    <li
+      className={`grid grid-cols-1 items-center gap-x-4 gap-y-2 border-t border-border px-3 py-2.5 first:border-t-0 ${DEBT_LIST_GRID}`}
+      data-testid="debt-row"
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full"
+          style={{ background: typeColor.bg, color: typeColor.ink }}
+        >
+          <TypeIcon size={13} />
+        </span>
+        <span className="truncate text-[13px] font-semibold" title={debt.name}>
+          {debt.name}
+        </span>
+      </div>
+      <RowFigure label={isReceivable ? t('debts.list.lent') : t('debts.list.borrowed')} value={formatMoney(debt.total_amount)} />
+      <RowFigure label={isReceivable ? t('debts.list.collected') : t('debts.list.paid')} value={formatMoney(String(paid))} />
+      <RowFigure
+        label={isReceivable ? t('debts.list.owesYou') : t('debts.list.balance')}
+        value={formatMoney(debt.current_balance)}
+        color={balanceColor}
+        strong
+      />
+      <div className="flex items-center gap-2">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--nl-bg-track)' }}>
+          <div className="h-full rounded-full" style={{ width: `${Math.round(ratio * 100)}%`, background: 'var(--nl-accent)' }} />
+        </div>
+        <span className="w-9 flex-shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+          {Math.round(ratio * 100)}%
+        </span>
+      </div>
+      {debt.status === 'completed' ? (
+        <span className="rounded-full px-2 py-0.5 text-[10px] lg:justify-self-end" style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}>
+          {t('debts.card.completed')}
+        </span>
+      ) : (
+        <DebtActions debt={debt} className="lg:flex-nowrap lg:justify-end" />
+      )}
+    </li>
+  )
+}
+
+function RowFigure({ label, value, color, strong }: { label: string; value: string; color?: string; strong?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 lg:block lg:text-right">
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground lg:hidden">{label}</span>
+      <span className={`text-[13px] tabular-nums ${strong ? 'font-semibold' : ''}`} style={{ color }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+/** The list view: one row per person with a header, and the totals at the bottom. */
+export function DebtsList({ debts }: { debts: Debt[] }) {
+  const { t } = useTranslation('pages')
+  const isReceivable = debts[0]?.direction === 'owed_to_me'
+  const sum = (pick: (d: Debt) => number) => debts.reduce((acc, d) => acc + pick(d), 0)
+  const lent = sum((d) => Number(d.total_amount))
+  const left = sum((d) => Number(d.current_balance))
+  const headers = [
+    isReceivable ? t('debts.list.lent') : t('debts.list.borrowed'),
+    isReceivable ? t('debts.list.collected') : t('debts.list.paid'),
+    isReceivable ? t('debts.list.owesYou') : t('debts.list.balance'),
+  ]
+
+  return (
+    <div className="overflow-hidden rounded-md border border-border bg-card" data-testid="debts-list">
+      <div className={`hidden gap-x-4 px-3 py-2 text-[10.5px] uppercase tracking-wide text-muted-foreground lg:grid ${DEBT_LIST_GRID}`}>
+        <span>{t('debts.list.person')}</span>
+        {headers.map((h) => (
+          <span key={h} className="text-right">
+            {h}
+          </span>
+        ))}
+        <span>{t('debts.list.progress')}</span>
+        <span className="text-right">{t('debts.list.actions')}</span>
+      </div>
+      <ul className="border-t border-border">
+        {debts.map((debt) => (
+          <DebtRow key={debt.id} debt={debt} />
+        ))}
+      </ul>
+      <div className="flex items-center justify-between gap-3 border-t border-border px-3 py-2 text-[12.5px]" style={{ background: 'var(--nl-bg-input)' }}>
+        <span className="text-muted-foreground">{t('debts.list.totals', { count: debts.length })}</span>
+        <span className="flex items-center gap-4 tabular-nums">
+          <span className="text-muted-foreground">
+            {isReceivable ? t('debts.list.lent') : t('debts.list.borrowed')} {formatMoney(String(lent))}
+          </span>
+          <span className="font-semibold" style={{ color: isReceivable ? 'var(--nl-accent-ink)' : 'var(--nl-danger-ink)' }}>
+            {isReceivable ? t('debts.list.owesYou') : t('debts.list.balance')} {formatMoney(String(left))}
+          </span>
+        </span>
       </div>
     </div>
   )
@@ -1032,13 +1204,24 @@ export function Debts() {
   const { t } = useTranslation('pages')
   const user = useAuthStore((s) => s.user)
   const debtTroubleMode = user?.debt_trouble_mode ?? false
-  const [direction, setDirection] = useState<DebtDirection>('owed_by_me')
+  // What the user left selected here (view and tab) is saved on their account, so it follows them
+  // to any browser. The screen answers instantly from local state; the save happens in the background.
+  const updateSettings = useUpdateSettings()
+  const [direction, setDirectionState] = useState<DebtDirection>(user?.debts_direction ?? 'owed_by_me')
+  const [view, setViewState] = useState<DebtsView>(user?.debts_view ?? 'cards')
+  const setDirection = (next: DebtDirection) => {
+    setDirectionState(next)
+    updateSettings.mutate({ debts_direction: next })
+  }
+  const setView = (next: DebtsView) => {
+    setViewState(next)
+    updateSettings.mutate({ debts_view: next })
+  }
   const { data: summary } = useDebtSummary()
   const { data: unplannedAll, isLoading: loadingUnplanned } = useUnplannedDebts()
   const { data: debts, isLoading: loadingDebts } = useDebts(direction)
   const [unplannedOpen, setUnplannedOpen] = useState(false)
   const [debtOpen, setDebtOpen] = useState(false)
-
   const unplanned = unplannedAll?.filter((u) => u.direction === direction) ?? []
   const activeDebts = debts?.filter((d) => d.status !== 'completed') ?? []
   const isReceivable = direction === 'owed_to_me'
@@ -1189,9 +1372,14 @@ export function Debts() {
         </div>
       )}
 
-      <div className="text-sm font-semibold mb-2">{t('debts.activeSection.heading')}</div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="text-sm font-semibold">{t('debts.activeSection.heading')}</div>
+        <DebtsViewToggle value={view} onChange={setView} />
+      </div>
       {loadingDebts ? (
         <p className="text-sm text-muted-foreground">{t('debts.activeSection.loading')}</p>
+      ) : activeDebts.length > 0 && view === 'list' ? (
+        <DebtsList debts={activeDebts} />
       ) : activeDebts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {activeDebts.map((debt) => (

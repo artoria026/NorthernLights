@@ -1,8 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BulkImportPreview, BulkImportResult } from '@/hooks/useBulkImport'
-import { BulkImport } from './BulkImport'
+import { AUTO_RESET_MS, BulkImport } from './BulkImport'
 
 const preview: BulkImportPreview = {
   valid_rows: 3,
@@ -144,6 +144,50 @@ describe('BulkImport', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar y cargar 3 movimientos' }))
     await waitFor(() => expect(mocks.uploadMutate).toHaveBeenCalledWith(xlsx, expect.anything()))
     expect(await screen.findByText('Se registraron 3 movimientos.')).toBeInTheDocument()
+  })
+
+  describe('after a load', () => {
+    async function loadWith(result: BulkImportResult) {
+      mocks.uploadMutate.mockImplementation((_file: File, options?: { onSuccess?: (r: BulkImportResult) => void }) =>
+        options?.onSuccess?.(result),
+      )
+      renderPage()
+      await dropFile()
+      fireEvent.click(screen.getByRole('button', { name: 'Confirmar y cargar 3 movimientos' }))
+      await screen.findByText(/Se registraron/)
+    }
+
+    it('clears the summary by itself after 15 seconds, ready for the next file', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      try {
+        await loadWith({ created: 3, errors: [] })
+        act(() => {
+          vi.advanceTimersByTime(AUTO_RESET_MS - 1000)
+        })
+        expect(screen.getByText('Se registraron 3 movimientos.')).toBeInTheDocument()
+        act(() => {
+          vi.advanceTimersByTime(1500)
+        })
+        expect(screen.queryByText('Se registraron 3 movimientos.')).not.toBeInTheDocument()
+        expect(screen.getByTestId('file-input')).toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('keeps the summary when some rows were rejected, so they can be read', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+      try {
+        await loadWith({ created: 2, errors: [{ row: 5, block: 'Gasto', reason: 'La cuenta no existe' }] })
+        act(() => {
+          vi.advanceTimersByTime(AUTO_RESET_MS * 4)
+        })
+        expect(screen.getByText('Se registraron 2 movimientos.')).toBeInTheDocument()
+        expect(screen.getByText(/La cuenta no existe/)).toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
   })
 
   it('lets the user pick another file instead of confirming', async () => {

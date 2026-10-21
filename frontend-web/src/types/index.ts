@@ -15,6 +15,9 @@ export interface User {
   push_notifications: boolean
   pay_cycle: PayCycle
   debt_trouble_mode: boolean
+  /** What the user left selected on the Deudas screen (saved on the account). */
+  debts_view: 'cards' | 'list'
+  debts_direction: 'owed_by_me' | 'owed_to_me'
   last_seen_changelog_version: string | null
   accepted_disclaimer_version: string | null
   /** Always = the version currently in effect on the backend (settings.DISCLAIMER_VERSION) --

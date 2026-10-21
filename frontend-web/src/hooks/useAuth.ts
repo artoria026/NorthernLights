@@ -166,6 +166,8 @@ export interface UpdateSettingsInput {
   push_notifications?: boolean
   pay_cycle?: 'weekly' | 'biweekly' | 'monthly'
   debt_trouble_mode?: boolean
+  debts_view?: 'cards' | 'list'
+  debts_direction?: 'owed_by_me' | 'owed_to_me'
   last_seen_changelog_version?: string | null
 }
 
