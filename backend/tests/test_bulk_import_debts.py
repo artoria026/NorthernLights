@@ -34,6 +34,10 @@ def _build_debt_upload(rows: list[dict]) -> bytes:
         ws.cell(row=row_num, column=DEBT_COL + 5, value=row.get("concept"))
         if "direction" in row:
             ws.cell(row=row_num, column=29, value=row["direction"])
+        # optional payment plan (AD-AH): amount, frequency, day, next due date, account
+        for offset, key in enumerate(("plan", "frequency", "day", "next", "plan_account")):
+            if key in row:
+                ws.cell(row=row_num, column=30 + offset, value=row[key])
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -64,7 +68,7 @@ async def test_template_has_the_debts_block(client: AsyncClient):
     response = await client.get("/api/v1/bulk-import/template", headers=headers)
     ws = load_workbook(BytesIO(response.content))["Transacciones"]
     assert ws["W1"].value == "Deudas"
-    assert [ws.cell(row=2, column=c).value for c in range(23, 30)] == [
+    assert [ws.cell(row=2, column=c).value for c in range(23, 35)] == [
         "Monto",
         "Persona",
         "Movimiento",
@@ -72,6 +76,11 @@ async def test_template_has_the_debts_block(client: AsyncClient):
         "Cuenta",
         "Concepto",
         "Dirección",
+        "Pago periódico",
+        "Frecuencia",
+        "Día de pago",
+        "Siguiente pago",
+        "Cuenta de pago",
     ]
 
 
@@ -351,3 +360,110 @@ async def test_preview_summarizes_the_debts_without_saving_and_warns_about_repea
     # a repeat of the file: the loans and the repayment look already loaded (the opening
     # balance fails because Franco's debt is open now)
     assert again["possible_duplicates"]["count"] >= 3
+
+
+async def test_payment_plan_is_set_after_the_repayments_so_the_next_date_is_kept(
+    client: AsyncClient,
+):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    santander = await _create_account(client, headers, name="Santander", initial_balance="9000")
+
+    # The plan sits on the opening row, but two repayments come after it in the file.
+    content = _build_debt_upload(
+        [
+            {
+                "amount": 5000,
+                "person": "Pavimento calle Cubelita",
+                "kind": "Saldo inicial",
+                "date": "2026-01-01",
+                "direction": "Debo",
+                "plan": 1000,
+                "frequency": "Mensual",
+                "day": 17,
+                "next": "2026-11-17",
+                "plan_account": "Santander",
+            },
+            {
+                "amount": 1000,
+                "person": "Pavimento calle Cubelita",
+                "kind": "Abono",
+                "date": "2026-02-17",
+                "account": "Santander",
+                "direction": "Debo",
+            },
+            {
+                "amount": 1000,
+                "person": "Pavimento calle Cubelita",
+                "kind": "Abono",
+                "date": "2026-03-17",
+                "account": "Santander",
+                "direction": "Debo",
+            },
+        ]
+    )
+    response = await _post(client, headers, "upload", content)
+    assert response.json()["data"] == {"created": 3, "errors": []}
+
+    (debt,) = await _debts(client, headers)
+    assert debt["current_balance"] == "3000.00"
+    assert debt["payment_amount"] == "1000.00"
+    assert debt["payment_frequency"] == "monthly"
+    assert debt["payment_day"] == 17
+    assert debt["next_payment_date"] == "2026-11-17"
+    assert debt["payment_source_account_id"] == santander
+    movements = (await client.get(f"/api/v1/debts/{debt['id']}/movements", headers=headers)).json()[
+        "data"
+    ]
+    assert [m["kind"] for m in movements] == ["opening", "payment", "payment"]
+
+
+async def test_payment_plan_defaults_to_monthly_and_is_optional_per_field(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander", initial_balance="0")
+
+    content = _build_debt_upload(
+        [
+            {
+                "amount": 900,
+                "person": "Educación Física",
+                "kind": "Saldo inicial",
+                "date": "2026-10-21",
+                "direction": "Debo",
+                "plan": 300,
+            }
+        ]
+    )
+    response = await _post(client, headers, "upload", content)
+    assert response.json()["data"] == {"created": 1, "errors": []}
+
+    (debt,) = await _debts(client, headers)
+    assert debt["payment_amount"] == "300.00"
+    assert debt["payment_frequency"] == "monthly"
+    assert debt["next_payment_date"] is None
+    assert debt["payment_source_account_id"] is None
+
+
+async def test_invalid_payment_plans_are_reported_without_loading_the_row(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander", initial_balance="0")
+    await _create_account(client, headers, name="Tarjeta", type="liability", subtype="credit_card")
+
+    base = {"amount": 900, "kind": "Saldo inicial", "date": "2026-10-21", "direction": "Debo"}
+    content = _build_debt_upload(
+        [
+            {**base, "person": "A", "frequency": "Mensual"},  # a plan without its payment
+            {**base, "person": "B", "plan": 100, "frequency": "Anual"},
+            {**base, "person": "C", "plan": 100, "day": 40},
+            {**base, "person": "D", "plan": 100, "next": "no es fecha"},
+            {**base, "person": "E", "plan": 100, "plan_account": "No existe"},
+            {**base, "person": "F", "plan": 100, "plan_account": "Tarjeta"},
+        ]
+    )
+    response = await _post(client, headers, "upload", content)
+    data = response.json()["data"]
+    assert data["created"] == 0
+    assert sorted(e["row"] for e in data["errors"]) == [3, 4, 5, 6, 7, 8]
+    assert await _debts(client, headers) == []
