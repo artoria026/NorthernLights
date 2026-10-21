@@ -19,7 +19,7 @@ from app.models.category import Category
 from app.models.debt import Debt, DebtMovement
 from app.models.tag import Tag
 from app.models.transaction import JournalEntry
-from app.schemas.debt import DebtCreate, DebtIncreaseCreate, DebtPaymentCreate
+from app.schemas.debt import DebtCreate, DebtIncreaseCreate, DebtPaymentCreate, DebtUpdate
 from app.schemas.transaction import JournalLineIn, TransactionCreate
 from app.services import account_service, category_service, debt_service, transaction_service
 
@@ -74,6 +74,29 @@ DEBT_START_COL = 23  # W
 DEBT_HEADERS = ["Monto", "Persona", "Movimiento", "Fecha", "Cuenta", "Concepto"]
 DEBT_DIRECTION_COL = 29  # AC
 DEBT_DIRECTION_HEADER = "Dirección"
+# Optional payment plan of the debt (AD-AH), read from any row of that person: the periodic
+# payment, how often, the day it falls on, the next due date and the account it is paid from.
+DEBT_PLAN_AMOUNT_COL = 30  # AD
+DEBT_PLAN_FREQUENCY_COL = 31  # AE
+DEBT_PLAN_DAY_COL = 32  # AF
+DEBT_PLAN_NEXT_COL = 33  # AG
+DEBT_PLAN_ACCOUNT_COL = 34  # AH
+DEBT_PLAN_HEADERS = {
+    DEBT_PLAN_AMOUNT_COL: "Pago periódico",
+    DEBT_PLAN_FREQUENCY_COL: "Frecuencia",
+    DEBT_PLAN_DAY_COL: "Día de pago",
+    DEBT_PLAN_NEXT_COL: "Siguiente pago",
+    DEBT_PLAN_ACCOUNT_COL: "Cuenta de pago",
+}
+DEBT_FREQUENCY_OPTIONS = ["Mensual", "Quincenal", "Semanal"]
+_DEBT_FREQUENCIES = {
+    "mensual": "monthly",
+    "monthly": "monthly",
+    "quincenal": "biweekly",
+    "biweekly": "biweekly",
+    "semanal": "weekly",
+    "weekly": "weekly",
+}
 DEBT_MOVEMENT_OPTIONS = ["Préstamo", "Abono", "Saldo inicial"]
 DEBT_DIRECTION_OPTIONS = ["Me deben", "Debo"]
 DEBT_FILL = PatternFill("solid", fgColor="FFE699")
@@ -127,6 +150,11 @@ COLUMN_WIDTHS = {
     27: 20,
     28: 36,
     29: 14,
+    30: 14,
+    31: 14,
+    32: 12,
+    33: 14,
+    34: 20,
 }
 
 
@@ -179,6 +207,11 @@ def build_template_workbook(
         debt_header = ws.cell(row=HEADER_ROW, column=col, value=header)
         debt_header.font = Font(bold=True)
         debt_header.fill = DEBT_FILL
+        ws.cell(row=1, column=col).fill = DEBT_FILL
+    for col, header in DEBT_PLAN_HEADERS.items():
+        plan_header = ws.cell(row=HEADER_ROW, column=col, value=header)
+        plan_header.font = Font(bold=True)
+        plan_header.fill = DEBT_FILL
         ws.cell(row=1, column=col).fill = DEBT_FILL
     tags_header = ws.cell(row=HEADER_ROW, column=TAGS_COL, value=TAGS_HEADER)
     tags_header.font = Font(bold=True)
@@ -250,7 +283,15 @@ def build_template_workbook(
     dv_debt_direction = DataValidation(
         type="list", formula1='"' + ",".join(DEBT_DIRECTION_OPTIONS) + '"', allow_blank=True
     )
+    dv_debt_plan_account = DataValidation(
+        type="list", formula1=_range("E", len(source_names)), allow_blank=True
+    )
+    dv_debt_frequency = DataValidation(
+        type="list", formula1='"' + ",".join(DEBT_FREQUENCY_OPTIONS) + '"', allow_blank=True
+    )
     for dv in (
+        dv_debt_plan_account,
+        dv_debt_frequency,
         dv_account_income,
         dv_cat_income,
         dv_account_expense,
@@ -281,12 +322,15 @@ def build_template_workbook(
     dv_debt_movement.add(f"Y{FIRST_DATA_ROW}:Y{last_row}")
     dv_debt_account.add(f"AA{FIRST_DATA_ROW}:AA{last_row}")
     dv_debt_direction.add(f"AC{FIRST_DATA_ROW}:AC{last_row}")
+    dv_debt_frequency.add(f"AE{FIRST_DATA_ROW}:AE{last_row}")
+    dv_debt_plan_account.add(f"AH{FIRST_DATA_ROW}:AH{last_row}")
 
     for row in range(FIRST_DATA_ROW, last_row + 1):
         ws.cell(row=row, column=3).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=9).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=CARD_PAYMENT_START_COL + 2).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=DEBT_START_COL + 3).number_format = "yyyy-mm-dd"
+        ws.cell(row=row, column=DEBT_PLAN_NEXT_COL).number_format = "yyyy-mm-dd"
 
     buf = BytesIO()
     wb.save(buf)
@@ -314,6 +358,12 @@ class ParsedRow:
     # ('loan' | 'payment' | 'opening') and whose side ('owed_to_me' | 'owed_by_me').
     debt_kind: str = ""
     debt_direction: str = "owed_to_me"
+    # Only for entry_type 'debt', all optional: the payment plan of that person's debt.
+    plan_amount: Decimal | None = None
+    plan_frequency: str | None = None
+    plan_day: int | None = None
+    plan_next_date: date_type | None = None
+    plan_account_name: str = ""
 
 
 def _parse_notes(row_cells: tuple, entry_type: str) -> str | None:
@@ -462,6 +512,46 @@ def _debt_cell(row_cells: tuple, col: int) -> object:
     return row_cells[col - 1].value if len(row_cells) >= col else None
 
 
+def _parse_debt_plan(row_cells: tuple) -> tuple[dict, str | None]:
+    """The optional payment plan of a debt row (columns AD-AH): ({ParsedRow fields}, error).
+    No plan at all is fine; with one, the periodic payment is required and must be positive."""
+    amount_cell = _debt_cell(row_cells, DEBT_PLAN_AMOUNT_COL)
+    frequency_cell = _debt_cell(row_cells, DEBT_PLAN_FREQUENCY_COL)
+    day_cell = _debt_cell(row_cells, DEBT_PLAN_DAY_COL)
+    next_cell = _debt_cell(row_cells, DEBT_PLAN_NEXT_COL)
+    account_cell = _debt_cell(row_cells, DEBT_PLAN_ACCOUNT_COL)
+    cells = (amount_cell, frequency_cell, day_cell, next_cell, account_cell)
+    if all(c in (None, "") for c in cells):
+        return {}, None
+    amount = _parse_amount(amount_cell)
+    if amount is None or amount <= 0:
+        return {}, "El plan de pagos necesita un Pago periódico válido (mayor que 0)"
+    frequency_text = str(frequency_cell or "").strip().lower()
+    frequency = _DEBT_FREQUENCIES.get(frequency_text) if frequency_text else "monthly"
+    if frequency is None:
+        return {}, "Frecuencia inválida: usa Mensual, Quincenal o Semanal"
+    day = None
+    if day_cell not in (None, ""):
+        try:
+            day = int(day_cell)
+        except (TypeError, ValueError):
+            day = None
+        if day is None or not 1 <= day <= 31:
+            return {}, "El día de pago debe ser un número del 1 al 31"
+    next_date = None
+    if next_cell not in (None, ""):
+        next_date = _parse_date(next_cell)
+        if next_date is None:
+            return {}, "Fecha inválida en Siguiente pago"
+    return {
+        "plan_amount": amount,
+        "plan_frequency": frequency,
+        "plan_day": day,
+        "plan_next_date": next_date,
+        "plan_account_name": str(account_cell).strip() if account_cell else "",
+    }, None
+
+
 def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
     """One step of a person's debt (columns W-AC). Returns (ParsedRow | None, error | None)."""
     amount_cell = _debt_cell(row_cells, DEBT_START_COL)
@@ -493,6 +583,9 @@ def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
         return error("Fecha inválida o vacía")
     if direction is None:
         return error("Dirección inválida: usa Me deben o Debo")
+    plan, plan_error = _parse_debt_plan(row_cells)
+    if plan_error:
+        return error(plan_error)
     return (
         ParsedRow(
             entry_type="debt",
@@ -505,6 +598,7 @@ def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
             notes=str(concept).strip() if concept else None,
             debt_kind=movement,
             debt_direction=direction,
+            **plan,
         ),
         None,
     )
@@ -578,6 +672,8 @@ class ResolvedRow:
     # Only for a debt row: what the load will do with it ('create' | 'opening' | 'increase' |
     # 'payment').
     debt_action: str = ""
+    # Only for a debt row with a payment plan: the account each periodic payment comes from.
+    plan_account_id: UUID | None = None
 
 
 async def resolve_rows(
@@ -736,6 +832,13 @@ async def _resolve_debt_rows(
             fail(f"La cuenta '{row.account_name}' no existe")
             continue
 
+        plan_account = None
+        if row.plan_account_name:
+            plan_account = account_by_name.get(row.plan_account_name.strip().lower())
+            if plan_account is None or not _is_asset(plan_account):
+                fail(f"La cuenta de pago '{row.plan_account_name}' no existe o no es de dinero")
+                continue
+
         if row.debt_kind == "loan":
             action = "increase" if state else "create"
             states[key] = {
@@ -772,6 +875,7 @@ async def _resolve_debt_rows(
                 tag_ids=[],
                 tag_names=[],
                 debt_action=action,
+                plan_account_id=plan_account.id if plan_account else None,
             )
         )
     return resolved, errors
@@ -840,15 +944,33 @@ async def _apply_debt_row(session: AsyncSession, user_id: UUID, item: ResolvedRo
         )
 
 
+async def _apply_debt_plan(session: AsyncSession, user_id: UUID, item: ResolvedRow) -> None:
+    """Sets the payment plan the row carries on its person's debt."""
+    row = item.row
+    debt = await _find_debt(session, user_id, row.description, row.debt_direction)
+    fields: dict = {"payment_amount": row.plan_amount, "payment_frequency": row.plan_frequency}
+    if row.plan_day is not None:
+        fields["payment_day"] = row.plan_day
+    if row.plan_next_date is not None:
+        fields["next_payment_date"] = row.plan_next_date
+    if item.plan_account_id is not None:
+        fields["payment_source_account_id"] = item.plan_account_id
+    await debt_service.update_debt(session, user_id, debt.id, DebtUpdate(**fields))
+
+
 async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: ParseResult) -> dict:
     resolved, errors = await resolve_rows(session, user_id, parsed)
     created = 0
+    # person's payment plan -> the last row of the file that carries one (and was applied).
+    plans: dict[tuple[str, str], ResolvedRow] = {}
     for item in resolved:
         row = item.row
         if row.entry_type == "debt":
             try:
                 async with session.begin_nested():
                     await _apply_debt_row(session, user_id, item)
+                if row.plan_amount is not None:
+                    plans[(row.description.strip().lower(), row.debt_direction)] = item
             except HTTPException as exc:
                 errors.append(
                     {
@@ -895,6 +1017,20 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 installment_total=row.installments,
             ),
         )
+    # The plan goes on after every step: each repayment moves the next due date forward, so
+    # setting it first would leave it wherever the last repayment of the file put it.
+    for item in plans.values():
+        try:
+            async with session.begin_nested():
+                await _apply_debt_plan(session, user_id, item)
+        except HTTPException as exc:
+            errors.append(
+                {
+                    "row": item.row.row_number,
+                    "block": BLOCK_LABELS["debt"],
+                    "reason": str(exc.detail),
+                }
+            )
     return {"created": created, "errors": errors}
 
 
