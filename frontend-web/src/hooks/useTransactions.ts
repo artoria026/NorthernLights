@@ -29,18 +29,21 @@ export function useTransactions(filters: TransactionFilters = {}) {
 const ALL_PAGE_SIZE = 500 // the most the API gives per page
 const ALL_MAX_PAGES = 40 // safety net: 20,000 transactions
 
-/** EVERY transaction of the user, not just the latest page: the API caps a page at 500, so
- * this reads the first one and then fetches the rest in parallel. The Transactions screen
- * filters and totals on the client, so anything short of "all of them" would make its totals
- * (and the older rows) silently incomplete. Same `{ data, meta }` shape as `useTransactions`,
+/** EVERY transaction of the user (or of one account), not just the latest page: the API caps
+ * a page at 500, so this reads the first one and then fetches the rest in parallel. The
+ * Transactions screen filters and totals on the client, and a credit card's installment
+ * plans can be older than any "latest N" window, so anything short of "all of them" would
+ * make the numbers silently incomplete. Same `{ data, meta }` shape as `useTransactions`,
  * and under the same ['transactions'] key so every create/update/delete refreshes it. */
-export function useAllTransactions() {
+export function useAllTransactions(options: { accountId?: string; enabled?: boolean } = {}) {
+  const { accountId, enabled = true } = options
   return useQuery({
-    queryKey: ['transactions', 'all'],
+    queryKey: ['transactions', 'all', accountId ?? null],
+    enabled,
     queryFn: async () => {
       const fetchPage = async (page: number) => {
         const { data } = await api.get<ApiSuccess<Transaction[]> & { meta: Meta }>('/transactions', {
-          params: { page, per_page: ALL_PAGE_SIZE },
+          params: { page, per_page: ALL_PAGE_SIZE, account_id: accountId },
         })
         return data
       }

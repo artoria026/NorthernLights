@@ -50,4 +50,18 @@ describe('useAllTransactions', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data?.data).toEqual([])
   })
+
+  it('can read the transactions of a single account, and waits when disabled', async () => {
+    mocks.get.mockResolvedValue(page([1], 1, 1))
+    const { result } = renderHook(() => useAllTransactions({ accountId: 'stori' }), { wrapper })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(mocks.get).toHaveBeenCalledWith('/transactions', {
+      params: { page: 1, per_page: 500, account_id: 'stori' },
+    })
+
+    mocks.get.mockClear()
+    const { result: idle } = renderHook(() => useAllTransactions({ accountId: 'otra', enabled: false }), { wrapper })
+    expect(idle.current.fetchStatus).toBe('idle')
+    expect(mocks.get).not.toHaveBeenCalled()
+  })
 })

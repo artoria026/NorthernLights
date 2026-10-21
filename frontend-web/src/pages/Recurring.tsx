@@ -2,8 +2,11 @@ import {
   AlertCircle,
   AlertTriangle,
   Check,
+  CalendarClock,
   CheckCircle2,
+  ChevronDown,
   Clock,
+  Layers,
   CreditCard,
   Lock,
   Pause,
@@ -11,13 +14,14 @@ import {
   Plus,
   RefreshCw,
   RotateCcw,
+  ShoppingBag,
   TrendingUp,
   Wrench,
   X,
   Zap,
   type LucideIcon,
 } from 'lucide-react'
-import { type FormEvent, useCallback, useEffect, useState } from 'react'
+import { type FormEvent, type ReactNode, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -25,6 +29,7 @@ import { CategorySelect } from '@/components/nl/CategorySelect'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
+import { activeInstallmentPlans, lastCycleBoundary, openCycleCharges, remainingOfPlan } from '@/lib/cardCommitments'
 import { Donut } from '@/lib/charts'
 import { FREQUENCY_LABELS, ITEM_TYPE_LABELS, monthlyEquivalent, STATUS_LABELS, URGENCY_LABELS } from '@/lib/recurring'
 import { formatMoney, formatShortDate, selectClass } from '@/lib/utils'
@@ -45,7 +50,7 @@ import {
   useUpcomingRecurring,
   useUpdateRecurringItem,
 } from '@/hooks/useRecurring'
-import { useTransactions } from '@/hooks/useTransactions'
+import { useAllTransactions } from '@/hooks/useTransactions'
 import { apiErrorMessage } from '@/services/api'
 import type { Account, AlertUrgency, RecurringFrequency, RecurringItem, RecurringItemType, Transaction } from '@/types'
 
@@ -580,31 +585,6 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
   )
 }
 
-/** Last date (YYYY-MM-DD) a credit card with this billing day cut off, on
- * or before today -- JS mirror of account_service._last_occurrence (same
- * end-of-month clamp). Comparing dates as ISO strings instead of Date
- * avoids the timezone offset from `new Date("YYYY-MM-DD")` (parsed as
- * midnight UTC, not local). */
-function lastCycleBoundary(billingCycleDay: number, today: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const daysInMonth = (y: number, m: number) => new Date(y, m + 1, 0).getDate()
-  let year = today.getFullYear()
-  let month = today.getMonth()
-  let day = Math.min(billingCycleDay, daysInMonth(year, month))
-  const todayStr = `${year}-${pad(month + 1)}-${pad(today.getDate())}`
-  let candidate = `${year}-${pad(month + 1)}-${pad(day)}`
-  if (candidate > todayStr) {
-    month -= 1
-    if (month < 0) {
-      month = 11
-      year -= 1
-    }
-    day = Math.min(billingCycleDay, daysInMonth(year, month))
-    candidate = `${year}-${pad(month + 1)}-${pad(day)}`
-  }
-  return candidate
-}
-
 /** A credit card's row inside CreditCardCommitments -- each one queries its
  * own cycle and its own transactions (both already filtered by account_id
  * on the backend -- never depends on which position in `lines` the real
@@ -619,6 +599,48 @@ function lastCycleBoundary(billingCycleDay: number, today: Date): string {
  * monthly amount in `installmentTotal`, adding them here too would double
  * count them) nor payments (a card payment would lower this number, giving
  * the impression you owe less by the next cutoff). */
+const MAX_CHARGES_SHOWN = 15
+
+// One color per plan so each progress bar reads on its own (token pairs from index.css:
+// the bar uses the base color, the amount the "-ink" one that stays readable in light mode).
+const PLAN_TONES = [
+  { bar: 'var(--nl-violet)', ink: 'var(--nl-violet-ink)', soft: 'var(--nl-violet-soft-bg)' },
+  { bar: 'var(--nl-blue)', ink: 'var(--nl-blue-ink)', soft: 'var(--nl-blue-soft-bg)' },
+  { bar: 'var(--nl-pink)', ink: 'var(--nl-pink)', soft: 'var(--nl-bg-track)' },
+  { bar: 'var(--nl-accent)', ink: 'var(--nl-accent-ink)', soft: 'var(--nl-accent-soft-bg)' },
+]
+
+function DetailHeading({
+  icon,
+  tone,
+  title,
+  amount,
+}: {
+  icon: ReactNode
+  tone: { ink: string; soft: string }
+  title: string
+  amount: string
+}) {
+  return (
+    <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <span
+          className="flex h-6 w-6 items-center justify-center rounded-md"
+          style={{ background: tone.soft, color: tone.ink }}
+        >
+          {icon}
+        </span>
+        <h4 className="text-[11.5px] font-semibold uppercase tracking-wide" style={{ color: tone.ink }}>
+          {title}
+        </h4>
+      </div>
+      <span className="text-[14px] font-semibold tabular-nums" style={{ color: tone.ink }}>
+        {amount}
+      </span>
+    </div>
+  )
+}
+
 function CreditCardCommitmentRow({
   account,
   onTotal,
@@ -628,21 +650,17 @@ function CreditCardCommitmentRow({
 }) {
   const { t } = useTranslation('pages')
   const { data: cycle } = useTdcCycle(account.id, true)
-  const { data: ledger } = useTransactions({ account_id: account.id, per_page: 50 })
+  // ALL of the card's transactions: an installment plan can be older than any "latest N" window.
+  const { data: ledger } = useAllTransactions({ accountId: account.id })
+  const { data: categories } = useCategories('expense')
+  const [open, setOpen] = useState(false)
 
-  const activeInstallments = (ledger?.data ?? []).filter(
-    (tx) => tx.installment && tx.installment.paid_installments < tx.installment.total_installments,
-  )
-  const installmentTotal = activeInstallments.reduce(
-    (sum, tx) => sum + Number(tx.installment?.monthly_amount ?? 0),
-    0,
-  )
+  const categoryColor = new Map((categories ?? []).map((c) => [c.id, c.color]))
+  const plans = activeInstallmentPlans(ledger?.data ?? [])
+  const installmentTotal = plans.reduce((sum, tx) => sum + Number(tx.installment?.monthly_amount ?? 0), 0)
   const boundary = cycle?.billing_cycle_day ? lastCycleBoundary(cycle.billing_cycle_day, new Date()) : null
-  const cycleSpend = boundary
-    ? (ledger?.data ?? [])
-        .filter((tx) => tx.entry_type === 'expense' && !tx.installment && tx.date > boundary)
-        .reduce((sum, tx) => sum + Number(tx.amount ?? 0), 0)
-    : 0
+  const charges = openCycleCharges(ledger?.data ?? [], boundary)
+  const cycleSpend = charges.reduce((sum, tx) => sum + Number(tx.amount ?? 0), 0)
   const total = installmentTotal + cycleSpend
 
   useEffect(() => {
@@ -652,21 +670,170 @@ function CreditCardCommitmentRow({
 
   if (total <= 0) return null
 
+  const shownCharges = charges.slice(0, MAX_CHARGES_SHOWN)
+  const msiTone = PLAN_TONES[0]
+  const warnTone = { ink: 'var(--nl-warning-ink)', soft: 'var(--nl-warning-soft-bg)' }
+  const blueTone = { ink: 'var(--nl-blue-ink)', soft: 'var(--nl-blue-soft-bg)' }
+
   return (
-    <div className="flex items-center justify-between gap-2 py-2 border-t border-border first:border-0 text-[13px]">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: account.color }} />
-        <span className="truncate">{account.name}</span>
-      </div>
-      <div className="flex items-center gap-3 flex-shrink-0 text-[12px] text-muted-foreground">
-        {installmentTotal > 0 && (
-          <span>{t('recurring.creditCardCommitments.msiLabel', { amount: formatMoney(String(installmentTotal)) })}</span>
-        )}
-        {cycleSpend > 0 && (
-          <span>{t('recurring.creditCardCommitments.cycleLabel', { amount: formatMoney(String(cycleSpend)) })}</span>
-        )}
-        <span className="text-[13px] font-medium text-foreground">{formatMoney(String(total))}</span>
-      </div>
+    <div className="py-2 border-t border-border first:border-0 text-[13px]" data-testid="card-commitment-row">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-2 rounded-md px-2 py-1 text-left outline-none transition-colors hover:bg-[var(--nl-bg-hover)] focus-visible:bg-[var(--nl-bg-hover)] focus-visible:ring-1 focus-visible:ring-[var(--nl-border-strong)]"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <ChevronDown
+            size={14}
+            className="flex-shrink-0 text-muted-foreground transition-transform"
+            style={{ transform: open ? 'rotate(180deg)' : undefined }}
+          />
+          <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: account.color }} />
+          <span className="truncate font-medium">{account.name}</span>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0 text-[12px]">
+          {installmentTotal > 0 && (
+            <span
+              className="rounded-full px-2 py-0.5 font-medium"
+              style={{ background: msiTone.soft, color: msiTone.ink }}
+            >
+              {t('recurring.creditCardCommitments.msiLabel', { amount: formatMoney(String(installmentTotal)) })}
+            </span>
+          )}
+          {cycleSpend > 0 && (
+            <span
+              className="rounded-full px-2 py-0.5 font-medium"
+              style={{ background: warnTone.soft, color: warnTone.ink }}
+            >
+              {t('recurring.creditCardCommitments.cycleLabel', { amount: formatMoney(String(cycleSpend)) })}
+            </span>
+          )}
+          <span className="text-[14px] font-semibold text-foreground tabular-nums">{formatMoney(String(total))}</span>
+        </div>
+      </button>
+
+      {open && (
+        <div
+          className="mt-2 flex flex-col gap-5 rounded-md border p-4"
+          style={{ background: 'var(--nl-bg-input)', borderColor: 'var(--nl-border)' }}
+          data-testid="card-commitment-detail"
+        >
+          {boundary && (
+            <div className="flex flex-wrap gap-2 text-[11.5px] font-medium">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
+                style={{ background: blueTone.soft, color: blueTone.ink }}
+              >
+                <CalendarClock size={12} />
+                {t('recurring.creditCardCommitments.cutLabel', { date: formatShortDate(boundary) })}
+              </span>
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
+                style={{ background: warnTone.soft, color: warnTone.ink }}
+              >
+                <Clock size={12} />
+                {t('recurring.creditCardCommitments.dueLabel', {
+                  date: cycle?.payment_due_date ? formatShortDate(cycle.payment_due_date) : '—',
+                })}
+              </span>
+            </div>
+          )}
+
+          {plans.length > 0 && (
+            <section>
+              <DetailHeading
+                icon={<Layers size={13} />}
+                tone={msiTone}
+                title={t('recurring.creditCardCommitments.plansTitle')}
+                amount={formatMoney(String(installmentTotal))}
+              />
+              <ul className="flex flex-col gap-3">
+                {plans.map((tx, i) => {
+                  const info = tx.installment!
+                  const tone = PLAN_TONES[i % PLAN_TONES.length]
+                  const ratio = info.total_installments > 0 ? info.paid_installments / info.total_installments : 0
+                  return (
+                    <li key={tx.id}>
+                      <div className="mb-1 flex items-center justify-between gap-3">
+                        <span className="min-w-0 truncate font-medium">{tx.description}</span>
+                        <span className="flex-shrink-0 font-semibold tabular-nums" style={{ color: tone.ink }}>
+                          {t('recurring.creditCardCommitments.perMonth', { amount: formatMoney(info.monthly_amount) })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--nl-bg-track)' }}>
+                          <div
+                            className="h-full rounded-full transition-[width]"
+                            style={{
+                              width: `${Math.max(Math.round(ratio * 100), 4)}%`,
+                              background: `linear-gradient(90deg, ${tone.bar}, color-mix(in srgb, ${tone.bar} 55%, white))`,
+                            }}
+                          />
+                        </div>
+                        <span
+                          className="flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums"
+                          style={{ background: tone.soft, color: tone.ink }}
+                        >
+                          {info.paid_installments}/{info.total_installments}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11.5px] text-muted-foreground">
+                        {t('recurring.creditCardCommitments.planProgress', {
+                          paid: info.paid_installments,
+                          total: info.total_installments,
+                          date: formatShortDate(tx.date),
+                        })}{' '}
+                        <span className="font-medium" style={{ color: warnTone.ink }}>
+                          {t('recurring.creditCardCommitments.planRemaining', {
+                            remaining: formatMoney(String(remainingOfPlan(tx))),
+                          })}
+                        </span>
+                      </p>
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          )}
+
+          {charges.length > 0 && (
+            <section>
+              <DetailHeading
+                icon={<ShoppingBag size={13} />}
+                tone={warnTone}
+                title={t('recurring.creditCardCommitments.chargesTitle')}
+                amount={formatMoney(String(cycleSpend))}
+              />
+              <ul className="flex flex-col gap-1">
+                {shownCharges.map((tx) => (
+                  <li
+                    key={tx.id}
+                    className="flex items-center justify-between gap-3 rounded-md px-2 py-1 transition-colors hover:bg-[var(--nl-bg-hover)]"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        className="h-2 w-2 flex-shrink-0 rounded-full"
+                        style={{ background: (tx.category_id && categoryColor.get(tx.category_id)) || 'var(--nl-warning)' }}
+                      />
+                      <span className="flex-shrink-0 text-[11px] text-muted-foreground tabular-nums">
+                        {formatShortDate(tx.date)}
+                      </span>
+                      <span className="truncate">{tx.description}</span>
+                    </span>
+                    <span className="flex-shrink-0 font-medium tabular-nums">{formatMoney(String(tx.amount ?? 0))}</span>
+                  </li>
+                ))}
+              </ul>
+              {charges.length > shownCharges.length && (
+                <p className="mt-1.5 px-2 text-[11.5px] text-muted-foreground">
+                  {t('recurring.creditCardCommitments.moreCharges', { count: charges.length - shownCharges.length })}
+                </p>
+              )}
+            </section>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -680,7 +847,7 @@ function CreditCardCommitmentRow({
  * counts toward the month's budget "spent". Explicit user decision: the
  * credit card stays out of the debt/commitment machinery unless it becomes
  * an overdue debt under negotiation. */
-function CreditCardCommitments({ creditCards }: { creditCards: Account[] }) {
+export function CreditCardCommitments({ creditCards }: { creditCards: Account[] }) {
   const { t } = useTranslation('pages')
   const [totals, setTotals] = useState<Record<string, number>>({})
   const handleTotal = useCallback((accountId: string, total: number) => {

@@ -1001,9 +1001,18 @@
     },
     "creditCardCommitments": {
       "heading": "Lo que ya deben tus tarjetas el próximo corte",
-      "hint": "Mensualidades de compras a meses sin intereses + lo que llevas gastado en el corte abierto de cada tarjeta. Informativo -- no está incluido en \"Comprometido / mes\" de arriba.",
+      "hint": "Mensualidades de compras a meses sin intereses + lo que llevas gastado en el corte abierto de cada tarjeta. Informativo -- no está incluido en \"Comprometido / mes\" de arriba. Toca una tarjeta para ver el detalle.",
       "msiLabel": "MSI {{amount}}",
-      "cycleLabel": "corte {{amount}}"
+      "cycleLabel": "corte {{amount}}",
+      "perMonth": "{{amount}}/mes",
+      "moreCharges_one": "y {{count}} compra más",
+      "moreCharges_other": "y {{count}} compras más",
+      "cutLabel": "Último corte: {{date}}",
+      "dueLabel": "Fecha límite de pago: {{date}}",
+      "plansTitle": "Mensualidades a meses sin intereses",
+      "planProgress": "{{paid}} de {{total}} pagadas · compra del {{date}} ·",
+      "planRemaining": "faltan {{remaining}}",
+      "chargesTitle": "Gastado en el corte abierto"
     },
     "stats": {
       "committedMonthly": "Comprometido / mes",

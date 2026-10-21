@@ -25,7 +25,8 @@ import {
   useUpdateAccount,
 } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
-import { useDeleteTransaction, useTransactions } from '@/hooks/useTransactions'
+import { useAllTransactions, useDeleteTransaction, useTransactions } from '@/hooks/useTransactions'
+import { activeInstallmentPlans } from '@/lib/cardCommitments'
 import { apiErrorMessage } from '@/services/api'
 import {
   accountBalanceColor,
@@ -1010,12 +1011,12 @@ export function Accounts() {
   const visibleRows = filteredRows.slice(0, LEDGER_PREVIEW_LIMIT)
   const hasMoreInAccount = (ledger?.meta?.total ?? 0) > LEDGER_PREVIEW_LIMIT
 
-  // Active installment purchases on this credit card, over the transaction
-  // window already loaded (per_page:50 above) -- enough for a visual
-  // summary, not meant to be an exact historical total.
-  const activeInstallments = (ledger?.data ?? []).filter(
-    (tx) => tx.installment && tx.installment.paid_installments < tx.installment.total_installments,
-  )
+  // Active installment purchases on this credit card. They are read from ALL of the card's
+  // transactions (not only the latest `per_page: 50` window above): a 12-month plan can be
+  // older than the last 50 movements and would silently drop out of the summary.
+  const isCard = selectedAccount?.type === 'liability'
+  const { data: cardLedger } = useAllTransactions({ accountId: selectedAccount?.id, enabled: isCard })
+  const activeInstallments = activeInstallmentPlans(cardLedger?.data ?? ledger?.data ?? [])
 
   async function handleDeleteAccount(account: Account) {
     const ok = await confirm({
