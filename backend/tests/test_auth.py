@@ -341,6 +341,22 @@ async def test_debts_screen_choices_are_saved_on_the_account(client: AsyncClient
         assert rejected.status_code == 422
 
 
+async def test_installments_panel_collapsed_is_saved_on_the_account(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    me = (await client.get("/api/v1/auth/me", headers=headers)).json()["data"]
+    assert me["installments_collapsed"] is False
+
+    saved = await client.put(
+        "/api/v1/auth/settings", headers=headers, json={"installments_collapsed": True}
+    )
+    assert saved.status_code == 200
+    assert saved.json()["data"]["installments_collapsed"] is True
+    me = (await client.get("/api/v1/auth/me", headers=headers)).json()["data"]
+    assert me["installments_collapsed"] is True
+    assert me["debts_view"] == "cards"  # the other preferences are untouched
+
+
 async def test_new_account_has_no_seen_changelog_version(client: AsyncClient):
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}

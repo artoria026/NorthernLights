@@ -1,4 +1,4 @@
-import { Building2, Check, CreditCard, Download, Landmark, Layers, Pencil, PiggyBank, Plus, Scale, Trash2, Wallet } from 'lucide-react'
+import { Building2, Check, ChevronDown, CreditCard, Download, Landmark, Layers, Pencil, PiggyBank, Plus, Scale, Trash2, Wallet } from 'lucide-react'
 import { type FormEvent, type ReactNode, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -25,8 +25,9 @@ import {
   useUpdateAccount,
 } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
+import { useUpdateSettings } from '@/hooks/useAuth'
 import { useAllTransactions, useDeleteTransaction, useTransactions } from '@/hooks/useTransactions'
-import { activeInstallmentPlans } from '@/lib/cardCommitments'
+import { activeInstallmentPlans, PLAN_TONES, remainingOfPlan } from '@/lib/cardCommitments'
 import { apiErrorMessage } from '@/services/api'
 import {
   accountBalanceColor,
@@ -34,9 +35,11 @@ import {
   amountColor,
   entryTypeLabel,
   formatMoney,
+  formatShortDate,
   isTransactionEditable,
   selectClass,
 } from '@/lib/utils'
+import { useAuthStore } from '@/stores/authStore'
 import { useConfirmStore } from '@/stores/confirmStore'
 import { useTransactionModalStore } from '@/stores/transactionModalStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -838,57 +841,107 @@ function TdcCycleCard({ accountId }: { accountId: string }) {
   )
 }
 
-/** Active interest-free installment purchases (MSI) on a credit card -- one
- * row per purchase, with a "paid/total installment" progress bar instead of
- * the plain text from before. `installments` already comes filtered to the
- * ones that haven't finished (see activeInstallments in Accounts()). */
-function InstallmentsCard({ installments }: { installments: Transaction[] }) {
+/** Active interest-free installment purchases (MSI) on a credit card: one row per purchase with
+ * its own color, progress bar, how many are paid, when it was bought and what is left. The header
+ * collapses the panel; whether the user left it collapsed is saved on their account. */
+export function InstallmentsCard({ installments }: { installments: Transaction[] }) {
   const { t } = useTranslation('pages')
+  const user = useAuthStore((s) => s.user)
+  const updateSettings = useUpdateSettings()
+  const [collapsed, setCollapsed] = useState(user?.installments_collapsed ?? false)
   const total = installments.reduce((sum, tx) => sum + Number(tx.installment?.monthly_amount ?? 0), 0)
+  const remaining = installments.reduce((sum, tx) => sum + remainingOfPlan(tx), 0)
+  const accent = PLAN_TONES[0]
+  const warning = { ink: 'var(--nl-warning-ink)', soft: 'var(--nl-warning-soft-bg)' }
+
+  function toggle() {
+    const next = !collapsed
+    setCollapsed(next)
+    updateSettings.mutate({ installments_collapsed: next })
+  }
 
   return (
-    <div className="rounded-md border border-border bg-card p-3.5 mb-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1.5 text-[13px] font-medium">
-          <Layers size={14} style={{ color: 'var(--nl-accent-ink)' }} />
-          {t('accounts.installments.active', { count: installments.length })}
+    <div className="rounded-md border border-border bg-card mb-4" data-testid="installments-panel">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={!collapsed}
+        className="flex w-full items-center justify-between gap-3 rounded-md p-3.5 text-left outline-none transition-colors hover:bg-[var(--nl-bg-hover)] focus-visible:ring-1 focus-visible:ring-[var(--nl-border-strong)]"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <ChevronDown
+            size={14}
+            className="flex-shrink-0 text-muted-foreground transition-transform"
+            style={{ transform: collapsed ? 'rotate(-90deg)' : undefined }}
+          />
+          <span
+            className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md"
+            style={{ background: accent.soft, color: accent.ink }}
+          >
+            <Layers size={13} />
+          </span>
+          <span className="truncate text-[13px] font-semibold" style={{ color: accent.ink }}>
+            {t('accounts.installments.active', { count: installments.length })}
+          </span>
         </div>
-        <div className="text-right">
-          <div className="text-[10px] tracking-wider text-muted-foreground">
-            {t('accounts.installments.committedThisMonth')}
-          </div>
-          <div className="text-[15px] font-medium" style={{ color: 'var(--nl-accent-ink)' }}>
-            {formatMoney(String(total))}
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col gap-3">
-        {installments.map((tx) => {
-          const info = tx.installment!
-          const ratio = info.total_installments > 0 ? info.paid_installments / info.total_installments : 0
-          return (
-            <div key={tx.id}>
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="text-[13px] truncate">{tx.description}</span>
-                <span className="text-[13px] font-medium flex-shrink-0">
-                  {t('accounts.installments.perMonth', { amount: formatMoney(info.monthly_amount) })}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--nl-bg-track)' }}>
-                  <div
-                    className="h-full rounded-full transition-[width]"
-                    style={{ width: `${Math.round(ratio * 100)}%`, background: 'var(--nl-accent)' }}
-                  />
-                </div>
-                <span className="text-[11px] text-muted-foreground flex-shrink-0 tabular-nums">
-                  {info.paid_installments}/{info.total_installments}
-                </span>
-              </div>
+        <div className="flex flex-shrink-0 items-center gap-3">
+          {collapsed && (
+            <span className="hidden rounded-full px-2 py-0.5 text-[11px] font-medium sm:inline" style={{ background: warning.soft, color: warning.ink }}>
+              {t('accounts.installments.remainingChip', { amount: formatMoney(String(remaining)) })}
+            </span>
+          )}
+          <div className="text-right">
+            <div className="text-[10px] tracking-wider text-muted-foreground">
+              {t('accounts.installments.committedThisMonth')}
             </div>
-          )
-        })}
-      </div>
+            <div className="text-[15px] font-semibold tabular-nums" style={{ color: accent.ink }}>
+              {formatMoney(String(total))}
+            </div>
+          </div>
+        </div>
+      </button>
+      {!collapsed && (
+        <div className="flex flex-col gap-4 border-t border-border px-3.5 pb-3.5 pt-3" data-testid="installments-detail">
+          {installments.map((tx, i) => {
+            const info = tx.installment!
+            const tone = PLAN_TONES[i % PLAN_TONES.length]
+            const ratio = info.total_installments > 0 ? info.paid_installments / info.total_installments : 0
+            return (
+              <div key={tx.id}>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-[13px] font-medium">{tx.description}</span>
+                  <span className="flex-shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: tone.ink }}>
+                    {t('accounts.installments.perMonth', { amount: formatMoney(info.monthly_amount) })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--nl-bg-track)' }}>
+                    <div
+                      className="h-full rounded-full transition-[width]"
+                      style={{
+                        width: `${Math.max(Math.round(ratio * 100), 4)}%`,
+                        background: `linear-gradient(90deg, ${tone.bar}, color-mix(in srgb, ${tone.bar} 55%, white))`,
+                      }}
+                    />
+                  </div>
+                  <span
+                    className="flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold tabular-nums"
+                    style={{ background: tone.soft, color: tone.ink }}
+                  >
+                    {info.paid_installments}/{info.total_installments}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11.5px] text-muted-foreground">
+                  {t('accounts.installments.boughtOn', { date: formatShortDate(tx.date) })}{' '}
+                  <span className="font-medium" style={{ color: warning.ink }}>
+                    {t('accounts.installments.left', { amount: formatMoney(String(remainingOfPlan(tx))) })}
+                  </span>
+                </p>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

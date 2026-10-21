@@ -168,6 +168,7 @@ export interface UpdateSettingsInput {
   debt_trouble_mode?: boolean
   debts_view?: 'cards' | 'list'
   debts_direction?: 'owed_by_me' | 'owed_to_me'
+  installments_collapsed?: boolean
   last_seen_changelog_version?: string | null
 }
 

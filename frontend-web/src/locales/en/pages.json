@@ -288,7 +288,10 @@
       "active_one": "{{count}} active interest-free installment purchase",
       "active_other": "{{count}} active interest-free installment purchases",
       "committedThisMonth": "COMMITTED THIS MONTH",
-      "perMonth": "{{amount}}/mo"
+      "perMonth": "{{amount}}/mo",
+      "remainingChip": "{{amount}} left",
+      "boughtOn": "bought {{date}} ·",
+      "left": "{{amount}} left"
     },
     "msiBadge": "Installments {{paid}}/{{total}}",
     "tdcCycle": {
