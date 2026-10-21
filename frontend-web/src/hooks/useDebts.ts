@@ -141,6 +141,8 @@ export function useCreateDebt() {
 
 export interface UpdateDebtInput {
   name?: string
+  type?: DebtType
+  creditor?: string
   payment_amount?: string
   payment_frequency?: PaymentFrequency
   payment_day?: number
@@ -165,6 +167,17 @@ export function useUpdateDebt() {
     mutationFn: async ({ id, input }: { id: string; input: UpdateDebtInput }) => {
       const { data } = await api.put<ApiSuccess<Debt>>(`/debts/${id}`, input)
       return data.data
+    },
+    onSuccess: () => invalidateDebts(queryClient),
+  })
+}
+
+/** DELETE /debts/{id}: only a debt that is paid off or never had a transaction can go. */
+export function useDeleteDebt() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/debts/${id}`)
     },
     onSuccess: () => invalidateDebts(queryClient),
   })

@@ -121,7 +121,9 @@ class DebtMovementOut(BaseModel):
 
 
 class DebtUpdate(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1)
+    type: str | None = Field(default=None, pattern=f"^({'|'.join(DEBT_TYPES)})$")
+    creditor: str | None = None
     payment_amount: Decimal | None = None
     payment_frequency: str | None = Field(
         default=None, pattern=f"^({'|'.join(PAYMENT_FREQUENCIES)})$"

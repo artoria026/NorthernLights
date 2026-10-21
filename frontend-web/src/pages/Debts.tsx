@@ -9,8 +9,10 @@ import {
   Landmark,
   LayoutGrid,
   List,
+  Pencil,
   Plus,
   Scale,
+  Trash2,
   TrendingDown,
   TrendingUp,
   Users,
@@ -37,6 +39,7 @@ import {
   useActivateUnplannedDebt,
   useCreateDebt,
   useCreateUnplannedDebt,
+  useDeleteDebt,
   useDebtSummary,
   useDebtMovements,
   useDebts,
@@ -735,6 +738,171 @@ function CorrectBalanceForm({ debt, onDone }: { debt: Debt; onDone: () => void }
   )
 }
 
+/** Edits what a debt is (name, type, creditor, notes) and its payment plan. The balance has its
+ * own form (Correct balance) because changing it leaves a step in the history. */
+export function EditDebtForm({ debt, onDone }: { debt: Debt; onDone: () => void }) {
+  const { t } = useTranslation('pages')
+  const { data: accounts } = useAccounts()
+  const updateDebt = useUpdateDebt()
+  const pushToast = useUiStore((s) => s.pushToast)
+  const [form, setForm] = useState({
+    name: debt.name,
+    type: debt.type,
+    creditor: debt.creditor ?? '',
+    notes: debt.notes ?? '',
+    payment_amount: debt.payment_amount ?? '',
+    payment_frequency: (debt.payment_frequency ?? '') as PaymentFrequency | '',
+    payment_day: debt.payment_day != null ? String(debt.payment_day) : '',
+    next_payment_date: debt.next_payment_date ?? '',
+    payment_source_account_id: debt.payment_source_account_id ?? '',
+  })
+  const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }))
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    // Only what the user filled in goes out: "" is not a valid number, date or id for the API.
+    try {
+      await updateDebt.mutateAsync({
+        id: debt.id,
+        input: {
+          name: form.name.trim(),
+          type: form.type,
+          creditor: form.creditor.trim(),
+          notes: form.notes.trim(),
+          payment_amount: form.payment_amount || undefined,
+          payment_frequency: form.payment_frequency || undefined,
+          payment_day: form.payment_day ? Number(form.payment_day) : undefined,
+          next_payment_date: form.next_payment_date || undefined,
+          payment_source_account_id: form.payment_source_account_id || undefined,
+        },
+      })
+      pushToast(
+        <Trans i18nKey="debts.toast.debtUpdated" ns="pages" values={{ name: form.name.trim() }}>
+          <strong className="font-bold" /> actualizada
+        </Trans>,
+        'success',
+      )
+      onDone()
+    } catch {
+      // error shown below
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.editForm.nameLabel')}</label>
+        <input required value={form.name} onChange={(e) => set({ name: e.target.value })} className={`${selectClass} h-9 w-full`} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.editForm.typeLabel')}</label>
+        <Select value={form.type} onValueChange={(v) => set({ type: (v as DebtType) ?? form.type })}>
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue>{(v: DebtType) => debtTypeLabel(v)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {DEBT_TYPES.map((dt) => (
+              <SelectItem key={dt} value={dt}>
+                {debtTypeLabel(dt)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.editForm.creditorLabel')}</label>
+        <input value={form.creditor} onChange={(e) => set({ creditor: e.target.value })} className={`${selectClass} h-9 w-full`} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.editForm.notesLabel')}</label>
+        <input value={form.notes} onChange={(e) => set({ notes: e.target.value })} className={`${selectClass} h-9 w-full`} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.editForm.paymentAmountLabel')}</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={form.payment_amount}
+          onChange={(e) => set({ payment_amount: e.target.value })}
+          className={`${selectClass} h-9 w-full`}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.editForm.frequencyLabel')}</label>
+        <Select
+          value={form.payment_frequency || null}
+          onValueChange={(v) => set({ payment_frequency: (v as PaymentFrequency) ?? '' })}
+        >
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder={t('debts.newDebtForm.noFrequencyOption')}>
+              {(v: PaymentFrequency | null) => (v ? paymentFrequencyLabel(v) : t('debts.newDebtForm.noFrequencyOption'))}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {FREQUENCIES.map((f) => (
+              <SelectItem key={f} value={f}>
+                {paymentFrequencyLabel(f)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">{t('debts.editForm.paymentDayLabel')}</label>
+          <input
+            type="number"
+            min="1"
+            max="31"
+            value={form.payment_day}
+            onChange={(e) => set({ payment_day: e.target.value })}
+            className={`${selectClass} h-9 w-full`}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">{t('debts.editForm.nextPaymentLabel')}</label>
+          <input
+            type="date"
+            value={form.next_payment_date}
+            onChange={(e) => set({ next_payment_date: e.target.value })}
+            className={`${selectClass} h-9 w-full`}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.editForm.paymentSourceLabel')}</label>
+        <Select
+          value={form.payment_source_account_id || null}
+          onValueChange={(v) => set({ payment_source_account_id: v ?? '' })}
+        >
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder={t('debts.newDebtForm.noneOption')}>
+              {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {accounts
+              ?.filter((a) => a.type === 'asset')
+              .map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">{t('debts.editForm.paymentSourceHint')}</p>
+      </div>
+      {updateDebt.isError && <p className="text-sm text-destructive">{apiErrorMessage(updateDebt.error)}</p>}
+      <DialogFooter>
+        <DialogPrimaryButton icon={Check} pending={updateDebt.isPending}>
+          {t('debts.editForm.submitButton')}
+        </DialogPrimaryButton>
+      </DialogFooter>
+    </form>
+  )
+}
+
 /** The buttons of a debt (history, lend/borrow more, correct, collect/pay) with their dialogs.
  * Shared by the card view and the list view so both do exactly the same things. */
 function DebtActions({ debt, className = '' }: { debt: Debt; className?: string }) {
@@ -742,11 +910,58 @@ function DebtActions({ debt, className = '' }: { debt: Debt; className?: string 
   const [payOpen, setPayOpen] = useState(false)
   const [correctOpen, setCorrectOpen] = useState(false)
   const [lendOpen, setLendOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const deleteDebt = useDeleteDebt()
+  const confirm = useConfirmStore((s) => s.ask)
+  const pushToast = useUiStore((s) => s.pushToast)
   const [historyOpen, setHistoryOpen] = useState(false)
   const isReceivable = debt.direction === 'owed_to_me'
 
+  async function handleDelete() {
+    const ok = await confirm({
+      title: t('debts.deleteConfirm.title'),
+      message: t('debts.deleteConfirm.message', { name: debt.name }),
+      confirmLabel: t('debts.deleteConfirm.confirmLabel'),
+      variant: 'danger',
+    })
+    if (!ok) return
+    try {
+      await deleteDebt.mutateAsync(debt.id)
+      pushToast(t('debts.toast.debtDeleted', { name: debt.name }), 'success')
+    } catch (error) {
+      pushToast(apiErrorMessage(error), 'error')
+    }
+  }
+
   return (
     <div className={`flex flex-wrap items-center gap-1 ${className}`}>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogTrigger
+          render={
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
+            >
+              <Pencil size={11} />
+              {t('debts.card.editButton')}
+            </button>
+          }
+        />
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('debts.card.editDialogTitle', { name: debt.name })}</DialogTitle>
+          </DialogHeader>
+          <EditDebtForm debt={debt} onDone={() => setEditOpen(false)} />
+        </DialogContent>
+      </Dialog>
+      <button
+        type="button"
+        onClick={handleDelete}
+        className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-destructive"
+      >
+        <Trash2 size={11} />
+        {t('debts.card.deleteButton')}
+      </button>
       {debt.status !== 'negotiating' && (
         <div className="flex items-center gap-1 flex-shrink-0">
           <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>

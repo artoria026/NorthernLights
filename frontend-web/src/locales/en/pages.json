@@ -749,6 +749,24 @@
       "conceptLabel": "Concept (optional)",
       "conceptPlaceholder": "E.g.: cash payment"
     },
+    "deleteConfirm": {
+      "title": "Delete debt",
+      "message": "Delete \"{{name}}\"? Only possible if it is paid off or never had a transaction. You can load it again.",
+      "confirmLabel": "Delete"
+    },
+    "editForm": {
+      "nameLabel": "Name",
+      "typeLabel": "Type",
+      "creditorLabel": "Creditor (optional)",
+      "notesLabel": "Notes (optional)",
+      "paymentAmountLabel": "Periodic payment (optional)",
+      "frequencyLabel": "Frequency",
+      "paymentDayLabel": "Payment day",
+      "nextPaymentLabel": "Next payment",
+      "paymentSourceLabel": "Payment account",
+      "paymentSourceHint": "If you pick an account, the app prepares the payment when it is due.",
+      "submitButton": "Save"
+    },
     "correctBalanceForm": {
       "oweYouNote": "Owes you: {{amount}}",
       "currentBalanceNote": "Current balance: {{amount}}",
@@ -759,6 +777,8 @@
       "confirmMessage": "You're about to change the balance of \"{{name}}\" from {{from}} to {{to}} directly -- it doesn't register any payment or modify existing ones, it only adjusts the number. Continue?"
     },
     "toast": {
+      "debtDeleted": "{{name}} deleted",
+      "debtUpdated": "<0>{{name}}</0> updated",
       "balanceUpdated": "<0>{{name}}</0>'s balance updated"
     },
     "card": {
@@ -769,6 +789,9 @@
       "balanceLabel": "Balance",
       "completed": "Paid off",
       "nextPayment": "Next: {{date}}",
+      "deleteButton": "Delete",
+      "editButton": "Edit",
+      "editDialogTitle": "Edit debt — {{name}}",
       "correctButton": "Correct",
       "correctDialogTitle": "Correct balance — {{name}}",
       "collectButton": "Collect",

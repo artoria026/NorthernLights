@@ -749,6 +749,24 @@
       "conceptLabel": "Concepto (opcional)",
       "conceptPlaceholder": "Ej.: abono en efectivo"
     },
+    "deleteConfirm": {
+      "title": "Eliminar deuda",
+      "message": "¿Eliminar \"{{name}}\"? Solo se puede si está pagada o si nunca tuvo transacciones. Podrás volver a cargarla.",
+      "confirmLabel": "Eliminar"
+    },
+    "editForm": {
+      "nameLabel": "Nombre",
+      "typeLabel": "Tipo",
+      "creditorLabel": "Acreedor (opcional)",
+      "notesLabel": "Notas (opcional)",
+      "paymentAmountLabel": "Pago periódico (opcional)",
+      "frequencyLabel": "Frecuencia",
+      "paymentDayLabel": "Día de pago",
+      "nextPaymentLabel": "Siguiente pago",
+      "paymentSourceLabel": "Cuenta de pago",
+      "paymentSourceHint": "Si eliges una cuenta, la app te prepara el pago cuando llegue la fecha.",
+      "submitButton": "Guardar"
+    },
     "correctBalanceForm": {
       "oweYouNote": "Te debe: {{amount}}",
       "currentBalanceNote": "Saldo actual: {{amount}}",
@@ -759,6 +777,8 @@
       "confirmMessage": "Vas a cambiar el saldo de \"{{name}}\" de {{from}} a {{to}} directamente -- no registra ningún pago ni modifica los que ya existen, solo ajusta el número. ¿Continuar?"
     },
     "toast": {
+      "debtDeleted": "{{name}} eliminada",
+      "debtUpdated": "<0>{{name}}</0> actualizada",
       "balanceUpdated": "Saldo de <0>{{name}}</0> actualizado"
     },
     "card": {
@@ -769,6 +789,9 @@
       "balanceLabel": "Saldo",
       "completed": "Liquidada",
       "nextPayment": "Próximo: {{date}}",
+      "deleteButton": "Eliminar",
+      "editButton": "Editar",
+      "editDialogTitle": "Editar deuda — {{name}}",
       "correctButton": "Corregir",
       "correctDialogTitle": "Corregir saldo — {{name}}",
       "collectButton": "Cobrar",
