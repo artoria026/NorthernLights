@@ -11,6 +11,8 @@ from app.models.mixins import SoftDeleteMixin, TimestampMixin
 PAY_CYCLES = ("weekly", "biweekly", "monthly")
 THEMES = ("dark", "light")
 LOCALES = ("es", "en")
+DEBTS_VIEWS = ("cards", "list")
+DEBTS_DIRECTIONS = ("owed_by_me", "owed_to_me")
 
 
 class User(Base, TimestampMixin, SoftDeleteMixin):
@@ -46,6 +48,10 @@ class UserPreferences(Base, TimestampMixin):
         CheckConstraint(f"pay_cycle IN {PAY_CYCLES}", name="ck_user_preferences_pay_cycle"),
         CheckConstraint(f"theme IN {THEMES}", name="ck_user_preferences_theme"),
         CheckConstraint(f"locale IN {LOCALES}", name="ck_user_preferences_locale"),
+        CheckConstraint(f"debts_view IN {DEBTS_VIEWS}", name="ck_user_preferences_debts_view"),
+        CheckConstraint(
+            f"debts_direction IN {DEBTS_DIRECTIONS}", name="ck_user_preferences_debts_direction"
+        ),
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
@@ -65,6 +71,10 @@ class UserPreferences(Base, TimestampMixin):
     # or one with payment problems -- we don't want that to be the first thing
     # someone without that problem sees.
     debt_trouble_mode: Mapped[bool] = mapped_column(default=False)
+    # What the user left selected on the Deudas screen: the view (cards or list) and the tab
+    # (what I owe / what I am owed). Saved on the account so it follows them to any browser.
+    debts_view: Mapped[str] = mapped_column(String, nullable=False, default="cards")
+    debts_direction: Mapped[str] = mapped_column(String, nullable=False, default="owed_by_me")
     # Changelog version (frontend/src/lib/changelog.ts) the user has already
     # seen -- NULL for accounts created before this feature or that never
     # closed the modal. Compared against the most recent version in the

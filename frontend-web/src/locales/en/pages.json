@@ -853,6 +853,24 @@
           "owed": "Correction"
         }
       }
+    },
+    "view": {
+      "label": "View",
+      "list": "List",
+      "cards": "Cards"
+    },
+    "list": {
+      "person": "Person",
+      "lent": "Lent",
+      "borrowed": "Received",
+      "collected": "Collected",
+      "paid": "Paid",
+      "owesYou": "Owes you",
+      "balance": "Balance",
+      "progress": "Progress",
+      "actions": "Actions",
+      "totals_one": "{{count}} person",
+      "totals_other": "{{count}} people"
     }
   },
   "budget": {

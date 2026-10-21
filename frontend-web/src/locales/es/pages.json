@@ -853,6 +853,24 @@
           "owed": "Corrección"
         }
       }
+    },
+    "view": {
+      "label": "Vista",
+      "list": "Lista",
+      "cards": "Tarjetas"
+    },
+    "list": {
+      "person": "Persona",
+      "lent": "Prestado",
+      "borrowed": "Recibido",
+      "collected": "Cobrado",
+      "paid": "Pagado",
+      "owesYou": "Te debe",
+      "balance": "Saldo",
+      "progress": "Avance",
+      "actions": "Acciones",
+      "totals_one": "{{count}} persona",
+      "totals_other": "{{count}} personas"
     }
   },
   "budget": {

@@ -44,6 +44,8 @@ describe('authStore', () => {
       push_notifications: true,
       pay_cycle: 'monthly',
       debt_trouble_mode: false,
+      debts_view: 'cards',
+      debts_direction: 'owed_by_me',
       last_seen_changelog_version: null,
       accepted_disclaimer_version: null,
       current_disclaimer_version: '1',
