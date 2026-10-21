@@ -35,7 +35,7 @@ def _build_debt_upload(rows: list[dict]) -> bytes:
         if "direction" in row:
             ws.cell(row=row_num, column=29, value=row["direction"])
         # optional payment plan (AD-AH): amount, frequency, day, next due date, account
-        for offset, key in enumerate(("plan", "frequency", "day", "next", "plan_account")):
+        for offset, key in enumerate(("plan", "frequency", "day", "next", "plan_account", "type")):
             if key in row:
                 ws.cell(row=row_num, column=30 + offset, value=row[key])
     buf = BytesIO()
@@ -68,7 +68,7 @@ async def test_template_has_the_debts_block(client: AsyncClient):
     response = await client.get("/api/v1/bulk-import/template", headers=headers)
     ws = load_workbook(BytesIO(response.content))["Transacciones"]
     assert ws["W1"].value == "Deudas"
-    assert [ws.cell(row=2, column=c).value for c in range(23, 35)] == [
+    assert [ws.cell(row=2, column=c).value for c in range(23, 36)] == [
         "Monto",
         "Persona",
         "Movimiento",
@@ -81,6 +81,7 @@ async def test_template_has_the_debts_block(client: AsyncClient):
         "Día de pago",
         "Siguiente pago",
         "Cuenta de pago",
+        "Tipo",
     ]
 
 
@@ -467,3 +468,60 @@ async def test_invalid_payment_plans_are_reported_without_loading_the_row(client
     assert data["created"] == 0
     assert sorted(e["row"] for e in data["errors"]) == [3, 4, 5, 6, 7, 8]
     assert await _debts(client, headers) == []
+
+
+async def test_debt_type_column_creates_the_debt_with_that_kind_and_later_rows_find_it(
+    client: AsyncClient,
+):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander", initial_balance="5000")
+
+    # The kind sits on the opening row only; the repayment finds the debt by its name.
+    content = _build_debt_upload(
+        [
+            {
+                "amount": 28200,
+                "person": "Pavimento calle Cubelita",
+                "kind": "Saldo inicial",
+                "date": "2025-07-11",
+                "direction": "Debo",
+                "type": "Crédito cívico",
+            },
+            {
+                "amount": 7500,
+                "person": "Pavimento calle Cubelita",
+                "kind": "Abono",
+                "date": "2025-07-11",
+                "account": "Santander",
+                "direction": "Debo",
+            },
+        ]
+    )
+    response = await _post(client, headers, "upload", content)
+    assert response.json()["data"] == {"created": 2, "errors": []}
+
+    (debt,) = await _debts(client, headers)
+    assert debt["type"] == "civic"
+    assert debt["current_balance"] == "20700.00"
+
+
+async def test_debt_type_is_informal_by_default_and_an_unknown_one_is_reported(
+    client: AsyncClient,
+):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander", initial_balance="0")
+
+    base = {"amount": 100, "kind": "Saldo inicial", "date": "2026-10-21"}
+    content = _build_debt_upload(
+        [
+            {**base, "person": "Emanuel"},
+            {**base, "person": "Banco", "direction": "Debo", "type": "Hipoteca"},
+        ]
+    )
+    response = await _post(client, headers, "upload", content)
+    data = response.json()["data"]
+    assert data["created"] == 1
+    assert [e["row"] for e in data["errors"]] == [4]
+    assert [d["type"] for d in await _debts(client, headers)] == ["informal"]
