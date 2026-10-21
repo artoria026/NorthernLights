@@ -5,6 +5,7 @@ import {
   Check,
   Coins,
   HandCoins,
+  History,
   Landmark,
   Plus,
   Scale,
@@ -34,7 +35,9 @@ import {
   useCreateDebt,
   useCreateUnplannedDebt,
   useDebtSummary,
+  useDebtMovements,
   useDebts,
+  useIncreaseDebt,
   useRegisterDebtPayment,
   useUnplannedDebts,
   useUpdateDebt,
@@ -44,7 +47,7 @@ import { debtTypeLabel, formatMoney, paymentFrequencyLabel, selectClass } from '
 import { useAuthStore } from '@/stores/authStore'
 import { useConfirmStore } from '@/stores/confirmStore'
 import { useUiStore } from '@/stores/uiStore'
-import type { Debt, DebtDirection, DebtType, PaymentFrequency, UnplannedDebt } from '@/types'
+import type { Debt, DebtDirection, DebtMovement, DebtType, PaymentFrequency, UnplannedDebt } from '@/types'
 
 const DEBT_TYPES: DebtType[] = [
   'personal_loan',
@@ -300,6 +303,7 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
         payment_amount: form.payment_amount || undefined,
         payment_frequency: form.payment_frequency || undefined,
         funding_account_id: form.funding_account_id || undefined,
+        concept: form.concept?.trim() || undefined,
         interest_rate: interestRatePct ? String(parseFloat(interestRatePct) / 100) : undefined,
       })
       onDone()
@@ -315,6 +319,15 @@ function NewDebtForm({ direction, onDone }: { direction: DebtDirection; onDone: 
           {isReceivable ? t('debts.newDebtForm.nameLabelReceivable') : t('debts.newDebtForm.nameLabel')}
         </label>
         <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={`${selectClass} h-9 w-full`} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.newDebtForm.conceptLabel')}</label>
+        <input
+          value={form.concept ?? ''}
+          onChange={(e) => setForm({ ...form, concept: e.target.value })}
+          placeholder={t('debts.newDebtForm.conceptPlaceholder')}
+          className={`${selectClass} h-9 w-full`}
+        />
       </div>
       {!isReceivable && (
         <div className="flex flex-col gap-1.5">
@@ -430,12 +443,16 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
   const isReceivable = debt.direction === 'owed_to_me'
   const [accountId, setAccountId] = useState('')
   const [amount, setAmount] = useState(debt.payment_amount ?? '')
+  const [concept, setConcept] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     try {
-      await registerPayment.mutateAsync({ debtId: debt.id, input: { account_id: accountId, amount, date } })
+      await registerPayment.mutateAsync({
+        debtId: debt.id,
+        input: { account_id: accountId, amount, date, notes: concept.trim() || undefined },
+      })
       onDone()
     } catch {
       // error shown below
@@ -476,6 +493,15 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
         <label className="text-xs text-muted-foreground">{t('debts.registerPaymentForm.dateLabel')}</label>
         <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={`${selectClass} h-9 w-full`} />
       </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.registerPaymentForm.conceptLabel')}</label>
+        <input
+          value={concept}
+          onChange={(e) => setConcept(e.target.value)}
+          placeholder={t('debts.registerPaymentForm.conceptPlaceholder')}
+          className={`${selectClass} h-9 w-full`}
+        />
+      </div>
       {registerPayment.isError && <p className="text-sm text-destructive">{apiErrorMessage(registerPayment.error)}</p>}
       <DialogFooter>
         <DialogPrimaryButton icon={Check} pending={registerPayment.isPending}>
@@ -483,6 +509,153 @@ function RegisterPaymentForm({ debt, onDone }: { debt: Debt; onDone: () => void 
         </DialogPrimaryButton>
       </DialogFooter>
     </form>
+  )
+}
+
+/** Another loan on the same debt: lend more to the same person (or be lent more). The money
+ * moves through the chosen account and the history gets a step with its own concept. */
+function IncreaseDebtForm({ debt, onDone }: { debt: Debt; onDone: () => void }) {
+  const { t } = useTranslation('pages')
+  const { data: accounts } = useAccounts()
+  const increase = useIncreaseDebt()
+  const isReceivable = debt.direction === 'owed_to_me'
+  const [accountId, setAccountId] = useState('')
+  const [amount, setAmount] = useState('')
+  const [concept, setConcept] = useState('')
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    try {
+      await increase.mutateAsync({
+        debtId: debt.id,
+        input: { account_id: accountId, amount, date, concept: concept.trim() || undefined },
+      })
+      onDone()
+    } catch {
+      // error shown below
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <p className="text-sm text-muted-foreground">
+        {isReceivable
+          ? t('debts.increaseForm.oweYouNote', { amount: formatMoney(debt.current_balance) })
+          : t('debts.increaseForm.currentBalanceNote', { amount: formatMoney(debt.current_balance) })}
+      </p>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">
+          {isReceivable ? t('debts.increaseForm.accountFromLabel') : t('debts.increaseForm.accountToLabel')}
+        </label>
+        <Select value={accountId || null} onValueChange={(v) => setAccountId(v ?? '')}>
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder={t('debts.increaseForm.accountPlaceholder')}>
+              {(v: string | null) => accounts?.find((a) => a.id === v)?.name}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {accounts?.map((a) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.increaseForm.amountLabel')}</label>
+        <input type="number" step="0.01" min="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} className={`${selectClass} h-9 w-full`} />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.increaseForm.conceptLabel')}</label>
+        <input
+          value={concept}
+          onChange={(e) => setConcept(e.target.value)}
+          placeholder={t('debts.increaseForm.conceptPlaceholder')}
+          className={`${selectClass} h-9 w-full`}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.increaseForm.dateLabel')}</label>
+        <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={`${selectClass} h-9 w-full`} />
+      </div>
+      {increase.isError && <p className="text-sm text-destructive">{apiErrorMessage(increase.error)}</p>}
+      <DialogFooter>
+        <DialogPrimaryButton icon={Plus} pending={increase.isPending}>
+          {isReceivable ? t('debts.increaseForm.submitLend') : t('debts.increaseForm.submitBorrow')}
+        </DialogPrimaryButton>
+      </DialogFooter>
+    </form>
+  )
+}
+
+// Color per kind of step: what grows the debt, what pays it, what was corrected by hand.
+const MOVEMENT_TONES: Record<DebtMovement['kind'], { ink: string; soft: string }> = {
+  opening: { ink: 'var(--nl-blue-ink)', soft: 'var(--nl-blue-soft-bg)' },
+  loan: { ink: 'var(--nl-warning-ink)', soft: 'var(--nl-warning-soft-bg)' },
+  payment: { ink: 'var(--nl-accent-ink)', soft: 'var(--nl-accent-soft-bg)' },
+  adjustment: { ink: 'var(--nl-violet-ink)', soft: 'var(--nl-violet-soft-bg)' },
+}
+
+/** The debt's history, newest first: what happened, when it was registered (day and time),
+ * why, through which account, and the balance it left. */
+export function DebtHistory({ debt }: { debt: Debt }) {
+  const { t, i18n } = useTranslation('pages')
+  const { data: movements, isLoading, isError } = useDebtMovements(debt.id)
+  const isReceivable = debt.direction === 'owed_to_me'
+  const rows = [...(movements ?? [])].reverse()
+  const when = (m: DebtMovement) =>
+    new Date(m.created_at).toLocaleString(i18n.language, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">{t('debts.history.loading')}</p>
+  if (isError) return <p className="text-sm text-destructive">{t('debts.history.error')}</p>
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t('debts.history.empty')}</p>
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">
+          {isReceivable ? t('debts.history.oweYouNow') : t('debts.history.balanceNow')}
+        </span>
+        <span className="font-semibold" style={{ color: isReceivable ? 'var(--nl-accent-ink)' : 'var(--nl-danger-ink)' }}>
+          {formatMoney(debt.current_balance)}
+        </span>
+      </div>
+      <ul className="flex max-h-[55vh] flex-col gap-2 overflow-y-auto pr-1" data-testid="debt-history">
+        {rows.map((m) => {
+          const tone = MOVEMENT_TONES[m.kind]
+          const grows = Number(m.delta) > 0
+          return (
+            <li key={m.id} className="rounded-md border border-border p-2.5" style={{ background: 'var(--nl-bg-input)' }}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ background: tone.soft, color: tone.ink }}>
+                  {t(`debts.history.kind.${m.kind}.${isReceivable ? 'receivable' : 'owed'}`)}
+                </span>
+                <span className="text-[13px] font-semibold tabular-nums" style={{ color: tone.ink }}>
+                  {grows ? '+' : '−'}
+                  {formatMoney(String(Math.abs(Number(m.delta))))}
+                </span>
+              </div>
+              {m.concept && <p className="mt-1 text-[13px]">{m.concept}</p>}
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 text-[11px] text-muted-foreground">
+                <span>
+                  {when(m)}
+                  {m.account_name ? ` · ${m.account_name}` : ''}
+                </span>
+                <span className="tabular-nums">{t('debts.history.balanceAfter', { amount: formatMoney(m.balance_after) })}</span>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 
@@ -563,6 +736,8 @@ function DebtCard({ debt }: { debt: Debt }) {
   const { t } = useTranslation('pages')
   const [payOpen, setPayOpen] = useState(false)
   const [correctOpen, setCorrectOpen] = useState(false)
+  const [lendOpen, setLendOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const isReceivable = debt.direction === 'owed_to_me'
   const paidRatio = Number(debt.total_amount) > 0 ? 1 - Number(debt.current_balance) / Number(debt.total_amount) : 0
   const apr = debt.interest_rate ? Number(debt.interest_rate) * 100 : 0
@@ -627,12 +802,58 @@ function DebtCard({ debt }: { debt: Debt }) {
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between pt-1.5 border-t border-border">
+      <div className="flex flex-wrap items-center justify-between gap-y-1.5 pt-1.5 border-t border-border">
         <div className="text-[10px] text-muted-foreground truncate">
           {debt.status === 'completed'
             ? t('debts.card.completed')
             : t('debts.card.nextPayment', { date: debt.next_payment_date ?? '—' })}
         </div>
+        {debt.status !== 'negotiating' && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+              <DialogTrigger
+                render={
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
+                  >
+                    <History size={11} />
+                    {t('debts.card.historyButton')}
+                  </button>
+                }
+              />
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t('debts.card.historyDialogTitle', { name: debt.name })}</DialogTitle>
+                </DialogHeader>
+                <DebtHistory debt={debt} />
+              </DialogContent>
+            </Dialog>
+            <Dialog open={lendOpen} onOpenChange={setLendOpen}>
+              <DialogTrigger
+                render={
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground"
+                  >
+                    <Plus size={11} />
+                    {isReceivable ? t('debts.card.lendMoreButton') : t('debts.card.borrowMoreButton')}
+                  </button>
+                }
+              />
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {isReceivable
+                      ? t('debts.card.lendMoreDialogTitle', { name: debt.name })
+                      : t('debts.card.borrowMoreDialogTitle', { name: debt.name })}
+                  </DialogTitle>
+                </DialogHeader>
+                <IncreaseDebtForm debt={debt} onDone={() => setLendOpen(false)} />
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
         {debt.status === 'active' && (
           <div className="flex items-center gap-1 flex-shrink-0">
             <Dialog open={correctOpen} onOpenChange={setCorrectOpen}>

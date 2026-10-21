@@ -732,7 +732,9 @@
       "submitButton": "Create debt",
       "noFrequencyOption": "No fixed frequency",
       "interestRateLabel": "Annual interest rate (%) (optional)",
-      "interestRatePlaceholder": "0"
+      "interestRatePlaceholder": "0",
+      "conceptLabel": "Concept (optional)",
+      "conceptPlaceholder": "What was this loan for?"
     },
     "registerPaymentForm": {
       "oweYouNote": "Owes you: {{amount}}",
@@ -743,7 +745,9 @@
       "amountLabel": "Amount",
       "dateLabel": "Date",
       "registerCollectionButton": "Register collection",
-      "registerPaymentButton": "Register payment"
+      "registerPaymentButton": "Register payment",
+      "conceptLabel": "Concept (optional)",
+      "conceptPlaceholder": "E.g.: cash payment"
     },
     "correctBalanceForm": {
       "oweYouNote": "Owes you: {{amount}}",
@@ -770,7 +774,13 @@
       "collectButton": "Collect",
       "payButton": "Pay",
       "collectionDialogTitle": "Collection — {{name}}",
-      "paymentDialogTitle": "Payment — {{name}}"
+      "paymentDialogTitle": "Payment — {{name}}",
+      "historyButton": "History",
+      "historyDialogTitle": "{{name}} history",
+      "lendMoreButton": "Lend more",
+      "borrowMoreButton": "Borrowed more",
+      "lendMoreDialogTitle": "Lend {{name}} more",
+      "borrowMoreDialogTitle": "Another loan from {{name}}"
     },
     "unplannedRow": {
       "activateButton": "Activate",
@@ -804,6 +814,45 @@
         "body": "Adjusts the outstanding balance directly to what it really is today, without registering payment by payment — meant for when you're loading old history and just need to leave the final number correct. Unlike \"Register payment\", it doesn't move money out of any account or affect payments already registered."
       },
       "tip": "Lending or borrowing isn't an expense or income — your total net worth doesn't change, it just moves from one account to another (or to this list, if it doesn't have an associated account yet)."
+    },
+    "increaseForm": {
+      "oweYouNote": "They owe you: {{amount}}",
+      "currentBalanceNote": "Current balance: {{amount}}",
+      "accountFromLabel": "Account the money leaves",
+      "accountToLabel": "Account the money lands in",
+      "accountPlaceholder": "Select an account",
+      "amountLabel": "Amount",
+      "conceptLabel": "Concept",
+      "conceptPlaceholder": "What was it for?",
+      "dateLabel": "Date",
+      "submitLend": "Record loan",
+      "submitBorrow": "Record loan received"
+    },
+    "history": {
+      "loading": "Loading the history…",
+      "error": "The history could not be loaded.",
+      "empty": "No movements yet.",
+      "oweYouNow": "They owe you now",
+      "balanceNow": "Current balance",
+      "balanceAfter": "balance {{amount}}",
+      "kind": {
+        "opening": {
+          "receivable": "Opening balance",
+          "owed": "Opening balance"
+        },
+        "loan": {
+          "receivable": "Loan",
+          "owed": "Loan received"
+        },
+        "payment": {
+          "receivable": "Payment received",
+          "owed": "Payment"
+        },
+        "adjustment": {
+          "receivable": "Correction",
+          "owed": "Correction"
+        }
+      }
     }
   },
   "budget": {
@@ -1698,7 +1747,7 @@
     "title": "Bulk upload",
     "subtitle": "Upload an Excel with your transactions: you see a summary first and nothing is saved until you confirm",
     "templateTitle": "1. Download the template",
-    "templateBody": "It already comes with your accounts, categories and tags as lists. Income in columns A–E, expenses in G–K, and optional columns: \"Etiquetas\" (tags, L) and \"Notas\" (notes, M) for expenses, and \"Notas (ingresos)\" (income notes, N) for income. Credit card payments go in columns P–T, and column U (\"Meses sin intereses\", interest-free months) is for card purchases paid in installments.",
+    "templateBody": "It already comes with your accounts, categories and tags as lists. Income in columns A–E, expenses in G–K, and optional columns: \"Etiquetas\" (tags, L) and \"Notas\" (notes, M) for expenses, and \"Notas (ingresos)\" (income notes, N) for income. Credit card payments go in columns P–T, people's debts (loan, payment or opening balance) in columns W–AC, and column U (\"Meses sin intereses\", interest-free months) is for card purchases paid in installments.",
     "downloadTemplate": "Download template",
     "generating": "Generating...",
     "dropTitle": "2. Drop your file",
@@ -1737,7 +1786,13 @@
       "errorsTitle_other": "{{count}} rows with problems (they will not be loaded)",
       "moreErrors_one": "and {{count}} more",
       "moreErrors_other": "and {{count}} more",
-      "row": "Row {{row}}"
+      "row": "Row {{row}}",
+      "debtsTitle": "Debts",
+      "debtPeople_one": "{{count}} person",
+      "debtPeople_other": "{{count}} people",
+      "debtLoans": "Loans",
+      "debtPayments": "Payments",
+      "debtOpenings": "Opening balances"
     }
   }
 }

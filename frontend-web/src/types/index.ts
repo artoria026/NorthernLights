@@ -162,6 +162,23 @@ export interface Transaction {
   installment: InstallmentInfo | null
 }
 
+/** One step in the life of a debt: why its balance is what it is. `delta` is signed (a loan
+ * or the opening balance raises the debt, a payment lowers it) and `balance_after` is the
+ * balance it left. `created_at` is the moment it was registered, `date` the day it happened. */
+export interface DebtMovement {
+  id: string
+  debt_id: string
+  kind: 'opening' | 'loan' | 'payment' | 'adjustment'
+  delta: string
+  date: string
+  concept: string | null
+  account_id: string | null
+  account_name: string | null
+  journal_entry_id: string | null
+  created_at: string
+  balance_after: string
+}
+
 export type DebtType =
   | 'personal_loan'
   | 'payroll_loan'

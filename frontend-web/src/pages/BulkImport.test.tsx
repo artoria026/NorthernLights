@@ -10,6 +10,12 @@ const preview: BulkImportPreview = {
   income: { count: 1, total: '1000.00' },
   expense: { count: 2, total: '150.00' },
   card_payment: { count: 0, total: '0' },
+  debts: {
+    loans: { count: 0, total: '0' },
+    payments: { count: 0, total: '0' },
+    openings: { count: 0, total: '0' },
+    people: 0,
+  },
   date_from: '2026-10-01',
   date_to: '2026-10-13',
   by_account: [{ name: 'Santander', count: 3, income: '1000.00', expense: '150.00' }],
@@ -89,6 +95,35 @@ describe('BulkImport', () => {
     await dropFile()
     expect(screen.getByText('Pagos de tarjeta')).toBeInTheDocument()
     expect(screen.getByText('$390.00')).toBeInTheDocument()
+  })
+
+  it('shows the people debts of the file apart, only when it has them', async () => {
+    renderPage()
+    await dropFile()
+    expect(screen.queryByTestId('bulk-debts')).not.toBeInTheDocument()
+
+    mocks.previewMutate.mockImplementation((_f: File, options?: { onSuccess?: (p: BulkImportPreview) => void }) =>
+      options?.onSuccess?.({
+        ...preview,
+        debts: {
+          loans: { count: 2, total: '1500.00' },
+          payments: { count: 1, total: '300.00' },
+          openings: { count: 1, total: '15000.00' },
+          people: 2,
+        },
+      }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Elegir otro archivo' }))
+    await dropFile()
+    const debts = screen.getByTestId('bulk-debts')
+    expect(debts).toHaveTextContent('Deudas')
+    expect(debts).toHaveTextContent('2 personas')
+    expect(debts).toHaveTextContent('Préstamos')
+    expect(debts).toHaveTextContent('$1,500.00')
+    expect(debts).toHaveTextContent('Abonos')
+    expect(debts).toHaveTextContent('$300.00')
+    expect(debts).toHaveTextContent('Saldos iniciales')
+    expect(debts).toHaveTextContent('$15,000.00')
   })
 
   it('warns about rows that look already loaded and lists the rows with problems', async () => {

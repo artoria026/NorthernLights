@@ -20,7 +20,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
  * wrong or looks already loaded. Shown BEFORE anything is saved. */
 export function BulkImportSummary({ preview }: { preview: BulkImportPreview }) {
   const { t } = useTranslation('pages')
-  const { income, expense, card_payment: cardPayment, possible_duplicates: dupes } = preview
+  const { income, expense, card_payment: cardPayment, debts, possible_duplicates: dupes } = preview
   const categories = preview.by_category.slice(0, MAX_CATEGORIES)
   const hiddenCategories = preview.by_category.length - categories.length
 
@@ -64,6 +64,32 @@ export function BulkImportSummary({ preview }: { preview: BulkImportPreview }) {
           }
         />
       </div>
+
+      {debts.people > 0 && (
+        <section data-testid="bulk-debts">
+          <h3 className="mb-1.5 flex items-center justify-between text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <span>{t('bulkImport.summary.debtsTitle')}</span>
+            <span className="normal-case tracking-normal">{t('bulkImport.summary.debtPeople', { count: debts.people })}</span>
+          </h3>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {(
+              [
+                ['debtLoans', debts.loans, 'var(--nl-warning-ink)', 'var(--nl-warning-soft-bg)'],
+                ['debtPayments', debts.payments, 'var(--nl-accent-ink)', 'var(--nl-accent-soft-bg)'],
+                ['debtOpenings', debts.openings, 'var(--nl-blue-ink)', 'var(--nl-blue-soft-bg)'],
+              ] as const
+            )
+              .filter(([, total]) => total.count > 0)
+              .map(([key, total, ink, soft]) => (
+                <div key={key} className="rounded-md p-3" style={{ background: soft, color: ink }}>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide">{t(`bulkImport.summary.${key}`)}</div>
+                  <div className="mt-1 text-[16px] font-semibold tabular-nums">{formatMoney(total.total)}</div>
+                  <div className="text-[11.5px] opacity-80">{t('bulkImport.summary.movements', { count: total.count })}</div>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
 
       {preview.by_account.length > 0 && (
         <section>

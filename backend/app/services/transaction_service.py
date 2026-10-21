@@ -341,6 +341,17 @@ async def split_expense(
         debt.current_balance += debtor.amount
         debt.total_amount += debtor.amount
         debt.status = "active"
+        await debt_service._record_movement(
+            session,
+            user_id,
+            debt.id,
+            "loan",
+            debtor.amount,
+            data.date,
+            data.description,
+            data.paying_account_id,
+            entry.id,
+        )
 
     return entry
 

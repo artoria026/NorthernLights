@@ -20,6 +20,15 @@ class PreviewTotal(BaseModel):
     total: Decimal
 
 
+class PreviewDebts(BaseModel):
+    """The loans, repayments and opening balances of people's debts in the file."""
+
+    loans: PreviewTotal = PreviewTotal(count=0, total=Decimal(0))
+    payments: PreviewTotal = PreviewTotal(count=0, total=Decimal(0))
+    openings: PreviewTotal = PreviewTotal(count=0, total=Decimal(0))
+    people: int = 0
+
+
 class PreviewAccount(BaseModel):
     name: str
     count: int
@@ -61,6 +70,7 @@ class BulkImportPreview(BaseModel):
     expense: PreviewTotal
     # Payments to credit cards (transfers): neither income nor expense.
     card_payment: PreviewTotal = PreviewTotal(count=0, total=Decimal(0))
+    debts: PreviewDebts = PreviewDebts()
     date_from: date | None
     date_to: date | None
     by_account: list[PreviewAccount]

@@ -4,6 +4,7 @@ import type {
   ApiSuccess,
   Debt,
   DebtDirection,
+  DebtMovement,
   DebtSummary,
   DebtType,
   PaymentFrequency,
@@ -113,6 +114,8 @@ export interface CreateDebtInput {
   /** Actual account where the cash for originating this debt already came in/out. */
   funding_account_id?: string
   start_date?: string
+  /** What this first loan was for; it opens the debt's history. */
+  concept?: string
   is_shared?: boolean
   responsible_party?: string
 }
@@ -179,6 +182,42 @@ export function useRegisterDebtPayment() {
   return useMutation({
     mutationFn: async ({ debtId, input }: { debtId: string; input: RegisterDebtPaymentInput }) => {
       const { data } = await api.post(`/debts/${debtId}/payments`, input)
+      return data.data
+    },
+    onSuccess: () => {
+      invalidateDebts(queryClient)
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+}
+
+/** The debt's history (loans, payments, corrections), oldest first. Lives under ['debts'] so
+ * every debt mutation refreshes it. */
+export function useDebtMovements(debtId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['debts', debtId, 'movements'],
+    enabled,
+    queryFn: async () => {
+      const { data } = await api.get<ApiSuccess<DebtMovement[]>>(`/debts/${debtId}/movements`)
+      return data.data
+    },
+  })
+}
+
+export interface IncreaseDebtInput {
+  account_id: string
+  amount: string
+  date: string
+  concept?: string
+}
+
+/** Another loan on the same debt (lend more to the same person). */
+export function useIncreaseDebt() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ debtId, input }: { debtId: string; input: IncreaseDebtInput }) => {
+      const { data } = await api.post<ApiSuccess<DebtMovement>>(`/debts/${debtId}/loans`, input)
       return data.data
     },
     onSuccess: () => {

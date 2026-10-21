@@ -9,6 +9,8 @@ from app.schemas.common import Meta, SuccessResponse
 from app.schemas.debt import (
     DebtActivationRequest,
     DebtCreate,
+    DebtIncreaseCreate,
+    DebtMovementOut,
     DebtOut,
     DebtPaymentCreate,
     DebtPaymentOut,
@@ -190,6 +192,30 @@ async def register_payment(
 ) -> SuccessResponse:
     payment = await debt_service.register_debt_payment(session, current_user.id, debt_id, data)
     return SuccessResponse(data=DebtPaymentOut.model_validate(payment))
+
+
+@router.post("/{debt_id}/loans", status_code=status.HTTP_201_CREATED)
+async def increase_debt(
+    debt_id: UUID,
+    data: DebtIncreaseCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    """Another loan on the same debt (lend more to the same person)."""
+    await debt_service.increase_debt(session, current_user.id, debt_id, data)
+    movements = await debt_service.list_debt_movements(session, current_user.id, debt_id)
+    return SuccessResponse(data=DebtMovementOut(**movements[-1]))
+
+
+@router.get("/{debt_id}/movements")
+async def list_movements(
+    debt_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    """The debt's history, oldest first, each step with the balance it left."""
+    movements = await debt_service.list_debt_movements(session, current_user.id, debt_id)
+    return SuccessResponse(data=[DebtMovementOut(**m) for m in movements])
 
 
 @router.get("/{debt_id}/schedule")

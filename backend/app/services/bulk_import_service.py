@@ -6,18 +6,22 @@ from decimal import Decimal, InvalidOperation
 from io import BytesIO
 from uuid import UUID
 
+from fastapi import HTTPException
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill
+from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.account import Account
 from app.models.category import Category
+from app.models.debt import Debt, DebtMovement
 from app.models.tag import Tag
 from app.models.transaction import JournalEntry
+from app.schemas.debt import DebtCreate, DebtIncreaseCreate, DebtPaymentCreate
 from app.schemas.transaction import JournalLineIn, TransactionCreate
-from app.services import account_service, category_service, transaction_service
+from app.services import account_service, category_service, debt_service, transaction_service
 
 # Layout: two blocks side by side on a single sheet, like a typical
 # homemade spreadsheet (see the example the user brought) -- Income in A-E,
@@ -62,6 +66,34 @@ INSTALLMENTS_HEADER = "Meses sin intereses"
 MIN_INSTALLMENTS = 2
 TAG_SEPARATORS = re.compile(r"[,;]")
 
+# Optional block after the installments column (W-AC): the loans and repayments of the people
+# who owe you (or that you owe). One row per step: a loan opens the person's debt or adds to
+# it, a repayment lowers it, an opening balance registers what was already owed before the
+# app. The last column (direction) is optional and defaults to "Me deben".
+DEBT_START_COL = 23  # W
+DEBT_HEADERS = ["Monto", "Persona", "Movimiento", "Fecha", "Cuenta", "Concepto"]
+DEBT_DIRECTION_COL = 29  # AC
+DEBT_DIRECTION_HEADER = "Dirección"
+DEBT_MOVEMENT_OPTIONS = ["Préstamo", "Abono", "Saldo inicial"]
+DEBT_DIRECTION_OPTIONS = ["Me deben", "Debo"]
+DEBT_FILL = PatternFill("solid", fgColor="FFE699")
+_DEBT_MOVEMENTS = {
+    "prestamo": "loan",
+    "préstamo": "loan",
+    "abono": "payment",
+    "pago": "payment",
+    "cobro": "payment",
+    "saldo inicial": "opening",
+    "saldo": "opening",
+}
+_DEBT_DIRECTIONS = {
+    "": "owed_to_me",
+    "me deben": "owed_to_me",
+    "owed_to_me": "owed_to_me",
+    "debo": "owed_by_me",
+    "owed_by_me": "owed_by_me",
+}
+
 INCOME_FILL = PatternFill("solid", fgColor="B8CCE4")
 EXPENSE_FILL = PatternFill("solid", fgColor="E6B8B7")
 
@@ -87,6 +119,14 @@ COLUMN_WIDTHS = {
     19: 20,
     20: 24,
     21: 18,
+    22: 3,
+    23: 12,
+    24: 24,
+    25: 16,
+    26: 14,
+    27: 20,
+    28: 36,
+    29: 14,
 }
 
 
@@ -130,6 +170,16 @@ def build_template_workbook(
     _write_block(
         ws, CARD_PAYMENT_START_COL, "Pagos de tarjeta", CARD_PAYMENT_FILL, CARD_PAYMENT_HEADERS
     )
+    _write_block(ws, DEBT_START_COL, "Deudas", DEBT_FILL, DEBT_HEADERS[:5])
+    # The debts block has a sixth column (concept) and the optional direction after it.
+    for col, header in (
+        (DEBT_START_COL + 5, DEBT_HEADERS[5]),
+        (DEBT_DIRECTION_COL, DEBT_DIRECTION_HEADER),
+    ):
+        debt_header = ws.cell(row=HEADER_ROW, column=col, value=header)
+        debt_header.font = Font(bold=True)
+        debt_header.fill = DEBT_FILL
+        ws.cell(row=1, column=col).fill = DEBT_FILL
     tags_header = ws.cell(row=HEADER_ROW, column=TAGS_COL, value=TAGS_HEADER)
     tags_header.font = Font(bold=True)
     tags_header.fill = EXPENSE_FILL
@@ -145,7 +195,7 @@ def build_template_workbook(
         ws.cell(row=1, column=col).fill = fill
 
     for col, width in COLUMN_WIDTHS.items():
-        ws.column_dimensions[chr(64 + col)].width = width
+        ws.column_dimensions[get_column_letter(col)].width = width
     ws.freeze_panes = "A3"
 
     lists_ws = wb.create_sheet(LISTS_SHEET)
@@ -191,6 +241,15 @@ def build_template_workbook(
         type="list", formula1=_range("E", len(source_names)), allow_blank=True
     )
     dv_card = DataValidation(type="list", formula1=_range("F", len(card_names)), allow_blank=True)
+    dv_debt_account = DataValidation(
+        type="list", formula1=_range("A", len(account_names)), allow_blank=True
+    )
+    dv_debt_movement = DataValidation(
+        type="list", formula1='"' + ",".join(DEBT_MOVEMENT_OPTIONS) + '"', allow_blank=True
+    )
+    dv_debt_direction = DataValidation(
+        type="list", formula1='"' + ",".join(DEBT_DIRECTION_OPTIONS) + '"', allow_blank=True
+    )
     for dv in (
         dv_account_income,
         dv_cat_income,
@@ -198,6 +257,9 @@ def build_template_workbook(
         dv_cat_expense,
         dv_source,
         dv_card,
+        dv_debt_account,
+        dv_debt_movement,
+        dv_debt_direction,
     ):
         ws.add_data_validation(dv)
     if tag_names:
@@ -216,11 +278,15 @@ def build_template_workbook(
     dv_cat_expense.add(f"K{FIRST_DATA_ROW}:K{last_row}")
     dv_source.add(f"S{FIRST_DATA_ROW}:S{last_row}")
     dv_card.add(f"T{FIRST_DATA_ROW}:T{last_row}")
+    dv_debt_movement.add(f"Y{FIRST_DATA_ROW}:Y{last_row}")
+    dv_debt_account.add(f"AA{FIRST_DATA_ROW}:AA{last_row}")
+    dv_debt_direction.add(f"AC{FIRST_DATA_ROW}:AC{last_row}")
 
     for row in range(FIRST_DATA_ROW, last_row + 1):
         ws.cell(row=row, column=3).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=9).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=CARD_PAYMENT_START_COL + 2).number_format = "yyyy-mm-dd"
+        ws.cell(row=row, column=DEBT_START_COL + 3).number_format = "yyyy-mm-dd"
 
     buf = BytesIO()
     wb.save(buf)
@@ -244,6 +310,10 @@ class ParsedRow:
     card_name: str = ""
     # Only for an expense paid with a credit card: number of months without interest.
     installments: int | None = None
+    # Only for entry_type 'debt': whose debt (description holds the person), what step it is
+    # ('loan' | 'payment' | 'opening') and whose side ('owed_to_me' | 'owed_by_me').
+    debt_kind: str = ""
+    debt_direction: str = "owed_to_me"
 
 
 def _parse_notes(row_cells: tuple, entry_type: str) -> str | None:
@@ -315,7 +385,12 @@ def _parse_amount(value: object) -> Decimal | None:
     return amount if amount > 0 else None
 
 
-BLOCK_LABELS = {"income": "Ingreso", "expense": "Gasto", "card_payment": "Pago de tarjeta"}
+BLOCK_LABELS = {
+    "income": "Ingreso",
+    "expense": "Gasto",
+    "card_payment": "Pago de tarjeta",
+    "debt": "Deuda",
+}
 
 
 def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int) -> tuple:
@@ -382,6 +457,59 @@ def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int
     )
 
 
+def _debt_cell(row_cells: tuple, col: int) -> object:
+    """Cell of the debts block by 1-based column; None when the file is older than it."""
+    return row_cells[col - 1].value if len(row_cells) >= col else None
+
+
+def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
+    """One step of a person's debt (columns W-AC). Returns (ParsedRow | None, error | None)."""
+    amount_cell = _debt_cell(row_cells, DEBT_START_COL)
+    person_cell = _debt_cell(row_cells, DEBT_START_COL + 1)
+    if amount_cell in (None, "") and person_cell in (None, ""):
+        return None, None
+
+    def error(reason: str) -> tuple:
+        return None, {"row": row_idx, "block": BLOCK_LABELS["debt"], "reason": reason}
+
+    person = str(person_cell).strip() if person_cell else ""
+    movement_raw = _debt_cell(row_cells, DEBT_START_COL + 2)
+    movement = _DEBT_MOVEMENTS.get(str(movement_raw or "").strip().lower())
+    amount = _parse_amount(amount_cell)
+    date_value = _parse_date(_debt_cell(row_cells, DEBT_START_COL + 3))
+    account = _debt_cell(row_cells, DEBT_START_COL + 4)
+    concept = _debt_cell(row_cells, DEBT_START_COL + 5)
+    direction = _DEBT_DIRECTIONS.get(
+        str(_debt_cell(row_cells, DEBT_DIRECTION_COL) or "").strip().lower()
+    )
+
+    if not person:
+        return error("Falta la persona")
+    if movement is None:
+        return error("Movimiento inválido: usa Préstamo, Abono o Saldo inicial")
+    if amount is None:
+        return error("Monto inválido")
+    if date_value is None:
+        return error("Fecha inválida o vacía")
+    if direction is None:
+        return error("Dirección inválida: usa Me deben o Debo")
+    return (
+        ParsedRow(
+            entry_type="debt",
+            amount=amount,
+            description=person,
+            date=date_value,
+            account_name=str(account).strip() if account else "",
+            category_name="",
+            row_number=row_idx,
+            notes=str(concept).strip() if concept else None,
+            debt_kind=movement,
+            debt_direction=direction,
+        ),
+        None,
+    )
+
+
 def parse_upload(content: bytes) -> ParseResult:
     wb = load_workbook(BytesIO(content), data_only=True)
     if SHEET_NAME not in wb.sheetnames:
@@ -413,6 +541,11 @@ def parse_upload(content: bytes) -> ParseResult:
                 result.rows.append(parsed)
             if error:
                 result.errors.append(error)
+        debt_row, debt_error = _parse_debt_row(row_cells, row_idx)
+        if debt_row:
+            result.rows.append(debt_row)
+        if debt_error:
+            result.errors.append(debt_error)
 
     return result
 
@@ -433,7 +566,7 @@ class ResolvedRow:
     """A parsed row whose account, category and tags exist for this user."""
 
     row: ParsedRow
-    account_id: UUID
+    account_id: UUID | None
     account_name: str
     category_id: UUID | None
     category_name: str
@@ -442,6 +575,9 @@ class ResolvedRow:
     # Only for a card payment: the card that receives it (account_* is the source).
     card_account_id: UUID | None = None
     card_account_name: str = ""
+    # Only for a debt row: what the load will do with it ('create' | 'opening' | 'increase' |
+    # 'payment').
+    debt_action: str = ""
 
 
 async def resolve_rows(
@@ -466,6 +602,8 @@ async def resolve_rows(
     resolved: list[ResolvedRow] = []
     errors = list(parsed.errors)
     for row in parsed.rows:
+        if row.entry_type == "debt":
+            continue  # debt steps depend on each other: resolved together, below
         block_label = BLOCK_LABELS[row.entry_type]
 
         def fail(reason: str, row=row, block_label=block_label) -> None:
@@ -523,13 +661,206 @@ async def resolve_rows(
                 tag_names=[t.name for t in row_tags],
             )
         )
+    debt_items, debt_errors = await _resolve_debt_rows(
+        session,
+        user_id,
+        [r for r in parsed.rows if r.entry_type == "debt"],
+        account_by_name,
+    )
+    resolved.extend(debt_items)
+    errors.extend(debt_errors)
     return resolved, errors
+
+
+async def _open_debt_states(session: AsyncSession, user_id: UUID) -> dict[tuple[str, str], dict]:
+    """(person, direction) -> {'active': bool, 'balance': Decimal} for the debts the user already
+    has (one per person: an open one wins over a paid-off one)."""
+    debts = (
+        (
+            await session.execute(
+                select(Debt)
+                .where(
+                    Debt.user_id == user_id,
+                    Debt.type == "informal",
+                    Debt.deleted_at.is_(None),
+                    Debt.status.in_(("active", "completed")),
+                )
+                .order_by(Debt.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    states: dict[tuple[str, str], dict] = {}
+    for debt in debts:
+        key = (debt.name.strip().lower(), debt.direction)
+        previous = states.get(key)
+        if previous and previous["active"] and debt.status != "active":
+            continue
+        states[key] = {"active": debt.status == "active", "balance": debt.current_balance}
+    return states
+
+
+async def _resolve_debt_rows(
+    session: AsyncSession,
+    user_id: UUID,
+    rows: list[ParsedRow],
+    account_by_name: dict[str, Account],
+) -> tuple[list[ResolvedRow], list[dict]]:
+    """Checks the debt steps WITHOUT writing: in date order (then file order), following each
+    person's balance as the file would move it, so a repayment right after its loan in the
+    same file is valid and one that goes past what is owed is not."""
+    resolved: list[ResolvedRow] = []
+    errors: list[dict] = []
+    if not rows:
+        return resolved, errors
+    states = await _open_debt_states(session, user_id)
+    label = BLOCK_LABELS["debt"]
+
+    for row in sorted(rows, key=lambda r: (r.date, r.row_number)):
+
+        def fail(reason: str, row=row) -> None:
+            errors.append({"row": row.row_number, "block": label, "reason": reason})
+
+        person = row.description
+        key = (person.strip().lower(), row.debt_direction)
+        state = states.get(key)
+        needs_account = row.debt_kind in ("loan", "payment")
+        account = (
+            account_by_name.get(row.account_name.strip().lower()) if row.account_name else None
+        )
+        if needs_account and not row.account_name:
+            fail("Falta la cuenta: de dónde sale o a dónde entra el dinero")
+            continue
+        if row.account_name and account is None:
+            fail(f"La cuenta '{row.account_name}' no existe")
+            continue
+
+        if row.debt_kind == "loan":
+            action = "increase" if state else "create"
+            states[key] = {
+                "active": True,
+                "balance": (state["balance"] if state else Decimal(0)) + row.amount,
+            }
+        elif row.debt_kind == "opening":
+            if state and state["active"]:
+                fail(f"Ya existe una deuda abierta con {person}: usa Préstamo para sumarle")
+                continue
+            action = "opening"
+            states[key] = {"active": True, "balance": row.amount}
+        else:
+            if not state or not state["active"] or state["balance"] <= 0:
+                fail(f"No hay una deuda abierta con {person} (registra antes su Préstamo)")
+                continue
+            if row.amount > state["balance"]:
+                fail(
+                    f"El abono ({row.amount}) es mayor que lo que {person} debe "
+                    f"en ese momento ({state['balance']})"
+                )
+                continue
+            action = "payment"
+            balance = state["balance"] - row.amount
+            states[key] = {"active": balance > 0, "balance": balance}
+
+        resolved.append(
+            ResolvedRow(
+                row=row,
+                account_id=account.id if account else None,
+                account_name=account.name if account else "",
+                category_id=None,
+                category_name="",
+                tag_ids=[],
+                tag_names=[],
+                debt_action=action,
+            )
+        )
+    return resolved, errors
+
+
+async def _find_debt(session: AsyncSession, user_id: UUID, person: str, direction: str) -> Debt:
+    """The person's debt as it is right now: the open one, or the last one paid off."""
+    debts = (
+        (
+            await session.execute(
+                select(Debt)
+                .where(
+                    Debt.user_id == user_id,
+                    Debt.type == "informal",
+                    Debt.direction == direction,
+                    Debt.deleted_at.is_(None),
+                    Debt.status.in_(("active", "completed")),
+                    func.lower(Debt.name) == person.strip().lower(),
+                )
+                .order_by(Debt.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    open_ones = [d for d in debts if d.status == "active"]
+    return (open_ones or debts)[0]
+
+
+async def _apply_debt_row(session: AsyncSession, user_id: UUID, item: ResolvedRow) -> None:
+    row = item.row
+    if item.debt_action in ("create", "opening"):
+        await debt_service.create_debt(
+            session,
+            user_id,
+            DebtCreate(
+                name=row.description,
+                type="informal",
+                direction=row.debt_direction,
+                total_amount=row.amount,
+                funding_account_id=item.account_id if item.debt_action == "create" else None,
+                start_date=row.date,
+                concept=row.notes,
+            ),
+            "user",
+        )
+        return
+    debt = await _find_debt(session, user_id, row.description, row.debt_direction)
+    if item.debt_action == "increase":
+        await debt_service.increase_debt(
+            session,
+            user_id,
+            debt.id,
+            DebtIncreaseCreate(
+                account_id=item.account_id, amount=row.amount, date=row.date, concept=row.notes
+            ),
+        )
+    else:
+        await debt_service.register_debt_payment(
+            session,
+            user_id,
+            debt.id,
+            DebtPaymentCreate(
+                account_id=item.account_id, amount=row.amount, date=row.date, notes=row.notes
+            ),
+        )
 
 
 async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: ParseResult) -> dict:
     resolved, errors = await resolve_rows(session, user_id, parsed)
+    created = 0
     for item in resolved:
         row = item.row
+        if row.entry_type == "debt":
+            try:
+                async with session.begin_nested():
+                    await _apply_debt_row(session, user_id, item)
+            except HTTPException as exc:
+                errors.append(
+                    {
+                        "row": row.row_number,
+                        "block": BLOCK_LABELS["debt"],
+                        "reason": str(exc.detail),
+                    }
+                )
+                continue
+            created += 1
+            continue
+        created += 1
         if row.entry_type == "card_payment":
             # Paying a card is a transfer: it lowers what the card owes (debit on the
             # card) and takes the money out of the source account (credit).
@@ -564,7 +895,7 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 installment_total=row.installments,
             ),
         )
-    return {"created": len(resolved), "errors": errors}
+    return {"created": created, "errors": errors}
 
 
 async def _existing_keys(
@@ -597,11 +928,36 @@ async def _existing_keys(
     }
 
 
+async def _existing_debt_keys(
+    session: AsyncSession, user_id: UUID, resolved: list[ResolvedRow]
+) -> set[tuple[str, date_type, Decimal, str]]:
+    """(person, date, amount, kind) of the debt steps the user already has in the date range of
+    the file, to warn about debt rows that look already loaded."""
+    dates = [item.row.date for item in resolved if item.row.entry_type == "debt"]
+    if not dates:
+        return set()
+    rows = (
+        await session.execute(
+            select(Debt.name, DebtMovement.date, DebtMovement.delta, DebtMovement.kind)
+            .join(Debt, Debt.id == DebtMovement.debt_id)
+            .where(
+                DebtMovement.user_id == user_id,
+                DebtMovement.date >= min(dates),
+                DebtMovement.date <= max(dates),
+            )
+        )
+    ).all()
+    return {(name.strip().lower(), date_, abs(delta), kind) for name, date_, delta, kind in rows}
+
+
 async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResult) -> dict:
     """What loading this file would do, without doing it: totals, breakdowns, the rows
     that would be rejected (with the reason) and the ones that look already loaded."""
     resolved, errors = await resolve_rows(session, user_id, parsed)
     existing = await _existing_keys(session, user_id, resolved)
+    existing_debt = await _existing_debt_keys(session, user_id, resolved)
+    debt_totals = {"loan": [0, Decimal(0)], "payment": [0, Decimal(0)], "opening": [0, Decimal(0)]}
+    debt_people: set[tuple[str, str]] = set()
 
     by_type = {
         "income": [0, Decimal(0)],
@@ -614,6 +970,22 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
     duplicates: list[dict] = []
     for item in resolved:
         row = item.row
+        if row.entry_type == "debt":
+            debt_totals[row.debt_kind][0] += 1
+            debt_totals[row.debt_kind][1] += row.amount
+            debt_people.add((row.description.strip().lower(), row.debt_direction))
+            if (row.description.strip().lower(), row.date, row.amount, row.debt_kind) in (
+                existing_debt
+            ):
+                duplicates.append(
+                    {
+                        "row": row.row_number,
+                        "date": row.date,
+                        "amount": row.amount,
+                        "description": f"{row.description} ({row.debt_kind})",
+                    }
+                )
+            continue
         by_type[row.entry_type][0] += 1
         by_type[row.entry_type][1] += row.amount
         # A card payment is a transfer between the user's accounts: it isn't income,
@@ -652,6 +1024,12 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
         "income": {"count": by_type["income"][0], "total": by_type["income"][1]},
         "expense": {"count": by_type["expense"][0], "total": by_type["expense"][1]},
         "card_payment": {"count": by_type["card_payment"][0], "total": by_type["card_payment"][1]},
+        "debts": {
+            "loans": {"count": debt_totals["loan"][0], "total": debt_totals["loan"][1]},
+            "payments": {"count": debt_totals["payment"][0], "total": debt_totals["payment"][1]},
+            "openings": {"count": debt_totals["opening"][0], "total": debt_totals["opening"][1]},
+            "people": len(debt_people),
+        },
         "date_from": min(dates) if dates else None,
         "date_to": max(dates) if dates else None,
         "by_account": sorted(by_account.values(), key=lambda a: -a["count"]),
