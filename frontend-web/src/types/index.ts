@@ -18,6 +18,8 @@ export interface User {
   /** What the user left selected on the Deudas screen (saved on the account). */
   debts_view: 'cards' | 'list'
   debts_direction: 'owed_by_me' | 'owed_to_me'
+  /** Whether the user left the installments panel of a credit card collapsed. */
+  installments_collapsed: boolean
   last_seen_changelog_version: string | null
   accepted_disclaimer_version: string | null
   /** Always = the version currently in effect on the backend (settings.DISCLAIMER_VERSION) --

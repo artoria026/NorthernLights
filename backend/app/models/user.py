@@ -75,6 +75,8 @@ class UserPreferences(Base, TimestampMixin):
     # (what I owe / what I am owed). Saved on the account so it follows them to any browser.
     debts_view: Mapped[str] = mapped_column(String, nullable=False, default="cards")
     debts_direction: Mapped[str] = mapped_column(String, nullable=False, default="owed_by_me")
+    # Whether the user left the installments panel of a credit card (Cuentas) collapsed.
+    installments_collapsed: Mapped[bool] = mapped_column(default=False)
     # Changelog version (frontend/src/lib/changelog.ts) the user has already
     # seen -- NULL for accounts created before this feature or that never
     # closed the modal. Compared against the most recent version in the

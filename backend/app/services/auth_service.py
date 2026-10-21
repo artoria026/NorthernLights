@@ -90,6 +90,7 @@ def build_user_out(user: User) -> UserOut:
         debt_trouble_mode=user.preferences.debt_trouble_mode,
         debts_view=user.preferences.debts_view,
         debts_direction=user.preferences.debts_direction,
+        installments_collapsed=user.preferences.installments_collapsed,
         last_seen_changelog_version=user.preferences.last_seen_changelog_version,
         accepted_disclaimer_version=user.preferences.accepted_disclaimer_version,
         current_disclaimer_version=settings.DISCLAIMER_VERSION,

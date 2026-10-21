@@ -46,3 +46,13 @@ export function openCycleCharges(transactions: Transaction[], boundary: string |
     .filter((tx) => tx.entry_type === 'expense' && !tx.installment && tx.date > boundary)
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
 }
+
+/** One color per installment plan so each progress bar reads on its own (token pairs from
+ * index.css: the bar uses the base color, the amounts the "-ink" one that stays readable in
+ * light mode). Shared by the card commitments (Recurrentes) and the installments panel (Cuentas). */
+export const PLAN_TONES = [
+  { bar: 'var(--nl-violet)', ink: 'var(--nl-violet-ink)', soft: 'var(--nl-violet-soft-bg)' },
+  { bar: 'var(--nl-blue)', ink: 'var(--nl-blue-ink)', soft: 'var(--nl-blue-soft-bg)' },
+  { bar: 'var(--nl-pink)', ink: 'var(--nl-pink)', soft: 'var(--nl-bg-track)' },
+  { bar: 'var(--nl-accent)', ink: 'var(--nl-accent-ink)', soft: 'var(--nl-accent-soft-bg)' },
+]

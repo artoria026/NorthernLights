@@ -288,7 +288,10 @@
       "active_one": "{{count}} compra a meses activa",
       "active_other": "{{count}} compras a meses activas",
       "committedThisMonth": "COMPROMETIDO ESTE MES",
-      "perMonth": "{{amount}}/mes"
+      "perMonth": "{{amount}}/mes",
+      "remainingChip": "faltan {{amount}}",
+      "boughtOn": "compra del {{date}} ·",
+      "left": "faltan {{amount}}"
     },
     "msiBadge": "MSI {{paid}}/{{total}}",
     "tdcCycle": {

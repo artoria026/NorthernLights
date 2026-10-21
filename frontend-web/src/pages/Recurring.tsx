@@ -29,7 +29,13 @@ import { CategorySelect } from '@/components/nl/CategorySelect'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
-import { activeInstallmentPlans, lastCycleBoundary, openCycleCharges, remainingOfPlan } from '@/lib/cardCommitments'
+import {
+  activeInstallmentPlans,
+  lastCycleBoundary,
+  openCycleCharges,
+  PLAN_TONES,
+  remainingOfPlan,
+} from '@/lib/cardCommitments'
 import { Donut } from '@/lib/charts'
 import { FREQUENCY_LABELS, ITEM_TYPE_LABELS, monthlyEquivalent, STATUS_LABELS, URGENCY_LABELS } from '@/lib/recurring'
 import { formatMoney, formatShortDate, selectClass } from '@/lib/utils'
@@ -600,15 +606,6 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
  * count them) nor payments (a card payment would lower this number, giving
  * the impression you owe less by the next cutoff). */
 const MAX_CHARGES_SHOWN = 15
-
-// One color per plan so each progress bar reads on its own (token pairs from index.css:
-// the bar uses the base color, the amount the "-ink" one that stays readable in light mode).
-const PLAN_TONES = [
-  { bar: 'var(--nl-violet)', ink: 'var(--nl-violet-ink)', soft: 'var(--nl-violet-soft-bg)' },
-  { bar: 'var(--nl-blue)', ink: 'var(--nl-blue-ink)', soft: 'var(--nl-blue-soft-bg)' },
-  { bar: 'var(--nl-pink)', ink: 'var(--nl-pink)', soft: 'var(--nl-bg-track)' },
-  { bar: 'var(--nl-accent)', ink: 'var(--nl-accent-ink)', soft: 'var(--nl-accent-soft-bg)' },
-]
 
 function DetailHeading({
   icon,

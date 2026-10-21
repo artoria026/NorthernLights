@@ -46,6 +46,7 @@ describe('authStore', () => {
       debt_trouble_mode: false,
       debts_view: 'cards',
       debts_direction: 'owed_by_me',
+      installments_collapsed: false,
       last_seen_changelog_version: null,
       accepted_disclaimer_version: null,
       current_disclaimer_version: '1',

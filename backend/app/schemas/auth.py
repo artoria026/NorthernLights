@@ -81,6 +81,7 @@ class UpdateSettingsRequest(BaseModel):
     debt_trouble_mode: bool | None = None
     debts_view: str | None = Field(default=None, pattern=f"^({'|'.join(DEBTS_VIEWS)})$")
     debts_direction: str | None = Field(default=None, pattern=f"^({'|'.join(DEBTS_DIRECTIONS)})$")
+    installments_collapsed: bool | None = None
     last_seen_changelog_version: str | None = None
 
 
@@ -99,6 +100,7 @@ class UserOut(BaseModel):
     debt_trouble_mode: bool
     debts_view: str
     debts_direction: str
+    installments_collapsed: bool
     last_seen_changelog_version: str | None
     accepted_disclaimer_version: str | None
     # Always = settings.DISCLAIMER_VERSION -- sent together with the field
