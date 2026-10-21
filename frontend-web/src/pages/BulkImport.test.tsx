@@ -9,6 +9,7 @@ const preview: BulkImportPreview = {
   error_rows: 1,
   income: { count: 1, total: '1000.00' },
   expense: { count: 2, total: '150.00' },
+  card_payment: { count: 0, total: '0' },
   date_from: '2026-10-01',
   date_to: '2026-10-13',
   by_account: [{ name: 'Santander', count: 3, income: '1000.00', expense: '150.00' }],
@@ -74,6 +75,20 @@ describe('BulkImport', () => {
     expect(screen.getByText('Viaje Mty', { exact: false })).toBeInTheDocument()
     expect(screen.getByText('2026-10-01 → 2026-10-13')).toBeInTheDocument()
     expect(mocks.uploadMutate).not.toHaveBeenCalled()
+  })
+
+  it('shows card payments apart, only when the file has them', async () => {
+    renderPage()
+    await dropFile()
+    expect(screen.queryByText('Pagos de tarjeta')).not.toBeInTheDocument()
+
+    mocks.previewMutate.mockImplementation((_f: File, options?: { onSuccess?: (p: BulkImportPreview) => void }) =>
+      options?.onSuccess?.({ ...preview, card_payment: { count: 2, total: '390.00' } }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Elegir otro archivo' }))
+    await dropFile()
+    expect(screen.getByText('Pagos de tarjeta')).toBeInTheDocument()
+    expect(screen.getByText('$390.00')).toBeInTheDocument()
   })
 
   it('warns about rows that look already loaded and lists the rows with problems', async () => {

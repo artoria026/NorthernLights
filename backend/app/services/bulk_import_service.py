@@ -16,7 +16,7 @@ from app.models.account import Account
 from app.models.category import Category
 from app.models.tag import Tag
 from app.models.transaction import JournalEntry
-from app.schemas.transaction import TransactionCreate
+from app.schemas.transaction import JournalLineIn, TransactionCreate
 from app.services import account_service, category_service, transaction_service
 
 # Layout: two blocks side by side on a single sheet, like a typical
@@ -34,6 +34,13 @@ FIRST_DATA_ROW = 3
 BLOCK_HEADERS = ["Monto", "Descripción", "Fecha", "Cuenta", "Categoría"]
 INCOME_START_COL = 1  # A
 EXPENSE_START_COL = 7  # G
+
+# Optional third block (P-T): payments to a credit card, a transfer from one of the user's
+# own accounts to the card. It has no category -- the last column is the card instead.
+CARD_PAYMENT_START_COL = 16  # P
+CARD_PAYMENT_HEADERS = ["Monto", "Descripción", "Fecha", "Cuenta origen", "Tarjeta"]
+CARD_PAYMENT_DEFAULT_DESCRIPTION = "Pago de tarjeta"
+CARD_PAYMENT_FILL = PatternFill("solid", fgColor="D8E4BC")
 
 # Optional column after the Expenses block (L): the tags of each expense, separated by
 # commas. Files made before it existed simply don't have it -- they keep working.
@@ -67,19 +74,33 @@ COLUMN_WIDTHS = {
     12: 28,
     13: 40,
     14: 40,
+    15: 3,
+    16: 12,
+    17: 30,
+    18: 14,
+    19: 20,
+    20: 24,
 }
 
 
-def _write_block(ws, start_col: int, title: str, fill: PatternFill) -> None:
+def _write_block(
+    ws, start_col: int, title: str, fill: PatternFill, headers: list[str] = BLOCK_HEADERS
+) -> None:
     title_cell = ws.cell(row=1, column=start_col, value=title)
     title_cell.font = Font(bold=True)
     for offset in range(5):
         ws.cell(row=1, column=start_col + offset).fill = fill
-        header_cell = ws.cell(
-            row=HEADER_ROW, column=start_col + offset, value=BLOCK_HEADERS[offset]
-        )
+        header_cell = ws.cell(row=HEADER_ROW, column=start_col + offset, value=headers[offset])
         header_cell.font = Font(bold=True)
         header_cell.fill = fill
+
+
+def _is_asset(account: Account) -> bool:
+    return account.type == "asset"
+
+
+def _is_credit_card(account: Account) -> bool:
+    return account.type == "liability" and account.subtype == "credit_card"
 
 
 def build_template_workbook(
@@ -99,6 +120,9 @@ def build_template_workbook(
 
     _write_block(ws, INCOME_START_COL, "Ingresos", INCOME_FILL)
     _write_block(ws, EXPENSE_START_COL, "Gastos", EXPENSE_FILL)
+    _write_block(
+        ws, CARD_PAYMENT_START_COL, "Pagos de tarjeta", CARD_PAYMENT_FILL, CARD_PAYMENT_HEADERS
+    )
     tags_header = ws.cell(row=HEADER_ROW, column=TAGS_COL, value=TAGS_HEADER)
     tags_header.font = Font(bold=True)
     tags_header.fill = EXPENSE_FILL
@@ -130,6 +154,13 @@ def build_template_workbook(
     tag_names = list(tag_names or [])
     for i, name in enumerate(tag_names, start=1):
         lists_ws.cell(row=i, column=4, value=name)
+    # For the card payments block: where the money comes from (assets) and the cards.
+    source_names = [a.name for a in accounts if _is_asset(a)] or ["(crea una cuenta primero)"]
+    card_names = [a.name for a in accounts if _is_credit_card(a)] or ["(sin tarjetas)"]
+    for i, name in enumerate(source_names, start=1):
+        lists_ws.cell(row=i, column=5, value=name)
+    for i, name in enumerate(card_names, start=1):
+        lists_ws.cell(row=i, column=6, value=name)
 
     def _range(col: str, count: int) -> str:
         return f"={LISTS_SHEET}!${col}$1:${col}${count}"
@@ -148,7 +179,18 @@ def build_template_workbook(
     dv_cat_expense = DataValidation(
         type="list", formula1=_range("C", len(expense_names)), allow_blank=True
     )
-    for dv in (dv_account_income, dv_cat_income, dv_account_expense, dv_cat_expense):
+    dv_source = DataValidation(
+        type="list", formula1=_range("E", len(source_names)), allow_blank=True
+    )
+    dv_card = DataValidation(type="list", formula1=_range("F", len(card_names)), allow_blank=True)
+    for dv in (
+        dv_account_income,
+        dv_cat_income,
+        dv_account_expense,
+        dv_cat_expense,
+        dv_source,
+        dv_card,
+    ):
         ws.add_data_validation(dv)
     if tag_names:
         # Suggests the existing tags, but typing several separated by commas must not be rejected.
@@ -164,10 +206,13 @@ def build_template_workbook(
     dv_cat_income.add(f"E{FIRST_DATA_ROW}:E{last_row}")
     dv_account_expense.add(f"J{FIRST_DATA_ROW}:J{last_row}")
     dv_cat_expense.add(f"K{FIRST_DATA_ROW}:K{last_row}")
+    dv_source.add(f"S{FIRST_DATA_ROW}:S{last_row}")
+    dv_card.add(f"T{FIRST_DATA_ROW}:T{last_row}")
 
     for row in range(FIRST_DATA_ROW, last_row + 1):
         ws.cell(row=row, column=3).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=9).number_format = "yyyy-mm-dd"
+        ws.cell(row=row, column=CARD_PAYMENT_START_COL + 2).number_format = "yyyy-mm-dd"
 
     buf = BytesIO()
     wb.save(buf)
@@ -186,6 +231,9 @@ class ParsedRow:
     row_number: int
     tags: list[str] = field(default_factory=list)
     notes: str | None = None
+    # Only for entry_type 'card_payment': the card that receives the payment (account_name
+    # is where the money comes from, category_name stays empty).
+    card_name: str = ""
 
 
 def _parse_notes(row_cells: tuple, entry_type: str) -> str | None:
@@ -240,10 +288,14 @@ def _parse_amount(value: object) -> Decimal | None:
     return amount if amount > 0 else None
 
 
+BLOCK_LABELS = {"income": "Ingreso", "expense": "Gasto", "card_payment": "Pago de tarjeta"}
+
+
 def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int) -> tuple:
-    """start_col is 0-indexed within `row_cells` (0 for Income/A,
-    6 for Expenses/G). Returns (ParsedRow | None, error dict | None)."""
-    block_label = "Ingreso" if entry_type == "income" else "Gasto"
+    """start_col is 0-indexed within `row_cells` (0 for Income/A, 6 for Expenses/G, 15 for
+    Card payments/P). Returns (ParsedRow | None, error dict | None)."""
+    block_label = BLOCK_LABELS[entry_type]
+    is_card_payment = entry_type == "card_payment"
     amount_cell = row_cells[start_col].value
     if amount_cell in (None, ""):
         return None, None
@@ -261,18 +313,23 @@ def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int
     if date_value is None:
         return None, {"row": row_idx, "block": block_label, "reason": "Fecha inválida o vacía"}
     if not account_name:
-        return None, {"row": row_idx, "block": block_label, "reason": "Falta la cuenta"}
+        reason = "Falta la cuenta de origen" if is_card_payment else "Falta la cuenta"
+        return None, {"row": row_idx, "block": block_label, "reason": reason}
     if not category_name:
-        return None, {"row": row_idx, "block": block_label, "reason": "Falta la categoría"}
+        reason = "Falta la tarjeta" if is_card_payment else "Falta la categoría"
+        return None, {"row": row_idx, "block": block_label, "reason": reason}
 
+    default_description = CARD_PAYMENT_DEFAULT_DESCRIPTION if is_card_payment else block_label
     return (
         ParsedRow(
             entry_type=entry_type,
             amount=amount,
-            description=str(description).strip() if description else block_label,
+            description=str(description).strip() if description else default_description,
             date=date_value,
             account_name=account_name,
-            category_name=category_name,
+            # In a card payment the last column is the card, not a category.
+            category_name="" if is_card_payment else category_name,
+            card_name=category_name if is_card_payment else "",
             row_number=row_idx,
             # Only expenses carry tags (the rest of the app enforces it too); the column
             # may not exist in files made before it was added.
@@ -281,7 +338,7 @@ def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int
                 if entry_type == "expense" and len(row_cells) >= TAGS_COL
                 else []
             ),
-            notes=_parse_notes(row_cells, entry_type),
+            notes=None if is_card_payment else _parse_notes(row_cells, entry_type),
         ),
         None,
     )
@@ -306,7 +363,11 @@ def parse_upload(content: bytes) -> ParseResult:
     result = ParseResult()
 
     for row_idx, row_cells in enumerate(ws.iter_rows(min_row=FIRST_DATA_ROW), start=FIRST_DATA_ROW):
-        for entry_type, start_col in (("income", 0), ("expense", 6)):
+        for entry_type, start_col in (
+            ("income", INCOME_START_COL - 1),
+            ("expense", EXPENSE_START_COL - 1),
+            ("card_payment", CARD_PAYMENT_START_COL - 1),
+        ):
             if len(row_cells) < start_col + 5:
                 continue
             parsed, error = _parse_block(row_cells, row_idx, entry_type, start_col)
@@ -336,10 +397,13 @@ class ResolvedRow:
     row: ParsedRow
     account_id: UUID
     account_name: str
-    category_id: UUID
+    category_id: UUID | None
     category_name: str
     tag_ids: list[UUID]
     tag_names: list[str]
+    # Only for a card payment: the card that receives it (account_* is the source).
+    card_account_id: UUID | None = None
+    card_account_name: str = ""
 
 
 async def resolve_rows(
@@ -364,7 +428,7 @@ async def resolve_rows(
     resolved: list[ResolvedRow] = []
     errors = list(parsed.errors)
     for row in parsed.rows:
-        block_label = "Ingreso" if row.entry_type == "income" else "Gasto"
+        block_label = BLOCK_LABELS[row.entry_type]
 
         def fail(reason: str, row=row, block_label=block_label) -> None:
             errors.append({"row": row.row_number, "block": block_label, "reason": reason})
@@ -372,6 +436,28 @@ async def resolve_rows(
         account = account_by_name.get(row.account_name.strip().lower())
         if account is None:
             fail(f"La cuenta '{row.account_name}' no existe")
+            continue
+        if row.entry_type == "card_payment":
+            card = account_by_name.get(row.card_name.strip().lower())
+            if card is None or not _is_credit_card(card):
+                fail(f"La tarjeta '{row.card_name}' no existe o no es una tarjeta de crédito")
+                continue
+            if not _is_asset(account):
+                fail(f"La cuenta de origen '{row.account_name}' debe ser una cuenta de dinero")
+                continue
+            resolved.append(
+                ResolvedRow(
+                    row=row,
+                    account_id=account.id,
+                    account_name=account.name,
+                    category_id=None,
+                    category_name="",
+                    tag_ids=[],
+                    tag_names=[],
+                    card_account_id=card.id,
+                    card_account_name=card.name,
+                )
+            )
             continue
         category = category_by_type[row.entry_type].get(row.category_name.strip().lower())
         if category is None:
@@ -403,6 +489,25 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
     resolved, errors = await resolve_rows(session, user_id, parsed)
     for item in resolved:
         row = item.row
+        if row.entry_type == "card_payment":
+            # Paying a card is a transfer: it lowers what the card owes (debit on the
+            # card) and takes the money out of the source account (credit).
+            await transaction_service.create_transaction(
+                session,
+                user_id,
+                TransactionCreate(
+                    date=row.date,
+                    description=row.description,
+                    entry_type="transfer",
+                    lines=[
+                        JournalLineIn(
+                            account_id=item.card_account_id, amount=row.amount, type="debit"
+                        ),
+                        JournalLineIn(account_id=item.account_id, amount=row.amount, type="credit"),
+                    ],
+                ),
+            )
+            continue
         await transaction_service.create_transaction(
             session,
             user_id,
@@ -437,7 +542,7 @@ async def _existing_keys(
                     JournalEntry.deleted_at.is_(None),
                     JournalEntry.date >= start,
                     JournalEntry.date <= end,
-                    JournalEntry.entry_type.in_(("income", "expense")),
+                    JournalEntry.entry_type.in_(("income", "expense", "transfer")),
                 )
             )
         )
@@ -456,7 +561,11 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
     resolved, errors = await resolve_rows(session, user_id, parsed)
     existing = await _existing_keys(session, user_id, resolved)
 
-    by_type = {"income": [0, Decimal(0)], "expense": [0, Decimal(0)]}
+    by_type = {
+        "income": [0, Decimal(0)],
+        "expense": [0, Decimal(0)],
+        "card_payment": [0, Decimal(0)],
+    }
     by_account: dict[str, dict] = {}
     by_category: dict[tuple[str, str], list] = {}
     by_tag: dict[str, list] = {}
@@ -465,6 +574,21 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
         row = item.row
         by_type[row.entry_type][0] += 1
         by_type[row.entry_type][1] += row.amount
+        # A card payment is a transfer between the user's accounts: it isn't income,
+        # expense or part of a category, so it only shows in its own total.
+        entry_key = "transfer" if row.entry_type == "card_payment" else row.entry_type
+        key = (row.date, row.amount, row.description.strip().lower(), entry_key)
+        if key in existing:
+            duplicates.append(
+                {
+                    "row": row.row_number,
+                    "date": row.date,
+                    "amount": row.amount,
+                    "description": row.description,
+                }
+            )
+        if row.entry_type == "card_payment":
+            continue
         acct = by_account.setdefault(
             item.account_name,
             {"name": item.account_name, "count": 0, "income": Decimal(0), "expense": Decimal(0)},
@@ -478,16 +602,6 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
             tag = by_tag.setdefault(name, [0, Decimal(0)])
             tag[0] += 1
             tag[1] += row.amount
-        key = (row.date, row.amount, row.description.strip().lower(), row.entry_type)
-        if key in existing:
-            duplicates.append(
-                {
-                    "row": row.row_number,
-                    "date": row.date,
-                    "amount": row.amount,
-                    "description": row.description,
-                }
-            )
 
     dates = [item.row.date for item in resolved]
     return {
@@ -495,6 +609,7 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
         "error_rows": len(errors),
         "income": {"count": by_type["income"][0], "total": by_type["income"][1]},
         "expense": {"count": by_type["expense"][0], "total": by_type["expense"][1]},
+        "card_payment": {"count": by_type["card_payment"][0], "total": by_type["card_payment"][1]},
         "date_from": min(dates) if dates else None,
         "date_to": max(dates) if dates else None,
         "by_account": sorted(by_account.values(), key=lambda a: -a["count"]),
