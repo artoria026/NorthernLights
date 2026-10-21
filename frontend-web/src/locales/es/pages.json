@@ -698,6 +698,11 @@
       "emptyReceivable": "Nadie te debe dinero con un plan activo.",
       "emptyPayable": "No tienes deudas con plan de pago activo."
     },
+    "completedSection": {
+      "heading": "Pagadas ({{count}})",
+      "hintReceivable": "Usa «Prestar más» para volver a prestarle a alguien: la deuda se reactiva con su mismo historial.",
+      "hintPayable": "Usa «Me prestaron más» para volver a pedir prestado: la deuda se reactiva con su mismo historial."
+    },
     "newUnplannedForm": {
       "whoOwesYouLabel": "¿Quién te debe?",
       "whoLentLabel": "¿Quién te prestó?",

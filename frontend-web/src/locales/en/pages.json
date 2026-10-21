@@ -698,6 +698,11 @@
       "emptyReceivable": "No one owes you money with an active plan.",
       "emptyPayable": "You have no debts with an active payment plan."
     },
+    "completedSection": {
+      "heading": "Paid off ({{count}})",
+      "hintReceivable": "Use “Lend more” to lend to someone again: the debt comes back with its same history.",
+      "hintPayable": "Use “Borrowed more” to borrow again: the debt comes back with its same history."
+    },
     "newUnplannedForm": {
       "whoOwesYouLabel": "Who owes you?",
       "whoLentLabel": "Who lent it to you?",

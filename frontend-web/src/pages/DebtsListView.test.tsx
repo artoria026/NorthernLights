@@ -29,6 +29,17 @@ vi.mock('@/hooks/useDebts', () => ({
           interest_rate: '0',
           payment_amount: null,
         },
+        {
+          id: '9',
+          name: 'Joshua Lechuga',
+          direction,
+          type: 'informal',
+          status: 'completed',
+          total_amount: '3000.00',
+          current_balance: '0.00',
+          interest_rate: '0',
+          payment_amount: null,
+        },
       ],
     }
   },
@@ -126,5 +137,35 @@ describe('Debts screen preferences', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Yo debo' }))
     expect(mocks.saved).toContainEqual({ debts_direction: 'owed_by_me' })
+  })
+})
+
+describe('Paid-off debts', () => {
+  it('stay out of the active list but can be opened to see their history or lend again', async () => {
+    localStorage.setItem('nl:tour-seen:debts', '1')
+    const { Debts } = await import('./Debts')
+    const { MemoryRouter } = await import('react-router-dom')
+    const { useAuthStore } = await import('@/stores/authStore')
+    useAuthStore.setState({
+      user: { debts_view: 'list', debts_direction: 'owed_to_me', debt_trouble_mode: false } as never,
+    })
+    render(
+      <MemoryRouter>
+        <Debts />
+      </MemoryRouter>,
+    )
+    const active = await screen.findByTestId('debts-list')
+    expect(active).toHaveTextContent('George Reyes')
+    expect(active).not.toHaveTextContent('Joshua Lechuga')
+
+    const section = screen.getByTestId('completed-debts')
+    expect(section).toHaveTextContent('Pagadas (1)')
+    expect(section).not.toHaveTextContent('Joshua Lechuga') // closed until asked
+
+    fireEvent.click(within(section).getByRole('button', { name: /Pagadas/ }))
+    expect(section).toHaveTextContent('Joshua Lechuga')
+    expect(within(section).getByRole('button', { name: /Historial/ })).toBeInTheDocument()
+    expect(within(section).getByRole('button', { name: /Prestar más/ })).toBeInTheDocument()
+    expect(within(section).queryByRole('button', { name: /Cobrar/ })).not.toBeInTheDocument()
   })
 })
