@@ -3,6 +3,7 @@ import {
   Briefcase,
   Calendar,
   Check,
+  ChevronDown,
   Coins,
   HandCoins,
   History,
@@ -1245,13 +1246,7 @@ function DebtRow({ debt }: { debt: Debt }) {
           {Math.round(ratio * 100)}%
         </span>
       </div>
-      {debt.status === 'completed' ? (
-        <span className="rounded-full px-2 py-0.5 text-[10px] lg:justify-self-end" style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}>
-          {t('debts.card.completed')}
-        </span>
-      ) : (
-        <DebtActions debt={debt} className="lg:flex-nowrap lg:justify-end" />
-      )}
+      <DebtActions debt={debt} className="lg:flex-nowrap lg:justify-end" />
     </li>
   )
 }
@@ -1453,6 +1448,8 @@ export function Debts() {
   const [debtOpen, setDebtOpen] = useState(false)
   const unplanned = unplannedAll?.filter((u) => u.direction === direction) ?? []
   const activeDebts = debts?.filter((d) => d.status !== 'completed') ?? []
+  const completedDebts = debts?.filter((d) => d.status === 'completed') ?? []
+  const [completedOpen, setCompletedOpen] = useState(false)
   const isReceivable = direction === 'owed_to_me'
   // If there are already unplanned debts from before the toggle was
   // activated, they keep showing -- the toggle gates ENTRY into the
@@ -1619,6 +1616,35 @@ export function Debts() {
         <p className="text-sm text-muted-foreground">
           {isReceivable ? t('debts.activeSection.emptyReceivable') : t('debts.activeSection.emptyPayable')}
         </p>
+      )}
+
+      {completedDebts.length > 0 && (
+        <div className="mt-6" data-testid="completed-debts">
+          <button
+            type="button"
+            onClick={() => setCompletedOpen((open) => !open)}
+            aria-expanded={completedOpen}
+            className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
+          >
+            <ChevronDown size={14} className={`transition-transform ${completedOpen ? '' : '-rotate-90'}`} />
+            {t('debts.completedSection.heading', { count: completedDebts.length })}
+          </button>
+          {completedOpen &&
+            (view === 'list' ? (
+              <DebtsList debts={completedDebts} />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {completedDebts.map((debt) => (
+                  <DebtCard key={debt.id} debt={debt} />
+                ))}
+              </div>
+            ))}
+          {completedOpen && (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              {isReceivable ? t('debts.completedSection.hintReceivable') : t('debts.completedSection.hintPayable')}
+            </p>
+          )}
+        </div>
       )}
     </div>
   )
