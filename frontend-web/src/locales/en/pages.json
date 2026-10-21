@@ -1001,9 +1001,18 @@
     },
     "creditCardCommitments": {
       "heading": "What your cards already owe by the next cutoff",
-      "hint": "Monthly installments from interest-free purchases + what you've already spent in each card's open cycle. Informational only -- it isn't included in \"Committed / month\" above.",
+      "hint": "Monthly installments from interest-free purchases + what you've already spent in each card's open cycle. Informational only -- it isn't included in \"Committed / month\" above. Tap a card to see the detail.",
       "msiLabel": "Interest-free installments {{amount}}",
-      "cycleLabel": "cycle {{amount}}"
+      "cycleLabel": "cycle {{amount}}",
+      "perMonth": "{{amount}}/mo",
+      "moreCharges_one": "and {{count}} more purchase",
+      "moreCharges_other": "and {{count}} more purchases",
+      "cutLabel": "Last cutoff: {{date}}",
+      "dueLabel": "Payment due: {{date}}",
+      "plansTitle": "Interest-free installments",
+      "planProgress": "{{paid}} of {{total}} paid · bought {{date}} ·",
+      "planRemaining": "{{remaining}} left",
+      "chargesTitle": "Spent in the open cycle"
     },
     "stats": {
       "committedMonthly": "Committed / month",
