@@ -57,6 +57,8 @@ def _build_upload(rows: list[dict]) -> bytes:
         ws[f"{cols[4]}{row_num}"] = row["category"]
         if "tags" in row:
             ws[f"L{row_num}"] = row["tags"]  # optional "Etiquetas" column of the Expenses block
+        if "months" in row:
+            ws[f"U{row_num}"] = row["months"]  # optional "Meses sin intereses" column
         if "notes" in row:
             # optional notes: "Notas" (M) for an expense, "Notas (ingresos)" (N) for an income
             ws[f"{'M' if row['block'] == 'expense' else 'N'}{row_num}"] = row["notes"]
@@ -791,3 +793,55 @@ async def test_preview_counts_card_payments_apart_from_income_and_expenses(clien
         files={"file": ("lote.xlsx", content, "application/octet-stream")},
     )
     assert again.json()["data"]["possible_duplicates"]["count"] == 2
+
+
+async def test_template_has_the_installments_column(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+
+    response = await client.get("/api/v1/bulk-import/template", headers=headers)
+    ws = load_workbook(BytesIO(response.content))["Transacciones"]
+    assert ws["U2"].value == "Meses sin intereses"
+
+
+async def test_upload_creates_installment_plans_for_card_purchases(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+    await _create_card(client, headers, "0")
+    expense = await _get_category_names(client, headers, "expense")
+
+    def purchase(description: str, account: str, **extra):
+        return {
+            "block": "expense",
+            "amount": 2045.67,
+            "description": description,
+            "date": "2026-07-10",
+            "account": account,
+            "category": expense,
+            **extra,
+        }
+
+    content = _build_upload(
+        [
+            purchase("Teclado a 12 meses", "Stori", months=12),
+            purchase("Compra normal con tarjeta", "Stori"),
+            purchase("Meses en una cuenta de dinero", "Santander", months=6),
+            purchase("Meses invalidos", "Stori", months="uno"),
+            purchase("Meses de menos", "Stori", months=1),
+        ]
+    )
+    response = await client.post(
+        "/api/v1/bulk-import/upload",
+        headers=headers,
+        files={"file": ("lote.xlsx", content, "application/octet-stream")},
+    )
+    data = response.json()["data"]
+    assert data["created"] == 2
+    assert sorted(e["row"] for e in data["errors"]) == [5, 6, 7]
+
+    listed = await client.get("/api/v1/transactions?per_page=50", headers=headers)
+    plans = {t["description"]: t["installment"] for t in listed.json()["data"]}
+    assert plans["Compra normal con tarjeta"] is None
+    assert plans["Teclado a 12 meses"]["total_installments"] == 12
