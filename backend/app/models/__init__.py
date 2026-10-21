@@ -4,7 +4,7 @@ from app.models.budget import BudgetLimit, BudgetPeriod
 from app.models.category import Category
 from app.models.category_hide import CategoryHide
 from app.models.chat_message import ChatMessage
-from app.models.debt import Debt, DebtPayment, InstallmentPlan, UnplannedDebt
+from app.models.debt import Debt, DebtMovement, DebtPayment, InstallmentPlan, UnplannedDebt
 from app.models.feedback import Feedback
 from app.models.insight import Insight, InsightReview
 from app.models.notification import Notification
@@ -23,6 +23,7 @@ __all__ = [
     "CategoryHide",
     "ChatMessage",
     "Debt",
+    "DebtMovement",
     "DebtPayment",
     "Device",
     "Feedback",

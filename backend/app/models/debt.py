@@ -166,6 +166,47 @@ class DebtPayment(Base):
     debt: Mapped["Debt"] = relationship(back_populates="payments")
 
 
+DEBT_MOVEMENT_KINDS = ("opening", "loan", "payment", "adjustment")
+
+
+class DebtMovement(Base):
+    """One step in the life of a debt: why its balance is what it is.
+
+    `delta` is signed: positive when the debt grows (opening balance, another loan),
+    negative when it shrinks (a payment), either sign for a manual correction. The
+    running balance after each step is computed from the ordered deltas, never stored,
+    so it can't drift from the debt. `created_at` is the moment it was registered
+    (the history shows it with the time); `date` is the day it happened."""
+
+    __tablename__ = "debt_movements"
+    __table_args__ = (
+        CheckConstraint(f"kind IN {DEBT_MOVEMENT_KINDS}", name="ck_debt_movements_kind"),
+        CheckConstraint("delta <> 0", name="ck_debt_movements_delta"),
+        Index("idx_debt_movements_debt", "debt_id", "date", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    debt_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("debts.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String, nullable=False)
+    delta: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    date: Mapped[date_type] = mapped_column(nullable=False)
+    concept: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The real account the money moved through (None for the opening balance of a debt
+    # that already existed, and for corrections).
+    account_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True
+    )
+    journal_entry_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("journal_entries.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class InstallmentPlan(Base, TimestampMixin):
     """Metadata for a purchase made in interest-free installments (Meses Sin
     Intereses, MSI) with a credit card.

@@ -93,6 +93,31 @@ class DebtCreate(BaseModel):
     is_shared: bool = False
     responsible_party: str | None = None
     notes: str | None = None
+    # What this first loan was for; it opens the debt's history.
+    concept: str | None = None
+
+
+class DebtIncreaseCreate(BaseModel):
+    """Another loan on a debt that already exists."""
+
+    account_id: UUID  # real account the money leaves (you lend) or lands in (you are lent)
+    amount: Decimal = Field(gt=0)
+    date: date_type
+    concept: str | None = None
+
+
+class DebtMovementOut(BaseModel):
+    id: UUID
+    debt_id: UUID
+    kind: str
+    delta: Decimal
+    date: date_type
+    concept: str | None
+    account_id: UUID | None
+    account_name: str | None
+    journal_entry_id: UUID | None
+    created_at: datetime
+    balance_after: Decimal
 
 
 class DebtUpdate(BaseModel):

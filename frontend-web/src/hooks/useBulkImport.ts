@@ -14,6 +14,13 @@ export interface BulkImportPreview {
   income: { count: number; total: string }
   expense: { count: number; total: string }
   card_payment: { count: number; total: string }
+  /** People's debts in the file: loans, repayments and opening balances. */
+  debts: {
+    loans: { count: number; total: string }
+    payments: { count: number; total: string }
+    openings: { count: number; total: string }
+    people: number
+  }
   date_from: string | null
   date_to: string | null
   by_account: { name: string; count: number; income: string; expense: string }[]
@@ -73,6 +80,7 @@ export function useUploadBulkImport() {
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
       queryClient.invalidateQueries({ queryKey: ['accounts'] })
       queryClient.invalidateQueries({ queryKey: ['tags'] })
+      queryClient.invalidateQueries({ queryKey: ['debts'] })
     },
   })
 }

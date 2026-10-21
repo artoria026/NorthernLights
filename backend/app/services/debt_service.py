@@ -10,11 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.redis import get_redis
-from app.models.debt import Debt, DebtPayment, UnplannedDebt
+from app.models.account import Account
+from app.models.debt import Debt, DebtMovement, DebtPayment, UnplannedDebt
 from app.models.transaction import JournalEntry
 from app.schemas.debt import (
     DebtActivationRequest,
     DebtCreate,
+    DebtIncreaseCreate,
     DebtPaymentCreate,
     DebtSimulateRequest,
     DebtUpdate,
@@ -148,6 +150,33 @@ async def get_or_create_informal_debt(
     return debt
 
 
+async def _record_movement(
+    session: AsyncSession,
+    user_id: UUID,
+    debt_id: UUID,
+    kind: str,
+    delta: Decimal,
+    date_: date,
+    concept: str | None = None,
+    account_id: UUID | None = None,
+    journal_entry_id: UUID | None = None,
+) -> DebtMovement:
+    """One step of the debt's history (see DebtMovement). A zero change isn't a step."""
+    movement = DebtMovement(
+        user_id=user_id,
+        debt_id=debt_id,
+        kind=kind,
+        delta=delta,
+        date=date_,
+        concept=(concept or "").strip() or None,
+        account_id=account_id,
+        journal_entry_id=journal_entry_id,
+    )
+    session.add(movement)
+    await session.flush()
+    return movement
+
+
 async def _fund_debt(
     session: AsyncSession,
     user_id: UUID,
@@ -156,30 +185,34 @@ async def _fund_debt(
     amount: Decimal,
     date_: date,
     name: str,
-) -> None:
+    concept: str | None = None,
+) -> JournalEntry:
     """Records the real cash movement when a debt originates with money
     actually changing hands (someone lends you money that lands in an
     account of yours, or you lend and it leaves an account of yours). The
     other leg is ALWAYS the hidden informal debt ledger (one account per
     user per direction, never one per person) -- see
-    account_service.get_or_create_debt_ledger_account."""
+    account_service.get_or_create_debt_ledger_account. The concept, when there is one,
+    goes in the description so the loan reads the same in Transactions as in the
+    debt's history."""
     ledger = await account_service.get_or_create_debt_ledger_account(session, user_id, direction)
+    suffix = f" — {concept.strip()}" if concept and concept.strip() else ""
     if direction == "owed_by_me":
         lines = [
             JournalLineIn(account_id=funding_account_id, amount=amount, type="debit"),
             JournalLineIn(account_id=ledger.id, amount=amount, type="credit"),
         ]
-        description = f"Préstamo recibido — {name}"
+        description = f"Préstamo recibido — {name}{suffix}"
         entry_type = "loan_received"
     else:
         lines = [
             JournalLineIn(account_id=ledger.id, amount=amount, type="debit"),
             JournalLineIn(account_id=funding_account_id, amount=amount, type="credit"),
         ]
-        description = f"Préstamo a {name}"
+        description = f"Préstamo a {name}{suffix}"
         entry_type = "loan_given"
 
-    await transaction_service.create_transaction(
+    return await transaction_service.create_transaction(
         session,
         user_id,
         TransactionCreate(date=date_, description=description, entry_type=entry_type, lines=lines),
@@ -219,8 +252,9 @@ async def activate_unplanned_debt(
     session.add(debt)
     await session.flush()
 
+    entry = None
     if plan.funding_account_id:
-        await _fund_debt(
+        entry = await _fund_debt(
             session,
             user_id,
             unplanned.direction,
@@ -229,6 +263,17 @@ async def activate_unplanned_debt(
             plan.start_date,
             debt.name,
         )
+    await _record_movement(
+        session,
+        user_id,
+        debt.id,
+        "loan" if entry else "opening",
+        total,
+        plan.start_date,
+        unplanned.notes if entry else "Saldo inicial",
+        plan.funding_account_id,
+        entry.id if entry else None,
+    )
 
     unplanned.status = "converted"
     unplanned.converted_to_debt_id = debt.id
@@ -273,6 +318,26 @@ async def create_debt(
         is_shared = False
         responsible_party = None
 
+    if data.type == "informal":
+        # One debt per person: lending more to someone who already owes you is "increase_debt"
+        # on theirs, not a second debt with the same name.
+        existing = await session.execute(
+            select(Debt.id).where(
+                Debt.user_id == user_id,
+                Debt.direction == data.direction,
+                Debt.type == "informal",
+                Debt.status != "completed",
+                Debt.deleted_at.is_(None),
+                func.lower(Debt.name) == data.name.strip().lower(),
+            )
+        )
+        if existing.first() is not None:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"Ya tienes una deuda activa con {data.name.strip()}: "
+                "usa «Prestar más» en esa deuda",
+            )
+
     debt = Debt(
         user_id=user_id,
         name=data.name,
@@ -303,15 +368,41 @@ async def create_debt(
     session.add(debt)
     await session.flush()
 
+    start = data.start_date or date.today()
+    entry = None
     if data.funding_account_id:
-        await _fund_debt(
+        entry = await _fund_debt(
             session,
             user_id,
             data.direction,
             data.funding_account_id,
             data.total_amount,
-            data.start_date or date.today(),
+            start,
             debt.name,
+            data.concept,
+        )
+    # The history starts here: a loan when the money really moved, otherwise the balance
+    # of a debt that already existed before the app (its opening balance).
+    await _record_movement(
+        session,
+        user_id,
+        debt.id,
+        "loan" if entry else "opening",
+        data.total_amount,
+        start,
+        data.concept or ("Préstamo inicial" if entry else "Saldo inicial"),
+        data.funding_account_id,
+        entry.id if entry else None,
+    )
+    if debt.current_balance != data.total_amount:
+        await _record_movement(
+            session,
+            user_id,
+            debt.id,
+            "adjustment",
+            debt.current_balance - data.total_amount,
+            start,
+            "Saldo pendiente al registrar la deuda",
         )
 
     # Unconditional even though funding_account_id already invalidates the
@@ -321,13 +412,93 @@ async def create_debt(
     return debt
 
 
+async def increase_debt(
+    session: AsyncSession, user_id: UUID, debt_id: UUID, data: DebtIncreaseCreate
+) -> DebtMovement:
+    """Another loan on a debt that already exists (lending more to the same person, or
+    being lent more): the money moves through the chosen account, the balance and the
+    registered total grow, and the history gets a step with its own concept. A debt that
+    had been paid off comes back to active."""
+    debt = await get_debt(session, user_id, debt_id)
+    entry = await _fund_debt(
+        session,
+        user_id,
+        debt.direction,
+        data.account_id,
+        data.amount,
+        data.date,
+        debt.name,
+        data.concept,
+    )
+    debt.total_amount += data.amount
+    debt.current_balance += data.amount
+    if debt.status == "completed":
+        debt.status = "active"
+    movement = await _record_movement(
+        session,
+        user_id,
+        debt.id,
+        "loan",
+        data.amount,
+        data.date,
+        data.concept,
+        data.account_id,
+        entry.id,
+    )
+    await cache_service.invalidate_snapshot_for(user_id)
+    return movement
+
+
+async def list_debt_movements(session: AsyncSession, user_id: UUID, debt_id: UUID) -> list[dict]:
+    """The debt's history, oldest first, each step with the balance it left. The balance is
+    the running sum of the deltas, so it always agrees with what was recorded."""
+    await get_debt(session, user_id, debt_id)
+    result = await session.execute(
+        select(DebtMovement, Account.name)
+        .outerjoin(Account, Account.id == DebtMovement.account_id)
+        .where(DebtMovement.debt_id == debt_id, DebtMovement.user_id == user_id)
+        .order_by(DebtMovement.date, DebtMovement.created_at, DebtMovement.id)
+    )
+    balance = Decimal("0")
+    out: list[dict] = []
+    for movement, account_name in result.all():
+        balance += movement.delta
+        out.append(
+            {
+                "id": movement.id,
+                "debt_id": movement.debt_id,
+                "kind": movement.kind,
+                "delta": movement.delta,
+                "date": movement.date,
+                "concept": movement.concept,
+                "account_id": movement.account_id,
+                "account_name": account_name,
+                "journal_entry_id": movement.journal_entry_id,
+                "created_at": movement.created_at,
+                "balance_after": balance,
+            }
+        )
+    return out
+
+
 async def update_debt(
     session: AsyncSession, user_id: UUID, debt_id: UUID, data: DebtUpdate
 ) -> Debt:
     debt = await get_debt(session, user_id, debt_id)
+    previous_balance = debt.current_balance
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(debt, field, value)
     await session.flush()
+    if debt.current_balance != previous_balance:
+        await _record_movement(
+            session,
+            user_id,
+            debt.id,
+            "adjustment",
+            debt.current_balance - previous_balance,
+            date.today(),
+            "Corrección de saldo",
+        )
     return debt
 
 
@@ -382,6 +553,7 @@ async def _apply_payment(
     amount: Decimal,
     date_: date,
     notes: str | None,
+    account_id: UUID | None = None,
 ) -> DebtPayment:
     """Effect of a payment ALREADY recorded (transaction already created):
     lowers balance, raises paid installments, marks completed if
@@ -400,6 +572,17 @@ async def _apply_payment(
         notes=notes,
     )
     session.add(payment)
+    await _record_movement(
+        session,
+        user_id,
+        debt.id,
+        "payment",
+        -min(amount, debt.current_balance) if debt.current_balance > 0 else -amount,
+        date_,
+        notes,
+        account_id,
+        journal_entry_id,
+    )
 
     debt.current_balance = new_balance
     debt.paid_installments += 1
@@ -448,7 +631,7 @@ async def register_debt_payment(
         debt.next_payment_date = _advance_date(debt.next_payment_date, debt.payment_frequency)
 
     return await _apply_payment(
-        session, user_id, debt, entry.id, data.amount, data.date, data.notes
+        session, user_id, debt, entry.id, data.amount, data.date, data.notes, data.account_id
     )
 
 

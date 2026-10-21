@@ -732,7 +732,9 @@
       "submitButton": "Crear deuda",
       "noFrequencyOption": "Sin frecuencia fija",
       "interestRateLabel": "Tasa de interés anual (%) (opcional)",
-      "interestRatePlaceholder": "0"
+      "interestRatePlaceholder": "0",
+      "conceptLabel": "Concepto (opcional)",
+      "conceptPlaceholder": "¿Para qué fue este préstamo?"
     },
     "registerPaymentForm": {
       "oweYouNote": "Te debe: {{amount}}",
@@ -743,7 +745,9 @@
       "amountLabel": "Monto",
       "dateLabel": "Fecha",
       "registerCollectionButton": "Registrar cobro",
-      "registerPaymentButton": "Registrar pago"
+      "registerPaymentButton": "Registrar pago",
+      "conceptLabel": "Concepto (opcional)",
+      "conceptPlaceholder": "Ej.: abono en efectivo"
     },
     "correctBalanceForm": {
       "oweYouNote": "Te debe: {{amount}}",
@@ -770,7 +774,13 @@
       "collectButton": "Cobrar",
       "payButton": "Pagar",
       "collectionDialogTitle": "Cobro — {{name}}",
-      "paymentDialogTitle": "Pago — {{name}}"
+      "paymentDialogTitle": "Pago — {{name}}",
+      "historyButton": "Historial",
+      "historyDialogTitle": "Historial de {{name}}",
+      "lendMoreButton": "Prestar más",
+      "borrowMoreButton": "Me prestaron más",
+      "lendMoreDialogTitle": "Prestarle más a {{name}}",
+      "borrowMoreDialogTitle": "Otro préstamo de {{name}}"
     },
     "unplannedRow": {
       "activateButton": "Activar",
@@ -804,6 +814,45 @@
         "body": "Ajusta el saldo pendiente directamente a lo que de verdad es hoy, sin registrar pago por pago — pensado para cuando estás cargando historial viejo y solo necesitas dejar el número correcto al final. A diferencia de \"Registrar pago\", no mueve dinero de ninguna cuenta ni afecta pagos ya registrados."
       },
       "tip": "Prestar o que te presten no es un gasto ni un ingreso — tu patrimonio total no cambia, solo se mueve de una cuenta a otra (o a esta lista, si todavía no tiene cuenta asociada)."
+    },
+    "increaseForm": {
+      "oweYouNote": "Te debe: {{amount}}",
+      "currentBalanceNote": "Saldo actual: {{amount}}",
+      "accountFromLabel": "Cuenta de la que sale el dinero",
+      "accountToLabel": "Cuenta a la que entra el dinero",
+      "accountPlaceholder": "Selecciona una cuenta",
+      "amountLabel": "Monto",
+      "conceptLabel": "Concepto",
+      "conceptPlaceholder": "¿Para qué fue?",
+      "dateLabel": "Fecha",
+      "submitLend": "Registrar préstamo",
+      "submitBorrow": "Registrar préstamo recibido"
+    },
+    "history": {
+      "loading": "Cargando el historial…",
+      "error": "No se pudo cargar el historial.",
+      "empty": "Todavía no hay movimientos.",
+      "oweYouNow": "Te debe ahora",
+      "balanceNow": "Saldo actual",
+      "balanceAfter": "saldo {{amount}}",
+      "kind": {
+        "opening": {
+          "receivable": "Saldo inicial",
+          "owed": "Saldo inicial"
+        },
+        "loan": {
+          "receivable": "Préstamo",
+          "owed": "Préstamo recibido"
+        },
+        "payment": {
+          "receivable": "Abono recibido",
+          "owed": "Pago"
+        },
+        "adjustment": {
+          "receivable": "Corrección",
+          "owed": "Corrección"
+        }
+      }
     }
   },
   "budget": {
@@ -1698,7 +1747,7 @@
     "title": "Carga masiva",
     "subtitle": "Sube un Excel con tus movimientos: primero ves un resumen y solo se guarda cuando confirmas",
     "templateTitle": "1. Descarga la plantilla",
-    "templateBody": "Ya trae tus cuentas, categorías y etiquetas como listas. Ingresos en las columnas A–E, gastos en G–K, y columnas opcionales: «Etiquetas» (L) y «Notas» (M) para los gastos, y «Notas (ingresos)» (N) para los ingresos. Los pagos a tarjetas de crédito van en las columnas P–T, y la columna U («Meses sin intereses») sirve para gastos pagados con tarjeta a meses.",
+    "templateBody": "Ya trae tus cuentas, categorías y etiquetas como listas. Ingresos en las columnas A–E, gastos en G–K, y columnas opcionales: «Etiquetas» (L) y «Notas» (M) para los gastos, y «Notas (ingresos)» (N) para los ingresos. Los pagos a tarjetas de crédito van en las columnas P–T, las deudas de personas (préstamo, abono o saldo inicial) en las columnas W–AC, y la columna U («Meses sin intereses») sirve para gastos pagados con tarjeta a meses.",
     "downloadTemplate": "Descargar plantilla",
     "generating": "Generando...",
     "dropTitle": "2. Suelta tu archivo",
@@ -1737,7 +1786,13 @@
       "errorsTitle_other": "{{count}} filas con problemas (no se cargarán)",
       "moreErrors_one": "y {{count}} más",
       "moreErrors_other": "y {{count}} más",
-      "row": "Fila {{row}}"
+      "row": "Fila {{row}}",
+      "debtsTitle": "Deudas",
+      "debtPeople_one": "{{count}} persona",
+      "debtPeople_other": "{{count}} personas",
+      "debtLoans": "Préstamos",
+      "debtPayments": "Abonos",
+      "debtOpenings": "Saldos iniciales"
     }
   }
 }
