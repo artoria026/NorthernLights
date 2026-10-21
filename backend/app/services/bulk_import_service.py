@@ -54,6 +54,12 @@ EXPENSE_NOTES_COL = 13  # M
 INCOME_NOTES_COL = 14  # N
 NOTES_HEADER = "Notas"
 INCOME_NOTES_HEADER = "Notas (ingresos)"
+
+# Optional column after the card payments block (U): months without interest for an expense
+# paid with a credit card ("MSI"). Empty = a normal purchase; 2 or more = an installment plan.
+INSTALLMENTS_COL = 21  # U
+INSTALLMENTS_HEADER = "Meses sin intereses"
+MIN_INSTALLMENTS = 2
 TAG_SEPARATORS = re.compile(r"[,;]")
 
 INCOME_FILL = PatternFill("solid", fgColor="B8CCE4")
@@ -80,6 +86,7 @@ COLUMN_WIDTHS = {
     18: 14,
     19: 20,
     20: 24,
+    21: 18,
 }
 
 
@@ -130,6 +137,7 @@ def build_template_workbook(
     for col, header, fill in (
         (EXPENSE_NOTES_COL, NOTES_HEADER, EXPENSE_FILL),
         (INCOME_NOTES_COL, INCOME_NOTES_HEADER, INCOME_FILL),
+        (INSTALLMENTS_COL, INSTALLMENTS_HEADER, EXPENSE_FILL),
     ):
         notes_header = ws.cell(row=HEADER_ROW, column=col, value=header)
         notes_header.font = Font(bold=True)
@@ -234,6 +242,8 @@ class ParsedRow:
     # Only for entry_type 'card_payment': the card that receives the payment (account_name
     # is where the money comes from, category_name stays empty).
     card_name: str = ""
+    # Only for an expense paid with a credit card: number of months without interest.
+    installments: int | None = None
 
 
 def _parse_notes(row_cells: tuple, entry_type: str) -> str | None:
@@ -245,6 +255,23 @@ def _parse_notes(row_cells: tuple, entry_type: str) -> str | None:
     value = row_cells[col - 1].value
     text = str(value).strip() if value is not None else ""
     return text or None
+
+
+def _parse_installments(row_cells: tuple, entry_type: str) -> tuple[int | None, bool]:
+    """(months, is_valid). Only expenses can have months; an empty cell (or an old file
+    without the column) means a normal purchase."""
+    if entry_type != "expense" or len(row_cells) < INSTALLMENTS_COL:
+        return None, True
+    value = row_cells[INSTALLMENTS_COL - 1].value
+    if value is None or str(value).strip() == "":
+        return None, True
+    try:
+        months = int(str(value).strip())
+    except ValueError:
+        return None, False
+    if months < MIN_INSTALLMENTS:
+        return None, False
+    return months, True
 
 
 def _parse_tags(value: object) -> list[str]:
@@ -319,6 +346,16 @@ def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int
         reason = "Falta la tarjeta" if is_card_payment else "Falta la categoría"
         return None, {"row": row_idx, "block": block_label, "reason": reason}
 
+    installments, installments_ok = _parse_installments(row_cells, entry_type)
+    if not installments_ok:
+        return None, {
+            "row": row_idx,
+            "block": block_label,
+            "reason": (
+                f"Los meses sin intereses deben ser un número entero de {MIN_INSTALLMENTS} o más"
+            ),
+        }
+
     default_description = CARD_PAYMENT_DEFAULT_DESCRIPTION if is_card_payment else block_label
     return (
         ParsedRow(
@@ -339,6 +376,7 @@ def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int
                 else []
             ),
             notes=None if is_card_payment else _parse_notes(row_cells, entry_type),
+            installments=installments,
         ),
         None,
     )
@@ -459,6 +497,9 @@ async def resolve_rows(
                 )
             )
             continue
+        if row.installments and not _is_credit_card(account):
+            fail("Los meses sin intereses solo aplican si pagas con una tarjeta de crédito")
+            continue
         category = category_by_type[row.entry_type].get(row.category_name.strip().lower())
         if category is None:
             fail(f"La categoría '{row.category_name}' no existe")
@@ -520,6 +561,7 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 amount=row.amount,
                 tag_ids=item.tag_ids,
                 notes=row.notes,
+                installment_total=row.installments,
             ),
         )
     return {"created": len(resolved), "errors": errors}
