@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 REC_COL = 37  # AK; AP Categoría, AQ Tipo, AR Día del mes, AS Notas
 
 
-def _build_upload(rows: list[dict]) -> bytes:
+def _build_upload(rows: list[dict], expenses: list[dict] | None = None) -> bytes:
     wb = Workbook()
     ws = wb.active
     ws.title = "Transacciones"
@@ -28,6 +28,13 @@ def _build_upload(rows: list[dict]) -> bytes:
         for col, key in ((42, "category"), (43, "type"), (44, "day"), (45, "notes")):
             if key in row:
                 ws.cell(row=row_num, column=col, value=row[key])
+    # expenses: [{amount, description, date, account, category, recurring}] in G-K; link in AT
+    ws.cell(row=2, column=46, value="Recurrente (gastos)")
+    for row_num, row in enumerate(expenses or [], start=3):
+        for offset, key in enumerate(("amount", "description", "date", "account", "category")):
+            ws.cell(row=row_num, column=7 + offset, value=row.get(key))
+        if row.get("recurring") is not None:
+            ws.cell(row=row_num, column=46, value=row["recurring"])
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -70,6 +77,8 @@ async def test_template_has_the_recurring_block(client: AsyncClient):
         "Día del mes",
         "Notas",
     ]
+    assert ws["AT2"].value == "Recurrente (gastos)"
+    assert ws["AU2"].value == "Recurrente (ingresos)"
 
 
 async def test_upload_creates_the_recurring_items(client: AsyncClient):
@@ -228,3 +237,158 @@ async def test_an_active_recurring_item_with_the_same_name_and_account_is_not_du
     assert data["created"] == 0
     assert "Ya tienes un recurrente activo" in data["errors"][0]["reason"]
     assert len(await _recurring(client, headers)) == 1
+
+
+async def _expense(client, headers, description):
+    response = await client.get("/api/v1/transactions?per_page=100", headers=headers)
+    return [t for t in response.json()["data"] if t["description"] == description]
+
+
+async def test_expenses_can_point_to_a_recurring_item_of_the_same_file(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander", initial_balance="1000")
+    expense = await _category(client, headers, "expense")
+
+    content = _build_upload(
+        [
+            {
+                "name": "Seguro",
+                "amount": 175.05,
+                "frequency": "Mensual",
+                "next": "2026-11-12",
+                "account": "Santander",
+                "category": expense,
+            }
+        ],
+        expenses=[
+            # the expense comes BEFORE its recurring item in the file; the link still works
+            {
+                "amount": 175.05,
+                "description": "Pago seguro 1",
+                "date": "2026-09-12",
+                "account": "Santander",
+                "category": expense,
+                "recurring": "Seguro",
+            },
+            {
+                "amount": 175.05,
+                "description": "Pago seguro 2",
+                "date": "2026-10-12",
+                "account": "Santander",
+                "category": expense,
+                "recurring": "seguro",
+            },
+            {
+                "amount": 50,
+                "description": "Gasto normal",
+                "date": "2026-10-13",
+                "account": "Santander",
+                "category": expense,
+            },
+        ],
+    )
+    response = await _post(client, headers, "upload", content)
+    assert response.json()["data"] == {"created": 4, "errors": []}
+
+    linked = await client.get(
+        "/api/v1/transactions?is_recurring=true&per_page=100", headers=headers
+    )
+    assert sorted(t["description"] for t in linked.json()["data"]) == [
+        "Pago seguro 1",
+        "Pago seguro 2",
+    ]
+    plain = await _expense(client, headers, "Gasto normal")
+    assert plain[0]["is_recurring"] is False
+    # the recurring item itself is untouched: its next charge stays where it was
+    (item,) = await _recurring(client, headers)
+    assert item["next_date"] == "2026-11-12"
+
+
+async def test_expenses_can_point_to_a_recurring_item_that_already_exists(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander", initial_balance="1000")
+    expense = await _category(client, headers, "expense")
+    row = {
+        "name": "Seguro",
+        "amount": 175.05,
+        "frequency": "Mensual",
+        "next": "2026-11-12",
+        "account": "Santander",
+        "category": expense,
+    }
+    await _post(client, headers, "upload", _build_upload([row]))
+
+    content = _build_upload(
+        [],
+        expenses=[
+            {
+                "amount": 175.05,
+                "description": "Pago seguro viejo",
+                "date": "2026-08-12",
+                "account": "Santander",
+                "category": expense,
+                "recurring": "Seguro",
+            }
+        ],
+    )
+    response = await _post(client, headers, "upload", content)
+    assert response.json()["data"] == {"created": 1, "errors": []}
+    linked = await client.get(
+        "/api/v1/transactions?is_recurring=true&per_page=100", headers=headers
+    )
+    assert [t["description"] for t in linked.json()["data"]] == ["Pago seguro viejo"]
+
+
+async def test_a_link_to_an_unknown_or_mismatched_recurring_item_is_reported(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander", initial_balance="1000")
+    expense = await _category(client, headers, "expense")
+    income = await _category(client, headers, "income")
+    sueldo = {
+        "name": "Sueldo",
+        "amount": 100,
+        "frequency": "Mensual",
+        "next": "2026-11-01",
+        "account": "Santander",
+        "category": income,
+        "type": "Ingreso",
+    }
+    await _post(client, headers, "upload", _build_upload([sueldo]))
+
+    content = _build_upload(
+        [],
+        expenses=[
+            {
+                "amount": 10,
+                "description": "A",
+                "date": "2026-10-01",
+                "account": "Santander",
+                "category": expense,
+                "recurring": "No existe",
+            },
+            {
+                "amount": 10,
+                "description": "B",
+                "date": "2026-10-01",
+                "account": "Santander",
+                "category": expense,
+                "recurring": "Sueldo",
+            },
+            {
+                "amount": 10,
+                "description": "C",
+                "date": "2026-10-01",
+                "account": "Santander",
+                "category": expense,
+            },
+        ],
+    )
+    response = await _post(client, headers, "upload", content)
+    data = response.json()["data"]
+    assert data["created"] == 1
+    assert sorted(e["row"] for e in data["errors"]) == [3, 4]
+    assert "No existe el recurrente" in data["errors"][0]["reason"]
+    assert "es de ingresos" in data["errors"][1]["reason"]
