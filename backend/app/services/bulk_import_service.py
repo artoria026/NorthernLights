@@ -195,6 +195,14 @@ _RECURRING_TYPES = {
     "income": "income",
 }
 RECURRING_FILL = PatternFill("solid", fgColor="C6E0B4")
+# Two more optional columns after the recurring block: the NAME of the recurring item a transaction
+# pays or collects (one for the Expenses block, one for the Income block, like the notes). The
+# transaction then carries the link, as the ones the app generates by itself. The item must be
+# active, or be created in the same file (Recurrentes block).
+EXPENSE_RECURRING_COL = 46  # AT
+INCOME_RECURRING_COL = 47  # AU
+EXPENSE_RECURRING_HEADER = "Recurrente (gastos)"
+INCOME_RECURRING_HEADER = "Recurrente (ingresos)"
 
 INCOME_FILL = PatternFill("solid", fgColor="B8CCE4")
 EXPENSE_FILL = PatternFill("solid", fgColor="E6B8B7")
@@ -245,6 +253,8 @@ COLUMN_WIDTHS = {
     43: 18,
     44: 12,
     45: 36,
+    46: 30,
+    47: 30,
 }
 
 
@@ -314,6 +324,14 @@ def build_template_workbook(
         rec_header.font = Font(bold=True)
         rec_header.fill = RECURRING_FILL
         ws.cell(row=1, column=col).fill = RECURRING_FILL
+    for col, header, fill in (
+        (EXPENSE_RECURRING_COL, EXPENSE_RECURRING_HEADER, EXPENSE_FILL),
+        (INCOME_RECURRING_COL, INCOME_RECURRING_HEADER, INCOME_FILL),
+    ):
+        link_header = ws.cell(row=HEADER_ROW, column=col, value=header)
+        link_header.font = Font(bold=True)
+        link_header.fill = fill
+        ws.cell(row=1, column=col).fill = fill
     tags_header = ws.cell(row=HEADER_ROW, column=TAGS_COL, value=TAGS_HEADER)
     tags_header.font = Font(bold=True)
     tags_header.fill = EXPENSE_FILL
@@ -498,12 +516,24 @@ class ParsedRow:
     rec_frequency: str = ""
     rec_type: str = "subscription"
     rec_day: int | None = None
+    # Only for income/expense rows: name of the recurring item this transaction pays or collects.
+    recurring_link: str | None = None
 
 
 def _parse_notes(row_cells: tuple, entry_type: str) -> str | None:
     """The note of the row's block, or None when the cell is empty or the file is older
     than the notes columns."""
     col = EXPENSE_NOTES_COL if entry_type == "expense" else INCOME_NOTES_COL
+    if len(row_cells) < col:
+        return None
+    value = row_cells[col - 1].value
+    text = str(value).strip() if value is not None else ""
+    return text or None
+
+
+def _parse_recurring_link(row_cells: tuple, entry_type: str) -> str | None:
+    """Name of the recurring item the row's block points to, or None (also in older files)."""
+    col = EXPENSE_RECURRING_COL if entry_type == "expense" else INCOME_RECURRING_COL
     if len(row_cells) < col:
         return None
     value = row_cells[col - 1].value
@@ -637,6 +667,9 @@ def _parse_block(row_cells: tuple, row_idx: int, entry_type: str, start_col: int
             ),
             notes=None if is_card_payment else _parse_notes(row_cells, entry_type),
             installments=installments,
+            recurring_link=(
+                None if is_card_payment else _parse_recurring_link(row_cells, entry_type)
+            ),
         ),
         None,
     )
@@ -906,6 +939,11 @@ async def resolve_rows(
     resolved: list[ResolvedRow] = []
     errors = list(parsed.errors)
     seen_recurring: set[tuple[str, UUID]] = set()
+    file_recurring = {
+        r.description.strip().lower(): r.rec_type
+        for r in parsed.rows
+        if r.entry_type == "recurring"
+    }
     for row in parsed.rows:
         if row.entry_type == "debt":
             continue  # debt steps depend on each other: resolved together, below
@@ -961,6 +999,11 @@ async def resolve_rows(
                 "o corrige el nombre"
             )
             continue
+        if row.recurring_link:
+            link_error = await _check_recurring_link(session, user_id, row, file_recurring)
+            if link_error:
+                fail(link_error)
+                continue
         row_tags = [tag_by_name[name.lower()] for name in row.tags]
         resolved.append(
             ResolvedRow(
@@ -982,6 +1025,60 @@ async def resolve_rows(
     resolved.extend(debt_items)
     errors.extend(debt_errors)
     return resolved, errors
+
+
+async def _active_recurring(session: AsyncSession, user_id: UUID, name: str) -> list[RecurringItem]:
+    """The user's active recurring items called `name` (case-insensitive)."""
+    result = await session.execute(
+        select(RecurringItem).where(
+            RecurringItem.user_id == user_id,
+            RecurringItem.status == "active",
+            RecurringItem.deleted_at.is_(None),
+            func.lower(RecurringItem.name) == name.strip().lower(),
+        )
+    )
+    return list(result.scalars().all())
+
+
+def _link_matches(item_type: str, entry_type: str) -> bool:
+    """A recurring income is paid by incomes only; the rest (subscription, service, utility) by
+    expenses only."""
+    return (item_type == "income") == (entry_type == "income")
+
+
+async def _check_recurring_link(
+    session: AsyncSession, user_id: UUID, row: ParsedRow, file_recurring: dict[str, str]
+) -> str | None:
+    """Why the recurring item a transaction points to is not usable, or None when it is."""
+    key = row.recurring_link.strip().lower()
+    items = await _active_recurring(session, user_id, key)
+    if any(_link_matches(i.item_type, row.entry_type) for i in items):
+        return None
+    if key in file_recurring and _link_matches(file_recurring[key], row.entry_type):
+        return None
+    if items or key in file_recurring:
+        kind = "de ingresos" if row.entry_type != "income" else "de gastos"
+        return f"El recurrente '{row.recurring_link}' es {kind}: no corresponde a este movimiento"
+    return (
+        f"No existe el recurrente '{row.recurring_link}': créalo en el bloque Recurrentes "
+        "o en la pantalla de Recurrentes"
+    )
+
+
+async def _find_recurring_id(
+    session: AsyncSession, user_id: UUID, row: ParsedRow, account_id: UUID | None
+) -> UUID | None:
+    """The active recurring item a transaction points to, once the ones of the same file exist:
+    the one on the same account when there are several."""
+    items = [
+        i
+        for i in await _active_recurring(session, user_id, row.recurring_link or "")
+        if _link_matches(i.item_type, row.entry_type)
+    ]
+    if not items:
+        return None
+    same_account = [i for i in items if i.account_id == account_id]
+    return (same_account or items)[0].id
 
 
 async def _resolve_recurring_row(
@@ -1230,6 +1327,8 @@ async def _apply_debt_plan(session: AsyncSession, user_id: UUID, item: ResolvedR
 
 async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: ParseResult) -> dict:
     resolved, errors = await resolve_rows(session, user_id, parsed)
+    # The recurring items go first: the transactions of the same file may point to them.
+    resolved.sort(key=lambda item: item.row.entry_type != "recurring")
     created = 0
     # person's payment plan -> the last row of the file that carries one (and was applied).
     plans: dict[tuple[str, str], ResolvedRow] = {}
@@ -1301,6 +1400,19 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 ),
             )
             continue
+        recurring_id = None
+        if row.recurring_link:
+            recurring_id = await _find_recurring_id(session, user_id, row, item.account_id)
+            if recurring_id is None:
+                errors.append(
+                    {
+                        "row": row.row_number,
+                        "block": BLOCK_LABELS[row.entry_type],
+                        "reason": f"No encontré el recurrente '{row.recurring_link}'",
+                    }
+                )
+                created -= 1
+                continue
         await transaction_service.create_transaction(
             session,
             user_id,
@@ -1315,6 +1427,8 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 notes=row.notes,
                 installment_total=row.installments,
             ),
+            is_recurring=recurring_id is not None,
+            recurring_id=recurring_id,
         )
     # The plan goes on after every step: each repayment moves the next due date forward, so
     # setting it first would leave it wherever the last repayment of the file put it.
