@@ -1845,7 +1845,10 @@
       "debtPeople_other": "{{count}} personas",
       "debtLoans": "Préstamos",
       "debtPayments": "Abonos",
-      "debtOpenings": "Saldos iniciales"
+      "debtOpenings": "Saldos iniciales",
+      "recurringTitle": "Recurrentes",
+      "recurringItems_one": "{{count}} pago recurrente por dar de alta (suma de sus montos por periodo)",
+      "recurringItems_other": "{{count}} pagos recurrentes por dar de alta (suma de sus montos por periodo)"
     }
   }
 }

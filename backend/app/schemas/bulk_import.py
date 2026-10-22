@@ -71,6 +71,7 @@ class BulkImportPreview(BaseModel):
     # Payments to credit cards (transfers): neither income nor expense.
     card_payment: PreviewTotal = PreviewTotal(count=0, total=Decimal(0))
     debts: PreviewDebts = PreviewDebts()
+    recurring: PreviewTotal = PreviewTotal(count=0, total=Decimal(0))
     date_from: date | None
     date_to: date | None
     by_account: list[PreviewAccount]

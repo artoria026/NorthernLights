@@ -21,6 +21,8 @@ export interface BulkImportPreview {
     openings: { count: number; total: string }
     people: number
   }
+  /** Recurring payments or incomes in the file: how many and the sum of their amounts. */
+  recurring: { count: number; total: string }
   date_from: string | null
   date_to: string | null
   by_account: { name: string; count: number; income: string; expense: string }[]
