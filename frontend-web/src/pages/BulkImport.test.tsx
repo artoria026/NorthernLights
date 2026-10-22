@@ -16,6 +16,7 @@ const preview: BulkImportPreview = {
     openings: { count: 0, total: '0' },
     people: 0,
   },
+  recurring: { count: 0, total: '0' },
   date_from: '2026-10-01',
   date_to: '2026-10-13',
   by_account: [{ name: 'Santander', count: 3, income: '1000.00', expense: '150.00' }],
@@ -124,6 +125,22 @@ describe('BulkImport', () => {
     expect(debts).toHaveTextContent('$300.00')
     expect(debts).toHaveTextContent('Saldos iniciales')
     expect(debts).toHaveTextContent('$15,000.00')
+  })
+
+  it('shows the recurring items of the file apart, only when it has them', async () => {
+    renderPage()
+    await dropFile()
+    expect(screen.queryByTestId('bulk-recurring')).not.toBeInTheDocument()
+
+    mocks.previewMutate.mockImplementation((_f: File, options?: { onSuccess?: (p: BulkImportPreview) => void }) =>
+      options?.onSuccess?.({ ...preview, recurring: { count: 2, total: '425.38' } }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Elegir otro archivo' }))
+    await dropFile()
+    const recurring = screen.getByTestId('bulk-recurring')
+    expect(recurring).toHaveTextContent('Recurrentes')
+    expect(recurring).toHaveTextContent('$425.38')
+    expect(recurring).toHaveTextContent('2 pagos recurrentes por dar de alta')
   })
 
   it('warns about rows that look already loaded and lists the rows with problems', async () => {

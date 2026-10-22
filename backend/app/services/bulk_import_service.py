@@ -17,11 +17,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.account import Account
 from app.models.category import Category
 from app.models.debt import Debt, DebtMovement
+from app.models.recurring import RecurringItem
 from app.models.tag import Tag
 from app.models.transaction import JournalEntry
 from app.schemas.debt import DebtCreate, DebtIncreaseCreate, DebtPaymentCreate, DebtUpdate
+from app.schemas.recurring import RecurringItemCreate
 from app.schemas.transaction import JournalLineIn, TransactionCreate
-from app.services import account_service, category_service, debt_service, transaction_service
+from app.services import (
+    account_service,
+    category_service,
+    debt_service,
+    recurring_service,
+    transaction_service,
+)
 
 # Layout: two blocks side by side on a single sheet, like a typical
 # homemade spreadsheet (see the example the user brought) -- Income in A-E,
@@ -146,6 +154,48 @@ _DEBT_DIRECTIONS = {
     "owed_by_me": "owed_by_me",
 }
 
+# Optional block after the debts (AK-AS): recurring payments or incomes -- subscriptions, services,
+# insurance -- that the app will keep charging by itself. One row per item. The first 5 columns
+# follow the usual block order; the rest are optional (type defaults to subscription).
+RECURRING_START_COL = 37  # AK
+RECURRING_HEADERS = ["Nombre", "Monto", "Frecuencia", "Siguiente cobro", "Cuenta"]
+RECURRING_CATEGORY_COL = 42  # AP
+RECURRING_CATEGORY_HEADER = "Categoría"
+RECURRING_TYPE_COL = 43  # AQ
+RECURRING_TYPE_HEADER = "Tipo"
+RECURRING_DAY_COL = 44  # AR
+RECURRING_DAY_HEADER = "Día del mes"
+RECURRING_NOTES_COL = 45  # AS
+RECURRING_NOTES_HEADER = "Notas"
+RECURRING_FREQUENCY_OPTIONS = ["Mensual", "Semanal", "Quincenal", "Bimestral", "Anual"]
+RECURRING_TYPE_OPTIONS = ["Suscripción", "Servicio", "Servicio público", "Ingreso"]
+_RECURRING_FREQUENCIES = {
+    "semanal": "weekly",
+    "weekly": "weekly",
+    "quincenal": "biweekly",
+    "biweekly": "biweekly",
+    "mensual": "monthly",
+    "monthly": "monthly",
+    "bimestral": "bimonthly",
+    "bimonthly": "bimonthly",
+    "anual": "annual",
+    "annual": "annual",
+}
+_RECURRING_TYPES = {
+    "": "subscription",
+    "suscripción": "subscription",
+    "suscripcion": "subscription",
+    "subscription": "subscription",
+    "servicio": "service",
+    "service": "service",
+    "servicio público": "utility",
+    "servicio publico": "utility",
+    "utility": "utility",
+    "ingreso": "income",
+    "income": "income",
+}
+RECURRING_FILL = PatternFill("solid", fgColor="C6E0B4")
+
 INCOME_FILL = PatternFill("solid", fgColor="B8CCE4")
 EXPENSE_FILL = PatternFill("solid", fgColor="E6B8B7")
 
@@ -185,6 +235,16 @@ COLUMN_WIDTHS = {
     33: 14,
     34: 20,
     35: 20,
+    36: 3,
+    37: 30,
+    38: 12,
+    39: 14,
+    40: 16,
+    41: 20,
+    42: 24,
+    43: 18,
+    44: 12,
+    45: 36,
 }
 
 
@@ -243,6 +303,17 @@ def build_template_workbook(
         plan_header.font = Font(bold=True)
         plan_header.fill = DEBT_FILL
         ws.cell(row=1, column=col).fill = DEBT_FILL
+    _write_block(ws, RECURRING_START_COL, "Recurrentes", RECURRING_FILL, RECURRING_HEADERS)
+    for col, header in (
+        (RECURRING_CATEGORY_COL, RECURRING_CATEGORY_HEADER),
+        (RECURRING_TYPE_COL, RECURRING_TYPE_HEADER),
+        (RECURRING_DAY_COL, RECURRING_DAY_HEADER),
+        (RECURRING_NOTES_COL, RECURRING_NOTES_HEADER),
+    ):
+        rec_header = ws.cell(row=HEADER_ROW, column=col, value=header)
+        rec_header.font = Font(bold=True)
+        rec_header.fill = RECURRING_FILL
+        ws.cell(row=1, column=col).fill = RECURRING_FILL
     tags_header = ws.cell(row=HEADER_ROW, column=TAGS_COL, value=TAGS_HEADER)
     tags_header.font = Font(bold=True)
     tags_header.fill = EXPENSE_FILL
@@ -319,10 +390,26 @@ def build_template_workbook(
     dv_debt_type = DataValidation(
         type="list", formula1='"' + ",".join(DEBT_TYPE_OPTIONS) + '"', allow_blank=True
     )
+    dv_rec_frequency = DataValidation(
+        type="list", formula1='"' + ",".join(RECURRING_FREQUENCY_OPTIONS) + '"', allow_blank=True
+    )
+    dv_rec_type = DataValidation(
+        type="list", formula1='"' + ",".join(RECURRING_TYPE_OPTIONS) + '"', allow_blank=True
+    )
+    dv_rec_account = DataValidation(
+        type="list", formula1=_range("A", len(account_names)), allow_blank=True
+    )
+    dv_rec_category = DataValidation(
+        type="list", formula1=_range("C", len(expense_names)), allow_blank=True
+    )
     dv_debt_frequency = DataValidation(
         type="list", formula1='"' + ",".join(DEBT_FREQUENCY_OPTIONS) + '"', allow_blank=True
     )
     for dv in (
+        dv_rec_frequency,
+        dv_rec_type,
+        dv_rec_account,
+        dv_rec_category,
         dv_debt_type,
         dv_debt_plan_account,
         dv_debt_frequency,
@@ -358,6 +445,10 @@ def build_template_workbook(
     dv_debt_direction.add(f"AC{FIRST_DATA_ROW}:AC{last_row}")
     dv_debt_frequency.add(f"AE{FIRST_DATA_ROW}:AE{last_row}")
     dv_debt_type.add(f"AI{FIRST_DATA_ROW}:AI{last_row}")
+    dv_rec_frequency.add(f"AM{FIRST_DATA_ROW}:AM{last_row}")
+    dv_rec_account.add(f"AO{FIRST_DATA_ROW}:AO{last_row}")
+    dv_rec_category.add(f"AP{FIRST_DATA_ROW}:AP{last_row}")
+    dv_rec_type.add(f"AQ{FIRST_DATA_ROW}:AQ{last_row}")
     dv_debt_plan_account.add(f"AH{FIRST_DATA_ROW}:AH{last_row}")
 
     for row in range(FIRST_DATA_ROW, last_row + 1):
@@ -366,6 +457,7 @@ def build_template_workbook(
         ws.cell(row=row, column=CARD_PAYMENT_START_COL + 2).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=DEBT_START_COL + 3).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=DEBT_PLAN_NEXT_COL).number_format = "yyyy-mm-dd"
+        ws.cell(row=row, column=RECURRING_START_COL + 3).number_format = "yyyy-mm-dd"
 
     buf = BytesIO()
     wb.save(buf)
@@ -401,6 +493,11 @@ class ParsedRow:
     plan_account_name: str = ""
     # Only for entry_type 'debt': the kind of the debt the row creates (informal by default).
     debt_type: str = "informal"
+    # Only for entry_type 'recurring' (description = name, date = next charge): how often, what kind
+    # (subscription | service | utility | income) and the optional day of the month.
+    rec_frequency: str = ""
+    rec_type: str = "subscription"
+    rec_day: int | None = None
 
 
 def _parse_notes(row_cells: tuple, entry_type: str) -> str | None:
@@ -477,6 +574,7 @@ BLOCK_LABELS = {
     "expense": "Gasto",
     "card_payment": "Pago de tarjeta",
     "debt": "Deuda",
+    "recurring": "Recurrente",
 }
 
 
@@ -645,6 +743,70 @@ def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
     )
 
 
+def _parse_recurring_row(row_cells: tuple, row_idx: int) -> tuple:
+    """One recurring payment or income (columns AK-AS). Returns (ParsedRow | None, error | None)."""
+    name_cell = _debt_cell(row_cells, RECURRING_START_COL)
+    amount_cell = _debt_cell(row_cells, RECURRING_START_COL + 1)
+    if name_cell in (None, "") and amount_cell in (None, ""):
+        return None, None
+
+    def error(reason: str) -> tuple:
+        return None, {"row": row_idx, "block": BLOCK_LABELS["recurring"], "reason": reason}
+
+    name = str(name_cell).strip() if name_cell else ""
+    amount = _parse_amount(amount_cell)
+    frequency = _RECURRING_FREQUENCIES.get(
+        str(_debt_cell(row_cells, RECURRING_START_COL + 2) or "").strip().lower()
+    )
+    next_date = _parse_date(_debt_cell(row_cells, RECURRING_START_COL + 3))
+    account = _debt_cell(row_cells, RECURRING_START_COL + 4)
+    category = _debt_cell(row_cells, RECURRING_CATEGORY_COL)
+    item_type = _RECURRING_TYPES.get(
+        str(_debt_cell(row_cells, RECURRING_TYPE_COL) or "").strip().lower()
+    )
+    day_cell = _debt_cell(row_cells, RECURRING_DAY_COL)
+    notes = _debt_cell(row_cells, RECURRING_NOTES_COL)
+
+    if not name:
+        return error("Falta el nombre")
+    if amount is None or amount <= 0:
+        return error("Monto inválido: debe ser mayor que 0")
+    if frequency is None:
+        return error("Frecuencia inválida: usa Mensual, Semanal, Quincenal, Bimestral o Anual")
+    if next_date is None:
+        return error("Falta o es inválida la fecha del siguiente cobro")
+    if not account:
+        return error("Falta la cuenta")
+    if not category:
+        return error("Falta la categoría")
+    if item_type is None:
+        return error("Tipo inválido: usa Suscripción, Servicio, Servicio público o Ingreso")
+    day = None
+    if day_cell not in (None, ""):
+        try:
+            day = int(day_cell)
+        except (TypeError, ValueError):
+            day = None
+        if day is None or not 0 <= day <= 31:
+            return error("El día del mes debe ser un número del 0 al 31")
+    return (
+        ParsedRow(
+            entry_type="recurring",
+            amount=amount,
+            description=name,
+            date=next_date,
+            account_name=str(account).strip(),
+            category_name=str(category).strip(),
+            row_number=row_idx,
+            notes=str(notes).strip() if notes else None,
+            rec_frequency=frequency,
+            rec_type=item_type,
+            rec_day=day,
+        ),
+        None,
+    )
+
+
 def parse_upload(content: bytes) -> ParseResult:
     wb = load_workbook(BytesIO(content), data_only=True)
     if SHEET_NAME not in wb.sheetnames:
@@ -681,6 +843,11 @@ def parse_upload(content: bytes) -> ParseResult:
             result.rows.append(debt_row)
         if debt_error:
             result.errors.append(debt_error)
+        recurring_row, recurring_error = _parse_recurring_row(row_cells, row_idx)
+        if recurring_row:
+            result.rows.append(recurring_row)
+        if recurring_error:
+            result.errors.append(recurring_error)
 
     return result
 
@@ -738,10 +905,18 @@ async def resolve_rows(
 
     resolved: list[ResolvedRow] = []
     errors = list(parsed.errors)
+    seen_recurring: set[tuple[str, UUID]] = set()
     for row in parsed.rows:
         if row.entry_type == "debt":
             continue  # debt steps depend on each other: resolved together, below
         block_label = BLOCK_LABELS[row.entry_type]
+        if row.entry_type == "recurring":
+            item = await _resolve_recurring_row(
+                session, user_id, row, account_by_name, category_by_type, seen_recurring, errors
+            )
+            if item:
+                resolved.append(item)
+            continue
 
         def fail(reason: str, row=row, block_label=block_label) -> None:
             errors.append({"row": row.row_number, "block": block_label, "reason": reason})
@@ -807,6 +982,62 @@ async def resolve_rows(
     resolved.extend(debt_items)
     errors.extend(debt_errors)
     return resolved, errors
+
+
+async def _resolve_recurring_row(
+    session: AsyncSession,
+    user_id: UUID,
+    row: ParsedRow,
+    account_by_name: dict[str, Account],
+    category_by_type: dict[str, dict],
+    seen: set[tuple[str, UUID]],
+    errors: list[dict],
+) -> ResolvedRow | None:
+    """Checks a recurring item WITHOUT writing: its account and category exist (the category must
+    be of the type of entry it generates) and the same item isn't already active."""
+    label = BLOCK_LABELS["recurring"]
+
+    def fail(reason: str) -> None:
+        errors.append({"row": row.row_number, "block": label, "reason": reason})
+
+    account = account_by_name.get(row.account_name.strip().lower())
+    if account is None:
+        fail(f"La cuenta '{row.account_name}' no existe")
+        return None
+    entry_type = "income" if row.rec_type == "income" else "expense"
+    category = category_by_type[entry_type].get(row.category_name.strip().lower())
+    if category is None:
+        fail(
+            f"La categoría '{row.category_name}' no existe o no es de "
+            f"{'ingresos' if entry_type == 'income' else 'gastos'}"
+        )
+        return None
+    key = (row.description.strip().lower(), account.id)
+    if key in seen:
+        fail(f"'{row.description}' aparece dos veces para la cuenta {account.name}")
+        return None
+    already = await session.execute(
+        select(RecurringItem.id).where(
+            RecurringItem.user_id == user_id,
+            RecurringItem.account_id == account.id,
+            RecurringItem.status == "active",
+            RecurringItem.deleted_at.is_(None),
+            func.lower(RecurringItem.name) == row.description.strip().lower(),
+        )
+    )
+    if already.first() is not None:
+        fail(f"Ya tienes un recurrente activo '{row.description}' en {account.name}")
+        return None
+    seen.add(key)
+    return ResolvedRow(
+        row=row,
+        account_id=account.id,
+        account_name=account.name,
+        category_id=category.id,
+        category_name=category.display_name,
+        tag_ids=[],
+        tag_names=[],
+    )
 
 
 async def _open_debt_states(session: AsyncSession, user_id: UUID) -> dict[tuple[str, str], dict]:
@@ -1021,6 +1252,35 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 continue
             created += 1
             continue
+        if row.entry_type == "recurring":
+            try:
+                async with session.begin_nested():
+                    await recurring_service.create_recurring_item(
+                        session,
+                        user_id,
+                        RecurringItemCreate(
+                            name=row.description,
+                            item_type=row.rec_type,
+                            amount=row.amount,
+                            frequency=row.rec_frequency,
+                            frequency_day=row.rec_day,
+                            account_id=item.account_id,
+                            category_id=item.category_id,
+                            next_date=row.date,
+                            notes=row.notes,
+                        ),
+                    )
+            except HTTPException as exc:
+                errors.append(
+                    {
+                        "row": row.row_number,
+                        "block": BLOCK_LABELS["recurring"],
+                        "reason": str(exc.detail),
+                    }
+                )
+                continue
+            created += 1
+            continue
         created += 1
         if row.entry_type == "card_payment":
             # Paying a card is a transfer: it lowers what the card owes (debit on the
@@ -1133,6 +1393,7 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
     existing_debt = await _existing_debt_keys(session, user_id, resolved)
     debt_totals = {"loan": [0, Decimal(0)], "payment": [0, Decimal(0)], "opening": [0, Decimal(0)]}
     debt_people: set[tuple[str, str]] = set()
+    recurring_total = [0, Decimal(0)]
 
     by_type = {
         "income": [0, Decimal(0)],
@@ -1145,6 +1406,10 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
     duplicates: list[dict] = []
     for item in resolved:
         row = item.row
+        if row.entry_type == "recurring":
+            recurring_total[0] += 1
+            recurring_total[1] += row.amount
+            continue
         if row.entry_type == "debt":
             debt_totals[row.debt_kind][0] += 1
             debt_totals[row.debt_kind][1] += row.amount
@@ -1192,7 +1457,8 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
             tag[0] += 1
             tag[1] += row.amount
 
-    dates = [item.row.date for item in resolved]
+    # A recurring item's date is its next charge, not a movement: it stays out of the date range.
+    dates = [item.row.date for item in resolved if item.row.entry_type != "recurring"]
     return {
         "valid_rows": len(resolved),
         "error_rows": len(errors),
@@ -1205,6 +1471,7 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
             "openings": {"count": debt_totals["opening"][0], "total": debt_totals["opening"][1]},
             "people": len(debt_people),
         },
+        "recurring": {"count": recurring_total[0], "total": recurring_total[1]},
         "date_from": min(dates) if dates else None,
         "date_to": max(dates) if dates else None,
         "by_account": sorted(by_account.values(), key=lambda a: -a["count"]),

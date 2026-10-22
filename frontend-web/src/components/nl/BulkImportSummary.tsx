@@ -20,7 +20,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
  * wrong or looks already loaded. Shown BEFORE anything is saved. */
 export function BulkImportSummary({ preview }: { preview: BulkImportPreview }) {
   const { t } = useTranslation('pages')
-  const { income, expense, card_payment: cardPayment, debts, possible_duplicates: dupes } = preview
+  const { income, expense, card_payment: cardPayment, debts, recurring, possible_duplicates: dupes } = preview
   const categories = preview.by_category.slice(0, MAX_CATEGORIES)
   const hiddenCategories = preview.by_category.length - categories.length
 
@@ -64,6 +64,18 @@ export function BulkImportSummary({ preview }: { preview: BulkImportPreview }) {
           }
         />
       </div>
+
+      {recurring.count > 0 && (
+        <section data-testid="bulk-recurring">
+          <h3 className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t('bulkImport.summary.recurringTitle')}
+          </h3>
+          <div className="rounded-md p-3" style={{ background: 'var(--nl-accent-soft-bg)', color: 'var(--nl-accent-ink)' }}>
+            <div className="text-[16px] font-semibold tabular-nums">{formatMoney(recurring.total)}</div>
+            <div className="text-[11.5px] opacity-80">{t('bulkImport.summary.recurringItems', { count: recurring.count })}</div>
+          </div>
+        </section>
+      )}
 
       {debts.people > 0 && (
         <section data-testid="bulk-debts">

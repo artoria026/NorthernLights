@@ -1845,7 +1845,10 @@
       "debtPeople_other": "{{count}} people",
       "debtLoans": "Loans",
       "debtPayments": "Payments",
-      "debtOpenings": "Opening balances"
+      "debtOpenings": "Opening balances",
+      "recurringTitle": "Recurring",
+      "recurringItems_one": "{{count}} recurring item to create (sum of their amounts per period)",
+      "recurringItems_other": "{{count}} recurring items to create (sum of their amounts per period)"
     }
   }
 }

@@ -84,7 +84,7 @@ async def test_download_template_is_valid_xlsx_with_dropdowns(client: AsyncClien
     ws = wb["Transacciones"]
     assert ws["A2"].value == "Monto"
     assert ws["G2"].value == "Monto"
-    assert len(ws.data_validations.dataValidation) == 12
+    assert len(ws.data_validations.dataValidation) == 16
 
 
 async def test_upload_creates_valid_rows_and_reports_row_errors(client: AsyncClient):
@@ -243,7 +243,7 @@ async def test_template_has_the_tags_column_and_suggests_the_users_tags(client: 
     wb = load_workbook(BytesIO(response.content))
     ws = wb["Transacciones"]
     assert ws["L2"].value == "Etiquetas"
-    assert len(ws.data_validations.dataValidation) == 13
+    assert len(ws.data_validations.dataValidation) == 17
     assert wb["Listas"]["D1"].value == "Reparación choque"
 
 
