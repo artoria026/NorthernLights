@@ -450,7 +450,11 @@
         "income": "INGRESO",
         "expense": "GASTO",
         "transfer": "TRANSFER"
-      }
+      },
+      "allCategories": "Todas las categorías",
+      "clearCategory": "Quitar la categoría",
+      "clear_one": "Limpiar filtro",
+      "clear_other": "Limpiar filtros ({{count}})"
     },
     "states": {
       "loading": "Cargando...",
