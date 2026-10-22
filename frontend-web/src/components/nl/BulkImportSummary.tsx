@@ -20,7 +20,7 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
  * wrong or looks already loaded. Shown BEFORE anything is saved. */
 export function BulkImportSummary({ preview }: { preview: BulkImportPreview }) {
   const { t } = useTranslation('pages')
-  const { income, expense, card_payment: cardPayment, debts, recurring, possible_duplicates: dupes } = preview
+  const { income, expense, card_payment: cardPayment, debts, recurring, adjustments, possible_duplicates: dupes } = preview
   const categories = preview.by_category.slice(0, MAX_CATEGORIES)
   const hiddenCategories = preview.by_category.length - categories.length
 
@@ -64,6 +64,29 @@ export function BulkImportSummary({ preview }: { preview: BulkImportPreview }) {
           }
         />
       </div>
+
+      {adjustments.count > 0 && (
+        <section data-testid="bulk-adjustments">
+          <h3 className="mb-1.5 flex items-center justify-between text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <span>{t('bulkImport.summary.adjustmentsTitle')}</span>
+            <span className="normal-case tracking-normal">{t('bulkImport.summary.adjustmentsCount', { count: adjustments.count })}</span>
+          </h3>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {(
+              [
+                ['adjustmentsExits', adjustments.exits, 'var(--nl-danger-ink)', 'var(--nl-danger-soft-bg)'],
+                ['adjustmentsEntries', adjustments.entries, 'var(--nl-accent-ink)', 'var(--nl-accent-soft-bg)'],
+                ['adjustmentsNet', adjustments.net, 'var(--nl-warning-ink)', 'var(--nl-warning-soft-bg)'],
+              ] as const
+            ).map(([key, total, ink, soft]) => (
+              <div key={key} className="rounded-md p-3" style={{ background: soft, color: ink }}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide">{t(`bulkImport.summary.${key}`)}</div>
+                <div className="mt-1 text-[16px] font-semibold tabular-nums">{formatMoney(total)}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {recurring.count > 0 && (
         <section data-testid="bulk-recurring">

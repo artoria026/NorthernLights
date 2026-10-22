@@ -8,7 +8,7 @@ from app.core.redis import get_redis
 from app.core.security import CurrentUser, get_current_user
 from app.schemas.common import Meta, SuccessResponse
 from app.schemas.report import ReportGenerateRequest, ReportOut
-from app.services import report_service
+from app.services import engine_service, report_service
 
 router = APIRouter()
 
@@ -49,6 +49,19 @@ async def current_summary(
     redis = await get_redis()
     summary = await report_service.get_current_month_summary(session, redis, current_user.id)
     return SuccessResponse(data=summary)
+
+
+@router.get("/adjustments")
+async def adjustments_by_month(
+    months: int = Query(default=12, ge=1, le=60),
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    """The balance adjustments month by month: the money that left (or showed up) without a known
+    reason, for the last `months` months."""
+    return SuccessResponse(
+        data=await engine_service.adjustments_by_month(session, current_user.id, months)
+    )
 
 
 @router.get("/monthly/{year}/{month}")

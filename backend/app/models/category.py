@@ -16,7 +16,7 @@ class Category(Base, TimestampMixin, SoftDeleteMixin):
 
     __tablename__ = "categories"
     __table_args__ = (
-        CheckConstraint("type IN ('income', 'expense')", name="ck_categories_type"),
+        CheckConstraint("type IN ('income', 'expense', 'adjustment')", name="ck_categories_type"),
         # A subcategory (non-null parent_id) ALWAYS requires user_id -- there
         # can't be a system subcategory shared across all
         # users. Enforced at the database level, not just in

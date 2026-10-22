@@ -347,8 +347,10 @@ async def test_export_categories_has_system_state_and_own_tree(client: AsyncClie
     assert body["format"] == "northernlights.categories"
     by_name = {c["name"]: c for c in body["categories"]}
 
-    # every system category + 4 own
-    assert len(body["categories"]) == len(SYSTEM_CATEGORIES) + 4
+    # every system category the user can pick (the native adjustments one belongs to the app) + 4 own
+    pickable = [c for c in SYSTEM_CATEGORIES if c.type != "adjustment"]
+    assert len(body["categories"]) == len(pickable) + 4
+    assert "Ajustes de saldo" not in by_name
     assert by_name["Mascotas"]["is_system"] and by_name["Mascotas"]["hidden"]
     assert not by_name["Comida y Bebidas"]["hidden"]
     assert by_name["Gimnasio"]["icon"] == "dumbbell" and by_name["Gimnasio"]["color"] == "#112233"

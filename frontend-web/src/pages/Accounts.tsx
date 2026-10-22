@@ -704,6 +704,7 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
   const pushToast = useUiStore((s) => s.pushToast)
   const [realBalance, setRealBalance] = useState(account.balance)
   const [notes, setNotes] = useState('')
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
 
   const delta = realBalance === '' ? 0 : Number(realBalance) - Number(account.balance)
   // Small threshold instead of exactly === 0: avoids a cents rounding in the
@@ -716,7 +717,7 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
     try {
       const result = await reconcile.mutateAsync({
         id: account.id,
-        input: { real_balance: realBalance, notes: notes.trim() || undefined },
+        input: { real_balance: realBalance, date, notes: notes.trim() || undefined },
       })
       if (result.adjusted) {
         const isEntry = Number(result.delta) > 0
@@ -754,6 +755,15 @@ function ReconcileAccountForm({ account, onDone }: { account: Account; onDone: (
           required
           value={realBalance}
           onChange={(e) => setRealBalance(e.target.value)}
+          className={`${selectClass} h-9 w-full`}
+        />
+      </Field>
+      <Field label={t('accounts.reconcile.dateLabel')} tip={t('accounts.reconcile.dateTip')}>
+        <input
+          type="date"
+          required
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
           className={`${selectClass} h-9 w-full`}
         />
       </Field>

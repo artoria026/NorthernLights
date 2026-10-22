@@ -523,6 +523,79 @@ async def _adjustments_breakdown(
     }
 
 
+async def adjustments_by_month(session: AsyncSession, user_id: UUID, months: int) -> dict:
+    """The balance adjustments of the last `months` months (the current one included), month by
+    month: what left without a known reason (adjustment_out), what showed up (adjustment_in), the
+    net, how many there were, and what share of everything that left was unidentified (against the
+    registered expenses of that month). The months without any adjustment are in too, at zero, so
+    the trend reads without gaps."""
+    today = date.today()
+    first = today.replace(day=1) - relativedelta(months=months - 1)
+    month_start = func.date_trunc("month", JournalEntry.date)
+    result = await session.execute(
+        select(month_start, JournalEntry.entry_type, func.sum(JournalEntry.amount), func.count())
+        .where(
+            JournalEntry.user_id == user_id,
+            JournalEntry.entry_type.in_(("adjustment_in", "adjustment_out")),
+            JournalEntry.status == "confirmed",
+            JournalEntry.deleted_at.is_(None),
+            JournalEntry.date >= first,
+        )
+        .group_by(month_start, JournalEntry.entry_type)
+    )
+    adjustments: dict[date, dict[str, Decimal | int]] = {}
+    for month, entry_type, amount, count in result.all():
+        row = adjustments.setdefault(
+            month.date(), {"in": Decimal("0"), "out": Decimal("0"), "count": 0}
+        )
+        row["in" if entry_type == "adjustment_in" else "out"] = amount
+        row["count"] += count
+    result = await session.execute(
+        select(month_start, func.sum(JournalEntry.amount))
+        .where(
+            JournalEntry.user_id == user_id,
+            JournalEntry.entry_type == "expense",
+            JournalEntry.status == "confirmed",
+            JournalEntry.deleted_at.is_(None),
+            JournalEntry.date >= first,
+        )
+        .group_by(month_start)
+    )
+    expenses = {month.date(): amount for month, amount in result.all()}
+
+    rows = []
+    total_in = total_out = Decimal("0")
+    total_count = 0
+    for offset in range(months):
+        month = first + relativedelta(months=offset)
+        row = adjustments.get(month, {"in": Decimal("0"), "out": Decimal("0"), "count": 0})
+        spent = expenses.get(month, Decimal("0"))
+        outflow = spent + row["out"]
+        rows.append(
+            {
+                "month": month.strftime("%Y-%m"),
+                "total_in": row["in"],
+                "total_out": row["out"],
+                "net": row["in"] - row["out"],
+                "count": row["count"],
+                "expenses": spent,
+                "unidentified_share": float(row["out"] / outflow) if outflow > 0 else 0.0,
+            }
+        )
+        total_in += row["in"]
+        total_out += row["out"]
+        total_count += row["count"]
+    return {
+        "months": rows,
+        "total": {
+            "total_in": total_in,
+            "total_out": total_out,
+            "net": total_in - total_out,
+            "count": total_count,
+        },
+    }
+
+
 async def _net_worth_as_of(session: AsyncSession, user_id: UUID, as_of: date) -> Decimal:
     """Rebuilds net worth as of a past date by summing the effect of every
     confirmed journal_line up to that date onto `initial_balance`, instead

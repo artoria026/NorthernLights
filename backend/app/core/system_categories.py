@@ -40,7 +40,13 @@ SYSTEM_CATEGORIES: tuple[SystemCategory, ...] = (
     SystemCategory("investments_returns", "income", "Inversiones y Rendimientos", "Investments & Returns", "trending-up", "#4e8ef0", 30),
     SystemCategory("refunds_reimbursements", "income", "Reembolsos y Devoluciones", "Refunds & Reimbursements", "receipt", "#f5a623", 40),
     SystemCategory("other_income", "income", "Otro Ingreso", "Other Income", "plus-circle", "#6f6f76", 999),
+    # Native and immutable: every balance adjustment (reconciling an account) lives under it. Its own
+    # type keeps it out of the income / expense pickers; the app assigns it, nobody chooses it.
+    SystemCategory("balance_adjustment", "adjustment", "Ajustes de saldo", "Balance Adjustments", "scale", "#f5a623", 990),
 )
+
+# Slug of the category every balance adjustment goes under.
+BALANCE_ADJUSTMENT_SLUG = "balance_adjustment"
 
 
 def system_category_names(type_: str) -> str:

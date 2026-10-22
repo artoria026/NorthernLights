@@ -88,7 +88,8 @@ export interface Category {
   name: string
   /** Stable id of a system category; null for the user's own. */
   slug: string | null
-  type: 'income' | 'expense'
+  /** 'adjustment' is only the native «Ajustes de saldo» category: the app assigns it, nobody picks it. */
+  type: 'income' | 'expense' | 'adjustment'
   icon: string | null
   color: string
   is_system: boolean
@@ -402,6 +403,23 @@ export interface ReportCategoryAmount {
   /** Only present on a parent category's row -- the expense/income of
    * its subcategories is already summed into `amount`, this is the breakdown. */
   subcategories?: ReportCategoryAmount[]
+}
+
+export interface AdjustmentsMonth {
+  month: string
+  total_in: string
+  total_out: string
+  net: string
+  count: number
+  /** What the user did record as expenses that month. */
+  expenses: string
+  /** Part of everything that left (recorded expenses + unidentified exits) that was unidentified; 0-1. */
+  unidentified_share: number
+}
+
+export interface AdjustmentsReport {
+  months: AdjustmentsMonth[]
+  total: { total_in: string; total_out: string; net: string; count: number }
 }
 
 export interface ReportSummary {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/services/api'
-import type { ApiSuccess, Report, ReportSummary } from '@/types'
+import type { AdjustmentsReport, ApiSuccess, Report, ReportSummary } from '@/types'
 
 function invalidateReports(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ['reports'] })
@@ -23,6 +23,19 @@ export function useCurrentMonthSummary() {
     queryKey: ['reports', 'current'],
     queryFn: async () => {
       const { data } = await api.get<ApiSuccess<ReportSummary>>('/reports/summary/current')
+      return data.data
+    },
+  })
+}
+
+/** Month by month, the money that left or showed up with no explanation (balance adjustments). */
+export function useAdjustmentsReport(months = 12) {
+  return useQuery({
+    queryKey: ['reports', 'adjustments', months],
+    queryFn: async () => {
+      const { data } = await api.get<ApiSuccess<AdjustmentsReport>>('/reports/adjustments', {
+        params: { months },
+      })
       return data.data
     },
   })

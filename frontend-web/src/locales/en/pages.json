@@ -252,6 +252,8 @@
     "reconcile": {
       "title": "Reconcile balance",
       "currentBalanceIntro": "Current account: <strong>{{balance}}</strong>. Enter what you actually have (counted, or from your statement) and the rest adjusts itself.",
+      "dateLabel": "Adjustment date",
+      "dateTip": "If you record it late, use the date the money was actually missing or extra.",
       "realBalanceLabel": "Real balance",
       "noteLabel": "Note (optional)",
       "noteTip": "Over time these notes tell you what you're not recording.",
@@ -1437,6 +1439,18 @@
       },
       "tip": "Savings rate and DTI are indicators for the closed report, not the current month — for that, use the \"Current month\" note at the bottom of the page."
     },
+    "unidentified": {
+      "heading": "Unidentified difference",
+      "intro": "What left or showed up without you knowing where: each month's balance adjustments. The percentage is the part of everything that left that you could not identify.",
+      "empty": "No balance adjustments yet. They will show up here when you reconcile an account.",
+      "month": "Month",
+      "exits": "Exits",
+      "entries": "Entries",
+      "net": "Net",
+      "count": "Adjustments",
+      "share": "% unidentified",
+      "total": "Total"
+    },
     "tagsHeading": "Spending by tag",
     "tagsEmpty": "You have no tags to analyze yet.",
     "tagsCreate": "Create one"
@@ -1853,6 +1867,11 @@
       "debtLoans": "Loans",
       "debtPayments": "Payments",
       "debtOpenings": "Opening balances",
+      "adjustmentsTitle": "Balance adjustments",
+      "adjustmentsEntries": "Entries",
+      "adjustmentsExits": "Exits",
+      "adjustmentsNet": "Net",
+      "adjustmentsCount": "{{count}} adjustments to record",
       "recurringTitle": "Recurring",
       "recurringItems_one": "{{count}} recurring item to create (sum of their amounts per period)",
       "recurringItems_other": "{{count}} recurring items to create (sum of their amounts per period)"

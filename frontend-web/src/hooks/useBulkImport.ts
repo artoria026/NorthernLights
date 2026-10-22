@@ -23,6 +23,8 @@ export interface BulkImportPreview {
   }
   /** Recurring payments or incomes in the file: how many and the sum of their amounts. */
   recurring: { count: number; total: string }
+  /** Balance adjustments in the file (native «Ajustes de saldo» category). */
+  adjustments: { count: number; entries: string; exits: string; net: string }
   date_from: string | null
   date_to: string | null
   by_account: { name: string; count: number; income: string; expense: string }[]

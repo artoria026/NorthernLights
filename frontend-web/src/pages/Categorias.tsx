@@ -426,7 +426,7 @@ function AddSubcategoryRow({ parent }: { parent: Category }) {
           <DialogHeader>
             <DialogTitle>{t('categories.newSubcategoryTitle', { parent: parent.name })}</DialogTitle>
           </DialogHeader>
-          <NewCategoryForm type={parent.type} parentId={parent.id} onDone={() => setOpen(false)} />
+          <NewCategoryForm type={parent.type as CatType} parentId={parent.id} onDone={() => setOpen(false)} />
         </DialogContent>
       </Dialog>
     </div>
