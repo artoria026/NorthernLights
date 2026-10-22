@@ -17,6 +17,7 @@ const preview: BulkImportPreview = {
     people: 0,
   },
   recurring: { count: 0, total: '0' },
+  adjustments: { count: 0, entries: '0', exits: '0', net: '0' },
   date_from: '2026-10-01',
   date_to: '2026-10-13',
   by_account: [{ name: 'Santander', count: 3, income: '1000.00', expense: '150.00' }],
@@ -141,6 +142,23 @@ describe('BulkImport', () => {
     expect(recurring).toHaveTextContent('Recurrentes')
     expect(recurring).toHaveTextContent('$425.38')
     expect(recurring).toHaveTextContent('2 pagos recurrentes por dar de alta')
+  })
+
+  it('shows the balance adjustments of the file apart, only when it has them', async () => {
+    renderPage()
+    await dropFile()
+    expect(screen.queryByTestId('bulk-adjustments')).not.toBeInTheDocument()
+
+    mocks.previewMutate.mockImplementation((_f: File, options?: { onSuccess?: (p: BulkImportPreview) => void }) =>
+      options?.onSuccess?.({ ...preview, adjustments: { count: 52, entries: '1742.90', exits: '9569.11', net: '-7826.21' } }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Elegir otro archivo' }))
+    await dropFile()
+    const adjustments = screen.getByTestId('bulk-adjustments')
+    expect(adjustments).toHaveTextContent('Ajustes de saldo')
+    expect(adjustments).toHaveTextContent('52 ajustes por registrar')
+    expect(adjustments).toHaveTextContent('$9,569.11')
+    expect(adjustments).toHaveTextContent('$1,742.90')
   })
 
   it('warns about rows that look already loaded and lists the rows with problems', async () => {

@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.system_categories import BALANCE_ADJUSTMENT_SLUG
 from app.models.category import Category
 from app.models.category_hide import CategoryHide
 from app.models.transaction import JournalEntry
@@ -38,6 +39,25 @@ async def list_categories(
     )
     result = await session.execute(query)
     return list(result.scalars().all())
+
+
+async def get_balance_adjustment_category(session: AsyncSession) -> Category:
+    """The native category every balance adjustment goes under. It is a system row, visible to
+    everyone and never hidden, edited or deleted -- if it is missing the database is broken."""
+    result = await session.execute(
+        select(Category).where(
+            Category.slug == BALANCE_ADJUSTMENT_SLUG,
+            Category.user_id.is_(None),
+            Category.deleted_at.is_(None),
+        )
+    )
+    category = result.scalar_one_or_none()
+    if category is None:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "Falta la categoria nativa «Ajustes de saldo»: revisa las migraciones",
+        )
+    return category
 
 
 async def list_hidden_categories(
@@ -77,6 +97,8 @@ async def export_categories(session: AsyncSession, user_id: UUID) -> CategoryExp
         .where(
             or_(Category.user_id == user_id, Category.user_id.is_(None)),
             Category.deleted_at.is_(None),
+            # The native adjustments category belongs to the app, not to the user's tree.
+            Category.type != "adjustment",
         )
         .order_by(Category.type, Category.user_id.is_not(None), Category.sort_order, Category.name)
     )
@@ -308,6 +330,11 @@ async def deactivate_category(session: AsyncSession, user_id: UUID, category_id:
     if not category.is_system:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "Las categorias propias se eliminan, no se desactivan"
+        )
+    if category.slug == BALANCE_ADJUSTMENT_SLUG:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "La categoria «Ajustes de saldo» es nativa y no se puede desactivar",
         )
 
     existing = await session.execute(

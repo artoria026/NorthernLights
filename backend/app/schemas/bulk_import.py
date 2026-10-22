@@ -61,6 +61,13 @@ class PreviewDuplicates(BaseModel):
     examples: list[PreviewDuplicate]
 
 
+class PreviewAdjustments(BaseModel):
+    count: int
+    entries: Decimal
+    exits: Decimal
+    net: Decimal
+
+
 class BulkImportPreview(BaseModel):
     """What loading the file would do (nothing has been saved)."""
 
@@ -72,6 +79,9 @@ class BulkImportPreview(BaseModel):
     card_payment: PreviewTotal = PreviewTotal(count=0, total=Decimal(0))
     debts: PreviewDebts = PreviewDebts()
     recurring: PreviewTotal = PreviewTotal(count=0, total=Decimal(0))
+    adjustments: PreviewAdjustments = PreviewAdjustments(
+        count=0, entries=Decimal(0), exits=Decimal(0), net=Decimal(0)
+    )
     date_from: date | None
     date_to: date | None
     by_account: list[PreviewAccount]

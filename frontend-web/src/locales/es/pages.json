@@ -252,6 +252,8 @@
     "reconcile": {
       "title": "Conciliar saldo",
       "currentBalanceIntro": "Cuenta actual: <strong>{{balance}}</strong>. Escribe lo que de verdad tienes (contado o del estado de cuenta) y el resto se ajusta solo.",
+      "dateLabel": "Fecha del ajuste",
+      "dateTip": "Si lo registras tarde, pon la fecha en la que de verdad faltó o sobró el dinero.",
       "realBalanceLabel": "Saldo real",
       "noteLabel": "Nota (opcional)",
       "noteTip": "Con el tiempo estas notas te dicen qué es lo que no estás registrando.",
@@ -1437,6 +1439,18 @@
       },
       "tip": "Tasa de ahorro y DTI son indicadores del reporte cerrado, no del mes en curso — para eso usa la nota \"Mes en curso\" al final de la página."
     },
+    "unidentified": {
+      "heading": "Diferencia no identificada",
+      "intro": "Lo que salió o apareció sin que sepas en qué: los ajustes de saldo de cada mes. El porcentaje es la parte de todo lo que salió que no identificaste.",
+      "empty": "Aún no hay ajustes de saldo. Cuando concilies una cuenta aparecerán aquí.",
+      "month": "Mes",
+      "exits": "Salidas",
+      "entries": "Entradas",
+      "net": "Neto",
+      "count": "Ajustes",
+      "share": "% no identificado",
+      "total": "Total"
+    },
     "tagsHeading": "Gastos por etiqueta",
     "tagsEmpty": "Aún no tienes etiquetas para analizar.",
     "tagsCreate": "Crear una"
@@ -1853,6 +1867,11 @@
       "debtLoans": "Préstamos",
       "debtPayments": "Abonos",
       "debtOpenings": "Saldos iniciales",
+      "adjustmentsTitle": "Ajustes de saldo",
+      "adjustmentsEntries": "Entradas",
+      "adjustmentsExits": "Salidas",
+      "adjustmentsNet": "Neto",
+      "adjustmentsCount": "{{count}} ajustes por registrar",
       "recurringTitle": "Recurrentes",
       "recurringItems_one": "{{count}} pago recurrente por dar de alta (suma de sus montos por periodo)",
       "recurringItems_other": "{{count}} pagos recurrentes por dar de alta (suma de sus montos por periodo)"

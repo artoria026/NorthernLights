@@ -474,6 +474,7 @@ async def get_weekly_view(session: AsyncSession, user_id: UUID, year: int, month
         .join(Category, Category.id == JournalEntry.category_id)
         .where(
             JournalEntry.user_id == user_id,
+            JournalEntry.entry_type == "expense",
             JournalEntry.status == "confirmed",
             JournalEntry.deleted_at.is_(None),
             JournalEntry.category_id.is_not(None),

@@ -111,7 +111,10 @@ async def test_reconcile_creates_adjustment_out_when_real_balance_lower(client: 
     assert data["delta"] == "-350.00"
     assert data["transaction"]["entry_type"] == "adjustment_out"
     assert data["transaction"]["amount"] == "350.00"
-    assert data["transaction"]["category_id"] is None
+    # an adjustment always lives under the native «Ajustes de saldo» category
+    categories = (await client.get("/api/v1/categories", headers=headers)).json()["data"]
+    adjustment = next(c for c in categories if c["slug"] == "balance_adjustment")
+    assert data["transaction"]["category_id"] == adjustment["id"]
 
     account = await client.get(f"/api/v1/accounts/{account_id}", headers=headers)
     assert account.json()["data"]["balance"] == "650.00"

@@ -14,6 +14,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import LIQUID_SUBTYPES
 from app.models.account import Account
 from app.models.category import Category
 from app.models.debt import Debt, DebtMovement
@@ -206,6 +207,15 @@ DEBT_TERMS_HEADERS = {
     DEBT_TOTAL_COL: "Total a pagar",
     DEBT_RATE_COL: "Tasa anual (%)",
 }
+# Balance adjustments block (AZ-BD, after a spacer column): the money that went missing or showed up
+# with no explanation. Direction «Salida» takes it out of the account, «Entrada» puts it in; the
+# app files every one under the native «Ajustes de saldo» category, so there is no category column.
+ADJUSTMENT_START_COL = 52  # AZ
+ADJUSTMENT_HEADERS = ["Monto", "Dirección", "Fecha", "Cuenta líquida", "Concepto"]
+ADJUSTMENT_DIRECTION_OPTIONS = ["Salida", "Entrada"]
+_ADJUSTMENT_DIRECTIONS = {"salida": "adjustment_out", "entrada": "adjustment_in"}
+ADJUSTMENT_FILL = PatternFill("solid", fgColor="F8CBAD")
+ADJUSTMENT_DEFAULT_DESCRIPTION = "Ajuste de saldo"
 RECURRING_FILL = PatternFill("solid", fgColor="C6E0B4")
 # Two more optional columns after the recurring block: the NAME of the recurring item a transaction
 # pays or collects (one for the Expenses block, one for the Income block, like the notes). The
@@ -270,6 +280,12 @@ COLUMN_WIDTHS = {
     48: 16,
     49: 16,
     50: 14,
+    51: 3,
+    52: 12,
+    53: 14,
+    54: 14,
+    55: 20,
+    56: 36,
 }
 
 
@@ -313,6 +329,7 @@ def build_template_workbook(
     _write_block(
         ws, CARD_PAYMENT_START_COL, "Pagos de tarjeta", CARD_PAYMENT_FILL, CARD_PAYMENT_HEADERS
     )
+    _write_block(ws, ADJUSTMENT_START_COL, "Ajustes de saldo", ADJUSTMENT_FILL, ADJUSTMENT_HEADERS)
     _write_block(ws, DEBT_START_COL, "Deudas", DEBT_FILL, DEBT_HEADERS[:5])
     # The debts block has a sixth column (concept) and the optional direction after it.
     for col, header in (
@@ -443,7 +460,15 @@ def build_template_workbook(
     dv_debt_frequency = DataValidation(
         type="list", formula1='"' + ",".join(DEBT_FREQUENCY_OPTIONS) + '"', allow_blank=True
     )
+    dv_adjustment_direction = DataValidation(
+        type="list", formula1='"' + ",".join(ADJUSTMENT_DIRECTION_OPTIONS) + '"', allow_blank=True
+    )
+    dv_adjustment_account = DataValidation(
+        type="list", formula1=_range("E", len(source_names)), allow_blank=True
+    )
     for dv in (
+        dv_adjustment_direction,
+        dv_adjustment_account,
         dv_rec_frequency,
         dv_rec_type,
         dv_rec_account,
@@ -472,6 +497,8 @@ def build_template_workbook(
         )
         ws.add_data_validation(dv_tags)
         dv_tags.add(f"L{FIRST_DATA_ROW}:L{last_row}")
+    dv_adjustment_direction.add(f"BA{FIRST_DATA_ROW}:BA{last_row}")
+    dv_adjustment_account.add(f"BC{FIRST_DATA_ROW}:BC{last_row}")
     dv_account_income.add(f"D{FIRST_DATA_ROW}:D{last_row}")
     dv_cat_income.add(f"E{FIRST_DATA_ROW}:E{last_row}")
     dv_account_expense.add(f"J{FIRST_DATA_ROW}:J{last_row}")
@@ -493,6 +520,7 @@ def build_template_workbook(
         ws.cell(row=row, column=3).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=9).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=CARD_PAYMENT_START_COL + 2).number_format = "yyyy-mm-dd"
+        ws.cell(row=row, column=ADJUSTMENT_START_COL + 2).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=DEBT_START_COL + 3).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=DEBT_PLAN_NEXT_COL).number_format = "yyyy-mm-dd"
         ws.cell(row=row, column=RECURRING_START_COL + 3).number_format = "yyyy-mm-dd"
@@ -630,6 +658,7 @@ BLOCK_LABELS = {
     "card_payment": "Pago de tarjeta",
     "debt": "Deuda",
     "recurring": "Recurrente",
+    "adjustment": "Ajuste de saldo",
 }
 
 
@@ -902,6 +931,45 @@ def _parse_recurring_row(row_cells: tuple, row_idx: int) -> tuple:
     )
 
 
+def _parse_adjustment_row(row_cells: tuple, row_idx: int) -> tuple:
+    """One balance adjustment (columns AZ-BD). Returns (ParsedRow | None, error | None)."""
+    amount_cell = _debt_cell(row_cells, ADJUSTMENT_START_COL)
+    if amount_cell in (None, ""):
+        return None, None
+
+    def error(reason: str) -> tuple:
+        return None, {"row": row_idx, "block": BLOCK_LABELS["adjustment"], "reason": reason}
+
+    amount = _parse_amount(amount_cell)
+    entry_type = _ADJUSTMENT_DIRECTIONS.get(
+        str(_debt_cell(row_cells, ADJUSTMENT_START_COL + 1) or "").strip().lower()
+    )
+    date_value = _parse_date(_debt_cell(row_cells, ADJUSTMENT_START_COL + 2))
+    account = _debt_cell(row_cells, ADJUSTMENT_START_COL + 3)
+    concept = _debt_cell(row_cells, ADJUSTMENT_START_COL + 4)
+
+    if amount is None:
+        return error("Monto inválido")
+    if entry_type is None:
+        return error("Dirección inválida: usa Salida o Entrada")
+    if date_value is None:
+        return error("Fecha inválida o vacía")
+    if not account:
+        return error("Falta la cuenta")
+    return (
+        ParsedRow(
+            entry_type=entry_type,
+            amount=amount,
+            description=str(concept).strip() if concept else ADJUSTMENT_DEFAULT_DESCRIPTION,
+            date=date_value,
+            account_name=str(account).strip(),
+            category_name="",
+            row_number=row_idx,
+        ),
+        None,
+    )
+
+
 def parse_upload(content: bytes) -> ParseResult:
     wb = load_workbook(BytesIO(content), data_only=True)
     if SHEET_NAME not in wb.sheetnames:
@@ -938,6 +1006,11 @@ def parse_upload(content: bytes) -> ParseResult:
             result.rows.append(debt_row)
         if debt_error:
             result.errors.append(debt_error)
+        adjustment_row, adjustment_error = _parse_adjustment_row(row_cells, row_idx)
+        if adjustment_row:
+            result.rows.append(adjustment_row)
+        if adjustment_error:
+            result.errors.append(adjustment_error)
         recurring_row, recurring_error = _parse_recurring_row(row_cells, row_idx)
         if recurring_row:
             result.rows.append(recurring_row)
@@ -956,6 +1029,40 @@ def _category_names(category: Category) -> list[str]:
 def _category_lookup(categories: list[Category]) -> dict[str, UUID]:
     """Lowercased name -> id (a system category answers to either language)."""
     return {name: c.id for c in categories for name in _category_names(c)}
+
+
+_ADJUSTMENT_TYPES = ("adjustment_in", "adjustment_out")
+
+
+def _block_label(entry_type: str) -> str:
+    return BLOCK_LABELS["adjustment" if entry_type in _ADJUSTMENT_TYPES else entry_type]
+
+
+def _resolve_adjustment_row(
+    row: ParsedRow, account_by_name: dict[str, Account], errors: list[dict]
+) -> "ResolvedRow | None":
+    """An adjustment only makes sense on an account that holds money (the real balance is what
+    the user counts); the category is the native one, which the load assigns."""
+    account = account_by_name.get(row.account_name.strip().lower())
+    reason = None
+    if account is None:
+        reason = f"La cuenta '{row.account_name}' no existe"
+    elif account.subtype not in LIQUID_SUBTYPES:
+        reason = f"La cuenta '{row.account_name}' no es una cuenta líquida: no admite ajustes"
+    if reason:
+        errors.append(
+            {"row": row.row_number, "block": BLOCK_LABELS["adjustment"], "reason": reason}
+        )
+        return None
+    return ResolvedRow(
+        row=row,
+        account_id=account.id,
+        account_name=account.name,
+        category_id=None,
+        category_name="",
+        tag_ids=[],
+        tag_names=[],
+    )
 
 
 @dataclass
@@ -1009,7 +1116,12 @@ async def resolve_rows(
     for row in parsed.rows:
         if row.entry_type == "debt":
             continue  # debt steps depend on each other: resolved together, below
-        block_label = BLOCK_LABELS[row.entry_type]
+        block_label = _block_label(row.entry_type)
+        if row.entry_type in _ADJUSTMENT_TYPES:
+            adjustment_item = _resolve_adjustment_row(row, account_by_name, errors)
+            if adjustment_item:
+                resolved.append(adjustment_item)
+            continue
         if row.entry_type == "recurring":
             item = await _resolve_recurring_row(
                 session, user_id, row, account_by_name, category_by_type, seen_recurring, errors
@@ -1467,6 +1579,19 @@ async def commit_parsed_rows(session: AsyncSession, user_id: UUID, parsed: Parse
                 ),
             )
             continue
+        if row.entry_type in _ADJUSTMENT_TYPES:
+            await transaction_service.create_transaction(
+                session,
+                user_id,
+                TransactionCreate(
+                    date=row.date,
+                    description=row.description,
+                    entry_type=row.entry_type,
+                    account_id=item.account_id,
+                    amount=row.amount,
+                ),
+            )
+            continue
         recurring_id = None
         if row.recurring_link:
             recurring_id = await _find_recurring_id(session, user_id, row, item.account_id)
@@ -1531,7 +1656,9 @@ async def _existing_keys(
                     JournalEntry.deleted_at.is_(None),
                     JournalEntry.date >= start,
                     JournalEntry.date <= end,
-                    JournalEntry.entry_type.in_(("income", "expense", "transfer")),
+                    JournalEntry.entry_type.in_(
+                        ("income", "expense", "transfer", *_ADJUSTMENT_TYPES)
+                    ),
                 )
             )
         )
@@ -1575,6 +1702,8 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
     debt_totals = {"loan": [0, Decimal(0)], "payment": [0, Decimal(0)], "opening": [0, Decimal(0)]}
     debt_people: set[tuple[str, str]] = set()
     recurring_total = [0, Decimal(0)]
+    adjustment_totals = {"adjustment_in": Decimal(0), "adjustment_out": Decimal(0)}
+    adjustment_count = 0
 
     by_type = {
         "income": [0, Decimal(0)],
@@ -1604,6 +1733,19 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
                         "date": row.date,
                         "amount": row.amount,
                         "description": f"{row.description} ({row.debt_kind})",
+                    }
+                )
+            continue
+        if row.entry_type in _ADJUSTMENT_TYPES:
+            adjustment_count += 1
+            adjustment_totals[row.entry_type] += row.amount
+            if (row.date, row.amount, row.description.strip().lower(), row.entry_type) in existing:
+                duplicates.append(
+                    {
+                        "row": row.row_number,
+                        "date": row.date,
+                        "amount": row.amount,
+                        "description": row.description,
                     }
                 )
             continue
@@ -1653,6 +1795,12 @@ async def build_preview(session: AsyncSession, user_id: UUID, parsed: ParseResul
             "people": len(debt_people),
         },
         "recurring": {"count": recurring_total[0], "total": recurring_total[1]},
+        "adjustments": {
+            "count": adjustment_count,
+            "entries": adjustment_totals["adjustment_in"],
+            "exits": adjustment_totals["adjustment_out"],
+            "net": adjustment_totals["adjustment_in"] - adjustment_totals["adjustment_out"],
+        },
         "date_from": min(dates) if dates else None,
         "date_to": max(dates) if dates else None,
         "by_account": sorted(by_account.values(), key=lambda a: -a["count"]),

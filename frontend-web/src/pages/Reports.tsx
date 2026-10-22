@@ -18,6 +18,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
 import { EmptyState, HEADER_SECTIONS, SoftBadge, SegmentedControl, StatCard, ViewHeader } from '@/components/nl/primitives'
+import { AdjustmentsReportSection } from '@/components/nl/AdjustmentsReportSection'
 import { TagReportSection } from '@/components/nl/TagReportSection'
 import { LineChart, RadarChart } from '@/lib/charts'
 import { useCategories } from '@/hooks/useCategories'
@@ -627,6 +628,7 @@ export function Reports() {
             </div>
           </details>
 
+          <AdjustmentsReportSection />
           <TagReportSection />
         </>
       )}

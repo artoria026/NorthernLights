@@ -84,7 +84,7 @@ async def test_download_template_is_valid_xlsx_with_dropdowns(client: AsyncClien
     ws = wb["Transacciones"]
     assert ws["A2"].value == "Monto"
     assert ws["G2"].value == "Monto"
-    assert len(ws.data_validations.dataValidation) == 16
+    assert len(ws.data_validations.dataValidation) == 18
 
 
 async def test_upload_creates_valid_rows_and_reports_row_errors(client: AsyncClient):
@@ -243,7 +243,7 @@ async def test_template_has_the_tags_column_and_suggests_the_users_tags(client: 
     wb = load_workbook(BytesIO(response.content))
     ws = wb["Transacciones"]
     assert ws["L2"].value == "Etiquetas"
-    assert len(ws.data_validations.dataValidation) == 17
+    assert len(ws.data_validations.dataValidation) == 19
     assert wb["Listas"]["D1"].value == "Reparación choque"
 
 
@@ -845,3 +845,89 @@ async def test_upload_creates_installment_plans_for_card_purchases(client: Async
     plans = {t["description"]: t["installment"] for t in listed.json()["data"]}
     assert plans["Compra normal con tarjeta"] is None
     assert plans["Teclado a 12 meses"]["total_installments"] == 12
+
+
+def _build_adjustments_upload(rows: list[tuple]) -> bytes:
+    """rows: (amount, direction, date, account, concept) in the block AZ-BD."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Transacciones"
+    for offset, row in enumerate(rows):
+        for col, value in zip(("AZ", "BA", "BB", "BC", "BD"), row, strict=True):
+            ws[f"{col}{3 + offset}"] = value
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+async def test_template_has_the_balance_adjustments_block(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers)
+
+    response = await client.get("/api/v1/bulk-import/template", headers=headers)
+    ws = load_workbook(BytesIO(response.content))["Transacciones"]
+    assert [ws[f"{c}2"].value for c in ("AZ", "BA", "BB", "BC", "BD")] == [
+        "Monto",
+        "Dirección",
+        "Fecha",
+        "Cuenta líquida",
+        "Concepto",
+    ]
+    assert ws["AZ1"].value == "Ajustes de saldo"
+
+
+async def test_upload_loads_dated_balance_adjustments_under_the_native_category(
+    client: AsyncClient,
+):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    account_id = await _create_account(client, headers, initial_balance="1000")
+    credit_card = await _create_account(
+        client, headers, name="Visa", type="liability", subtype="credit_card"
+    )
+    content = _build_adjustments_upload(
+        [
+            (100, "Salida", "2025-05-18", "Santander", "Ajuste"),
+            (30, "Entrada", "2025-06-02", "Santander", None),
+            (10, "Salida", "2025-06-03", "Visa", "no liquida"),
+            (10, "Hacia afuera", "2025-06-03", "Santander", "mala direccion"),
+        ]
+    )
+
+    upload = {
+        "file": (
+            "ajustes.xlsx",
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    }
+    preview = await client.post("/api/v1/bulk-import/preview", headers=headers, files=upload)
+    adjustments = preview.json()["data"]["adjustments"]
+    assert adjustments["count"] == 2
+    assert Decimal(adjustments["exits"]) == Decimal("100")
+    assert Decimal(adjustments["entries"]) == Decimal("30")
+    assert Decimal(adjustments["net"]) == Decimal("-70")
+    assert preview.json()["data"]["error_rows"] == 2
+
+    response = await client.post("/api/v1/bulk-import/upload", headers=headers, files=upload)
+    data = response.json()["data"]
+    assert data["created"] == 2
+    reasons = " ".join(e["reason"] for e in data["errors"])
+    assert "no es una cuenta líquida" in reasons and "Dirección inválida" in reasons
+
+    account = (await client.get(f"/api/v1/accounts/{account_id}", headers=headers)).json()["data"]
+    assert Decimal(account["balance"]) == Decimal("930")
+    assert credit_card
+
+    native = next(
+        c
+        for c in (await client.get("/api/v1/categories", headers=headers)).json()["data"]
+        if c["slug"] == "balance_adjustment"
+    )
+    entries = (await client.get("/api/v1/transactions?per_page=10", headers=headers)).json()["data"]
+    assert {(t["entry_type"], t["date"], t["category_id"]) for t in entries} == {
+        ("adjustment_out", "2025-05-18", native["id"]),
+        ("adjustment_in", "2025-06-02", native["id"]),
+    }
+    assert {t["description"] for t in entries} == {"Ajuste", "Ajuste de saldo"}

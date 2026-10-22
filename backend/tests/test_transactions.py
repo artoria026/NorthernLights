@@ -172,7 +172,10 @@ async def test_adjustment_in_simple_form_increases_balance(client: AsyncClient):
         },
     )
     assert response.status_code == 201
-    assert response.json()["data"]["category_id"] is None
+    # the app files every adjustment under the native category, nobody picks it
+    categories = (await client.get("/api/v1/categories", headers=headers)).json()["data"]
+    native = next(c for c in categories if c["slug"] == "balance_adjustment")
+    assert response.json()["data"]["category_id"] == native["id"]
 
     cash = await client.get(f"/api/v1/accounts/{cash_id}", headers=headers)
     assert cash.json()["data"]["balance"] == "150.00"

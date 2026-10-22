@@ -105,9 +105,22 @@ async def resolve_tags(
     return list(tags)
 
 
+ADJUSTMENT_ENTRY_TYPES = ("adjustment_in", "adjustment_out")
+
+
 async def _validate_category(
     session: AsyncSession, user_id: UUID, entry_type: str, category_id: UUID | None
 ) -> None:
+    if entry_type in ADJUSTMENT_ENTRY_TYPES:
+        # An adjustment always lives under the native «Ajustes de saldo» category, and nowhere
+        # else; the app assigns it (see create_transaction), nobody chooses it.
+        adjustment = await category_service.get_balance_adjustment_category(session)
+        if category_id != adjustment.id:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Los ajustes de saldo siempre van en la categoria «Ajustes de saldo»",
+            )
+        return
     requires_category = entry_type in ("income", "expense")
     if requires_category:
         if category_id is None:
@@ -243,6 +256,14 @@ async def create_transaction(
     recurring_id: UUID | None = None,
     debt_id: UUID | None = None,
 ) -> JournalEntry:
+    if data.entry_type in ADJUSTMENT_ENTRY_TYPES:
+        adjustment = await category_service.get_balance_adjustment_category(session)
+        if data.category_id not in (None, adjustment.id):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "Los ajustes de saldo siempre van en la categoria «Ajustes de saldo»",
+            )
+        data = data.model_copy(update={"category_id": adjustment.id})
     await _validate_category(session, user_id, data.entry_type, data.category_id)
     if data.installment_total is not None:
         await _validate_installment_account(session, user_id, data.account_id)  # type: ignore[arg-type]
