@@ -705,6 +705,9 @@
       "emptyReceivable": "No one owes you money with an active plan.",
       "emptyPayable": "You have no debts with an active payment plan."
     },
+    "terms": {
+      "line": "Lent {{lent}} · To pay {{total}} · Interest {{interest}}"
+    },
     "completedSection": {
       "heading": "Paid off ({{count}})",
       "hintReceivable": "Use “Lend more” to lend to someone again: the debt comes back with its same history.",
@@ -733,6 +736,9 @@
     "newDebtForm": {
       "nameLabelReceivable": "Who are you lending to?",
       "nameLabel": "Name",
+      "lentLabel": "Amount lent (optional)",
+      "totalToPayLabel": "Total to pay",
+      "rateLabel": "Yearly rate % (optional)",
       "typeLabel": "Type",
       "totalAmountLabel": "Total amount",
       "paymentAmountLabel": "Installment (optional)",

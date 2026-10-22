@@ -122,6 +122,9 @@ class DebtMovementOut(BaseModel):
 
 class DebtUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1)
+    original_amount: Decimal | None = Field(default=None, gt=0)  # what was lent
+    total_amount: Decimal | None = Field(default=None, gt=0)  # what will end up being paid
+    interest_rate: Decimal | None = Field(default=None, ge=0, le=99)  # yearly, as a fraction
     type: str | None = Field(default=None, pattern=f"^({'|'.join(DEBT_TYPES)})$")
     creditor: str | None = None
     payment_amount: Decimal | None = None

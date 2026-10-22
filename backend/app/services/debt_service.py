@@ -491,6 +491,9 @@ async def update_debt(
         changes.pop("name", None)  # a debt always keeps a name
     if changes.get("type") is None:
         changes.pop("type", None)  # nor can it lose its type
+    for required in ("total_amount", "interest_rate"):
+        if changes.get(required) is None:
+            changes.pop(required, None)  # these two are never empty
     new_name = changes.get("name", debt.name)
     new_type = changes.get("type", debt.type)
     if (
@@ -516,6 +519,12 @@ async def update_debt(
                 status.HTTP_409_CONFLICT,
                 f"Ya tienes una deuda informal activa con {new_name.strip()}",
             )
+    new_balance = changes.get("current_balance", debt.current_balance)
+    if "total_amount" in changes and changes["total_amount"] < new_balance:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "El total a pagar no puede ser menor que lo que aún se debe",
+        )
     for field, value in changes.items():
         setattr(debt, field, value)
     await session.flush()

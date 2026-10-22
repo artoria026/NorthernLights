@@ -194,6 +194,18 @@ _RECURRING_TYPES = {
     "ingreso": "income",
     "income": "income",
 }
+# Three more optional columns, on the Saldo inicial row of a debt with interest: what was lent
+# (AV), the total that will end up being paid -- principal plus interest -- (AW) and the yearly rate
+# (AX, a percentage like 47.5). The opening balance is then what was still left to pay when the
+# record starts; the debt shows "lent X, to pay Y" and its payments never go past what is owed.
+DEBT_LENT_COL = 48  # AV
+DEBT_TOTAL_COL = 49  # AW
+DEBT_RATE_COL = 50  # AX
+DEBT_TERMS_HEADERS = {
+    DEBT_LENT_COL: "Monto prestado",
+    DEBT_TOTAL_COL: "Total a pagar",
+    DEBT_RATE_COL: "Tasa anual (%)",
+}
 RECURRING_FILL = PatternFill("solid", fgColor="C6E0B4")
 # Two more optional columns after the recurring block: the NAME of the recurring item a transaction
 # pays or collects (one for the Expenses block, one for the Income block, like the notes). The
@@ -255,6 +267,9 @@ COLUMN_WIDTHS = {
     45: 36,
     46: 30,
     47: 30,
+    48: 16,
+    49: 16,
+    50: 14,
 }
 
 
@@ -324,6 +339,11 @@ def build_template_workbook(
         rec_header.font = Font(bold=True)
         rec_header.fill = RECURRING_FILL
         ws.cell(row=1, column=col).fill = RECURRING_FILL
+    for col, header in DEBT_TERMS_HEADERS.items():
+        terms_header = ws.cell(row=HEADER_ROW, column=col, value=header)
+        terms_header.font = Font(bold=True)
+        terms_header.fill = DEBT_FILL
+        ws.cell(row=1, column=col).fill = DEBT_FILL
     for col, header, fill in (
         (EXPENSE_RECURRING_COL, EXPENSE_RECURRING_HEADER, EXPENSE_FILL),
         (INCOME_RECURRING_COL, INCOME_RECURRING_HEADER, INCOME_FILL),
@@ -511,6 +531,11 @@ class ParsedRow:
     plan_account_name: str = ""
     # Only for entry_type 'debt': the kind of the debt the row creates (informal by default).
     debt_type: str = "informal"
+    # Only for an 'opening' debt row, all optional: what was lent, what will end up being paid
+    # in total and the yearly rate as a fraction (0.475 = 47.5 %).
+    debt_lent: Decimal | None = None
+    debt_total: Decimal | None = None
+    debt_rate: Decimal | None = None
     # Only for entry_type 'recurring' (description = name, date = next charge): how often, what kind
     # (subscription | service | utility | income) and the optional day of the month.
     rec_frequency: str = ""
@@ -720,6 +745,39 @@ def _parse_debt_plan(row_cells: tuple) -> tuple[dict, str | None]:
     }, None
 
 
+def _parse_debt_terms(
+    row_cells: tuple, movement: str, amount: Decimal | None
+) -> tuple[dict, str | None]:
+    """The optional terms of a debt with interest (columns AV-AX): ({ParsedRow fields}, error). They
+    only make sense on the opening-balance row, where the total can't be less than what is left."""
+    lent_cell = _debt_cell(row_cells, DEBT_LENT_COL)
+    total_cell = _debt_cell(row_cells, DEBT_TOTAL_COL)
+    rate_cell = _debt_cell(row_cells, DEBT_RATE_COL)
+    if all(c in (None, "") for c in (lent_cell, total_cell, rate_cell)):
+        return {}, None
+    if movement != "opening":
+        return {}, "Monto prestado, Total a pagar y Tasa anual solo van en la fila de Saldo inicial"
+    out: dict = {}
+    if lent_cell not in (None, ""):
+        lent = _parse_amount(lent_cell)
+        if lent is None or lent <= 0:
+            return {}, "Monto prestado inválido: debe ser mayor que 0"
+        out["debt_lent"] = lent
+    if total_cell not in (None, ""):
+        total = _parse_amount(total_cell)
+        if total is None or total <= 0:
+            return {}, "Total a pagar inválido: debe ser mayor que 0"
+        if amount is not None and total < amount:
+            return {}, "El Total a pagar no puede ser menor que el Saldo inicial"
+        out["debt_total"] = total
+    if rate_cell not in (None, ""):
+        rate = _parse_amount(str(rate_cell).replace("%", "").strip())
+        if rate is None or not 0 <= rate <= 100:
+            return {}, "Tasa anual inválida: escribe un porcentaje entre 0 y 100, como 47.5"
+        out["debt_rate"] = (rate / 100).quantize(Decimal("0.0001"))
+    return out, None
+
+
 def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
     """One step of a person's debt (columns W-AC). Returns (ParsedRow | None, error | None)."""
     amount_cell = _debt_cell(row_cells, DEBT_START_COL)
@@ -757,6 +815,9 @@ def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
     plan, plan_error = _parse_debt_plan(row_cells)
     if plan_error:
         return error(plan_error)
+    terms, terms_error = _parse_debt_terms(row_cells, movement, amount)
+    if terms_error:
+        return error(terms_error)
     return (
         ParsedRow(
             entry_type="debt",
@@ -771,6 +832,7 @@ def _parse_debt_row(row_cells: tuple, row_idx: int) -> tuple:
             debt_direction=direction,
             debt_type=debt_type,
             **plan,
+            **terms,
         ),
         None,
     )
@@ -1282,7 +1344,12 @@ async def _apply_debt_row(session: AsyncSession, user_id: UUID, item: ResolvedRo
                 name=row.description,
                 type=row.debt_type,
                 direction=row.debt_direction,
-                total_amount=row.amount,
+                # An opening balance with a total to pay: what is left now is the balance, the
+                # total is what will end up being paid, and what was lent is kept as the original.
+                total_amount=row.debt_total or row.amount,
+                current_balance=row.amount if row.debt_total else None,
+                original_amount=row.debt_lent,
+                interest_rate=row.debt_rate if row.debt_rate is not None else Decimal("0"),
                 funding_account_id=item.account_id if item.debt_action == "create" else None,
                 start_date=row.date,
                 concept=row.notes,

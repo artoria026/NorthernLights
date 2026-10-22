@@ -756,6 +756,9 @@ export function EditDebtForm({ debt, onDone }: { debt: Debt; onDone: () => void 
     payment_day: debt.payment_day != null ? String(debt.payment_day) : '',
     next_payment_date: debt.next_payment_date ?? '',
     payment_source_account_id: debt.payment_source_account_id ?? '',
+    original_amount: debt.original_amount ?? '',
+    total_amount: debt.total_amount,
+    ratePct: debt.interest_rate && Number(debt.interest_rate) > 0 ? String(Number((Number(debt.interest_rate) * 100).toFixed(2))) : '',
   })
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }))
 
@@ -775,6 +778,9 @@ export function EditDebtForm({ debt, onDone }: { debt: Debt; onDone: () => void 
           payment_day: form.payment_day ? Number(form.payment_day) : undefined,
           next_payment_date: form.next_payment_date || undefined,
           payment_source_account_id: form.payment_source_account_id || undefined,
+          original_amount: form.original_amount || undefined,
+          total_amount: form.total_amount || undefined,
+          interest_rate: form.ratePct ? String(parseFloat(form.ratePct) / 100) : undefined,
         },
       })
       pushToast(
@@ -817,6 +823,42 @@ export function EditDebtForm({ debt, onDone }: { debt: Debt; onDone: () => void 
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">{t('debts.editForm.notesLabel')}</label>
         <input value={form.notes} onChange={(e) => set({ notes: e.target.value })} className={`${selectClass} h-9 w-full`} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">{t('debts.editForm.lentLabel')}</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.original_amount}
+            onChange={(e) => set({ original_amount: e.target.value })}
+            className={`${selectClass} h-9 w-full`}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground">{t('debts.editForm.totalToPayLabel')}</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={form.total_amount}
+            onChange={(e) => set({ total_amount: e.target.value })}
+            className={`${selectClass} h-9 w-full`}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground">{t('debts.editForm.rateLabel')}</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          max="99"
+          value={form.ratePct}
+          onChange={(e) => set({ ratePct: e.target.value })}
+          className={`${selectClass} h-9 w-full`}
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">{t('debts.editForm.paymentAmountLabel')}</label>
@@ -1072,6 +1114,21 @@ function DebtActions({ debt, className = '' }: { debt: Debt; className?: string 
   )
 }
 
+/** "Lent X · To pay Y · Interest Z": only for a debt that records what was lent and ends up costing
+ * more than that (a loan with interest). Quiet for the rest. */
+function DebtTermsLine({ debt, className = '' }: { debt: Debt; className?: string }) {
+  const { t } = useTranslation('pages')
+  if (!debt.original_amount) return null
+  const lent = Number(debt.original_amount)
+  const total = Number(debt.total_amount)
+  if (!(lent > 0) || !(total > lent)) return null
+  return (
+    <div className={`text-[10.5px] text-muted-foreground ${className}`} data-testid="debt-terms">
+      {t('debts.terms.line', { lent: formatMoney(lent), total: formatMoney(total), interest: formatMoney(total - lent) })}
+    </div>
+  )
+}
+
 function DebtCard({ debt }: { debt: Debt }) {
   const { t } = useTranslation('pages')
   const isReceivable = debt.direction === 'owed_to_me'
@@ -1139,6 +1196,7 @@ function DebtCard({ debt }: { debt: Debt }) {
           </div>
         </div>
       </div>
+      <DebtTermsLine debt={debt} className="mb-2" />
       <div className="flex flex-wrap items-center justify-between gap-y-1.5 pt-1.5 border-t border-border">
         <div className="text-[10px] text-muted-foreground truncate">
           {debt.status === 'completed'
@@ -1225,8 +1283,11 @@ function DebtRow({ debt }: { debt: Debt }) {
         >
           <TypeIcon size={13} />
         </span>
-        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold" title={debt.name}>
-          {debt.name}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-semibold" title={debt.name}>
+            {debt.name}
+          </span>
+          <DebtTermsLine debt={debt} />
         </span>
         <DebtManageActions debt={debt} />
       </div>

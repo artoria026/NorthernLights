@@ -32,6 +32,24 @@ beforeEach(() => {
   mocks.mutateAsync.mockResolvedValue(debt)
 })
 
+describe('EditDebtForm terms', () => {
+  it('sends what was lent, the total to pay and the rate as a fraction', async () => {
+    render(<EditDebtForm debt={{ ...debt, original_amount: '50000.00', total_amount: '98700.00', interest_rate: '0.4750' }} onDone={vi.fn()} />)
+    // numeric inputs in order: lent, total to pay, rate, payment amount, day
+    const numbers = screen.getAllByRole('spinbutton')
+    expect(numbers[0]).toHaveValue(50000)
+    expect(numbers[1]).toHaveValue(98700)
+    expect(numbers[2]).toHaveValue(47.5)
+    fireEvent.change(numbers[1], { target: { value: '100000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalled())
+    const input = mocks.mutateAsync.mock.calls[0][0].input
+    expect(input.original_amount).toBe('50000.00')
+    expect(input.total_amount).toBe('100000')
+    expect(input.interest_rate).toBe('0.475')
+  })
+})
+
 describe('EditDebtForm', () => {
   it('starts from what the debt already has', () => {
     render(<EditDebtForm debt={debt} onDone={vi.fn()} />)
