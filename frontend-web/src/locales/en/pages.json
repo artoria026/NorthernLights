@@ -706,7 +706,8 @@
       "emptyPayable": "You have no debts with an active payment plan."
     },
     "terms": {
-      "line": "Lent {{lent}} · To pay {{total}} · Interest {{interest}}"
+      "line": "Lent {{lent}} · To pay {{total}} · Interest {{interest}}",
+      "quita": "Owed {{owed}} · Agreement {{agreed}} · Write-off {{quita}}"
     },
     "completedSection": {
       "heading": "Paid off ({{count}})",

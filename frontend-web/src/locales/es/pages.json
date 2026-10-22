@@ -706,7 +706,8 @@
       "emptyPayable": "No tienes deudas con plan de pago activo."
     },
     "terms": {
-      "line": "Prestado {{lent}} · A pagar {{total}} · Intereses {{interest}}"
+      "line": "Prestado {{lent}} · A pagar {{total}} · Intereses {{interest}}",
+      "quita": "Debías {{owed}} · Acuerdo {{agreed}} · Quita {{quita}}"
     },
     "completedSection": {
       "heading": "Pagadas ({{count}})",

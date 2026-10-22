@@ -1114,17 +1114,22 @@ function DebtActions({ debt, className = '' }: { debt: Debt; className?: string 
   )
 }
 
-/** "Lent X · To pay Y · Interest Z": only for a debt that records what was lent and ends up costing
- * more than that (a loan with interest). Quiet for the rest. */
+/** What was lent and what it ends up costing: "Lent X · To pay Y · Interest Z" when the total is
+ * more than the loan (interest), "Owed X · Agreement Y · Write-off Z" when it is less (the creditor
+ * accepted less than the debt). Quiet for the rest, or when no original amount was recorded. */
 function DebtTermsLine({ debt, className = '' }: { debt: Debt; className?: string }) {
   const { t } = useTranslation('pages')
   if (!debt.original_amount) return null
   const lent = Number(debt.original_amount)
   const total = Number(debt.total_amount)
-  if (!(lent > 0) || !(total > lent)) return null
+  if (!(lent > 0) || !(total > 0) || total === lent) return null
+  const text =
+    total > lent
+      ? t('debts.terms.line', { lent: formatMoney(lent), total: formatMoney(total), interest: formatMoney(total - lent) })
+      : t('debts.terms.quita', { owed: formatMoney(lent), agreed: formatMoney(total), quita: formatMoney(lent - total) })
   return (
     <div className={`text-[10.5px] text-muted-foreground ${className}`} data-testid="debt-terms">
-      {t('debts.terms.line', { lent: formatMoney(lent), total: formatMoney(total), interest: formatMoney(total - lent) })}
+      {text}
     </div>
   )
 }

@@ -119,6 +119,22 @@ describe('Debt with interest', () => {
     )
     expect(within(rows[1]).queryByTestId('debt-terms')).not.toBeInTheDocument()
   })
+
+  it('shows the write-off when the creditor accepted less than what was owed', () => {
+    const quita = debt({
+      id: '7',
+      name: 'Mercado Libre',
+      direction: 'owed_by_me',
+      original_amount: '31661.68',
+      total_amount: '3482.78',
+      current_balance: '0.00',
+      status: 'completed',
+    })
+    render(<DebtsList debts={[quita]} />)
+    expect(screen.getByTestId('debt-terms')).toHaveTextContent(
+      'Debías $31,661.68 · Acuerdo $3,482.78 · Quita $28,178.90',
+    )
+  })
 })
 
 describe('DebtsViewToggle', () => {
