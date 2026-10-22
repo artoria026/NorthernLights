@@ -1,4 +1,17 @@
-import { ArrowLeftRight, Check, ChevronLeft, ChevronRight, CreditCard, Pencil, Plus, Trash2, UserPlus, Users } from 'lucide-react'
+import {
+  ArrowLeftRight,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  FilterX,
+  Pencil,
+  Plus,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react'
 import { type FormEvent, useMemo, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
@@ -10,6 +23,7 @@ import { TagChip } from '@/components/nl/TagChip'
 import { TagPicker } from '@/components/nl/TagPicker'
 import { useBulkTag, useTags } from '@/hooks/useTags'
 import { usePageSize } from '@/hooks/usePageSize'
+import { activeFilterCount, categoriesForType, matchesCategory } from '@/lib/transactionFilters'
 import { summarizeTransactions } from '@/lib/transactionTotals'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { EditTransactionModal } from '@/components/nl/EditTransactionModal'
@@ -479,7 +493,8 @@ export function Transactions() {
 
   const [search, setSearch] = useState('')
   const [accountFilter, setAccountFilter] = useState(() => searchParams.get('account') ?? 'all')
-  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [entryTypeFilter, setEntryTypeFilter] = useState('all')
+  const [categoryId, setCategoryId] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
@@ -499,6 +514,29 @@ export function Transactions() {
   const txAccountId = (tx: Transaction) =>
     tx.lines.find((l) => accounts?.some((a) => a.id === l.account_id))?.account_id ?? ''
 
+  const categoryOptionsList = categoriesForType(allCategories ?? [], typeFilter)
+  const filterCount = activeFilterCount({
+    search,
+    account: accountFilter,
+    entryType: entryTypeFilter,
+    category: categoryId,
+    tag: tagFilter,
+    dateFrom,
+    dateTo,
+    type: typeFilter,
+  })
+  function clearFilters() {
+    setSearch('')
+    setAccountFilter('all')
+    setEntryTypeFilter('all')
+    setCategoryId('')
+    setTagFilter('all')
+    setDateFrom('')
+    setDateTo('')
+    setTypeFilter('ALL')
+    setPage(0)
+  }
+
   const categoryOptions = useMemo(() => {
     const names = new Set((data?.data ?? []).map((tx) => tx.entry_type))
     return Array.from(names)
@@ -507,7 +545,8 @@ export function Transactions() {
   const filtered = (data?.data ?? [])
     .filter((tx) => (search ? tx.description.toLowerCase().includes(search.toLowerCase()) : true))
     .filter((tx) => (accountFilter === 'all' ? true : txAccountId(tx) === accountFilter))
-    .filter((tx) => (categoryFilter === 'all' ? true : tx.entry_type === categoryFilter))
+    .filter((tx) => (entryTypeFilter === 'all' ? true : tx.entry_type === entryTypeFilter))
+    .filter((tx) => matchesCategory(tx, categoryId, allCategories ?? []))
     .filter((tx) => (dateFrom ? tx.date >= dateFrom : true))
     .filter((tx) => (dateTo ? tx.date <= dateTo : true))
     .filter((tx) => (typeFilter === 'ALL' ? true : txType(tx) === typeFilter))
@@ -705,9 +744,9 @@ export function Transactions() {
               </SelectContent>
             </Select>
             <Select
-              value={categoryFilter}
+              value={entryTypeFilter}
               onValueChange={(v) => {
-                setCategoryFilter(v ?? 'all')
+                setEntryTypeFilter(v ?? 'all')
                 resetPage()
               }}
             >
@@ -725,6 +764,32 @@ export function Transactions() {
                 ))}
               </SelectContent>
             </Select>
+            <div className="flex items-center gap-1" data-testid="category-filter">
+              <CategorySelect
+                categories={categoryOptionsList}
+                value={categoryId || null}
+                onValueChange={(id) => {
+                  setCategoryId(id)
+                  resetPage()
+                }}
+                placeholder={t('transactions.filters.allCategories')}
+                triggerClassName="h-9 w-[210px]"
+              />
+              {categoryId && (
+                <button
+                  type="button"
+                  aria-label={t('transactions.filters.clearCategory')}
+                  title={t('transactions.filters.clearCategory')}
+                  onClick={() => {
+                    setCategoryId('')
+                    resetPage()
+                  }}
+                  className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
             {allTags.length > 0 && (
               <Select
                 value={tagFilter}
@@ -768,6 +833,18 @@ export function Transactions() {
               }}
               className={`${selectClass} h-9`}
             />
+            {filterCount > 0 && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                data-testid="clear-filters"
+                className="flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium transition-colors hover:brightness-110"
+                style={{ background: 'var(--nl-warning-soft-bg)', color: 'var(--nl-warning-ink)', borderColor: 'transparent' }}
+              >
+                <FilterX size={14} />
+                {t('transactions.filters.clear', { count: filterCount })}
+              </button>
+            )}
             {/* Second row of the filters: the type selector on one side and, on the opposite side,
                 the totals of everything the filters leave (not just the page on screen). The type
                 filter decides which figures show: all for TODO, only the matching ones otherwise.
@@ -777,6 +854,10 @@ export function Transactions() {
                 value={typeFilter}
                 onChange={(v: TypeFilter) => {
                   setTypeFilter(v)
+                  // a category of the other kind of movement would leave the list empty
+                  if (categoryId && !categoriesForType(allCategories ?? [], v).some((c) => c.id === categoryId)) {
+                    setCategoryId('')
+                  }
                   resetPage()
                 }}
                 options={[
