@@ -141,6 +141,10 @@ export function useCreateDebt() {
 
 export interface UpdateDebtInput {
   name?: string
+  /** What was lent, what will end up being paid in total, and the yearly rate as a fraction. */
+  original_amount?: string
+  total_amount?: string
+  interest_rate?: string
   type?: DebtType
   creditor?: string
   payment_amount?: string

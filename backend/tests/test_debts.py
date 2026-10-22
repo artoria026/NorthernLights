@@ -374,6 +374,33 @@ async def test_update_debt_changes_its_type_name_creditor_and_plan(client: Async
     assert [m["kind"] for m in movements["data"]] == ["opening"]
 
 
+async def test_update_debt_sets_what_was_lent_the_total_to_pay_and_the_rate(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    debt = await client.post(
+        "/api/v1/debts",
+        headers=headers,
+        json={"name": "Crédito", "type": "payroll_loan", "total_amount": "76000.00"},
+    )
+    debt_id = debt.json()["data"]["id"]
+
+    updated = await client.put(
+        f"/api/v1/debts/{debt_id}",
+        headers=headers,
+        json={"original_amount": "50000.00", "total_amount": "98700.00", "interest_rate": "0.475"},
+    )
+    assert updated.status_code == 200, updated.text
+    data = updated.json()["data"]
+    assert (data["original_amount"], data["total_amount"]) == ("50000.00", "98700.00")
+    assert float(data["interest_rate"]) == 0.475
+    assert data["current_balance"] == "76000.00"  # the balance is its own thing
+
+    too_low = await client.put(
+        f"/api/v1/debts/{debt_id}", headers=headers, json={"total_amount": "1000.00"}
+    )
+    assert too_low.status_code == 400
+
+
 async def test_update_debt_rejects_an_unknown_type_and_a_blank_name(client: AsyncClient):
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}

@@ -38,6 +38,10 @@ def _build_debt_upload(rows: list[dict]) -> bytes:
         for offset, key in enumerate(("plan", "frequency", "day", "next", "plan_account", "type")):
             if key in row:
                 ws.cell(row=row_num, column=30 + offset, value=row[key])
+        # terms of a debt with interest (AV-AX): lent, total to pay, yearly rate
+        for offset, key in enumerate(("lent", "total", "rate")):
+            if key in row:
+                ws.cell(row=row_num, column=48 + offset, value=row[key])
     buf = BytesIO()
     wb.save(buf)
     return buf.getvalue()
@@ -525,3 +529,103 @@ async def test_debt_type_is_informal_by_default_and_an_unknown_one_is_reported(
     assert data["created"] == 1
     assert [e["row"] for e in data["errors"]] == [4]
     assert [d["type"] for d in await _debts(client, headers)] == ["informal"]
+
+
+async def test_template_has_the_debt_terms_columns(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander")
+
+    response = await client.get("/api/v1/bulk-import/template", headers=headers)
+    ws = load_workbook(BytesIO(response.content))["Transacciones"]
+    assert [ws.cell(row=2, column=c).value for c in (48, 49, 50)] == [
+        "Monto prestado",
+        "Total a pagar",
+        "Tasa anual (%)",
+    ]
+
+
+async def test_a_debt_with_interest_keeps_what_was_lent_and_the_total_to_pay(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander", initial_balance="5000")
+
+    # 50,000 lent, 98,700 to pay in all; when the record starts 76,000 is still owed. The weekly
+    # payments include interest, so together they are more than the principal.
+    content = _build_debt_upload(
+        [
+            {
+                "amount": 76000,
+                "person": "Préstamo nómina",
+                "kind": "Saldo inicial",
+                "date": "2025-05-15",
+                "direction": "Debo",
+                "type": "Crédito de nómina",
+                "lent": 50000,
+                "total": 98700,
+                "rate": "47.5%",
+            },
+            {
+                "amount": 600,
+                "person": "Préstamo nómina",
+                "kind": "Abono",
+                "date": "2025-05-15",
+                "account": "Santander",
+                "direction": "Debo",
+            },
+            {
+                "amount": 75400,
+                "person": "Préstamo nómina",
+                "kind": "Abono",
+                "date": "2026-09-04",
+                "account": "Santander",
+                "direction": "Debo",
+            },
+        ]
+    )
+    response = await _post(client, headers, "upload", content)
+    assert response.json()["data"] == {"created": 3, "errors": []}
+
+    listing = (await client.get("/api/v1/debts?direction=owed_by_me", headers=headers)).json()[
+        "data"
+    ]
+    (debt,) = listing
+    assert debt["type"] == "payroll_loan"
+    assert debt["original_amount"] == "50000.00"
+    assert debt["total_amount"] == "98700.00"
+    assert debt["current_balance"] == "0.00"
+    assert debt["status"] == "completed"
+    assert debt["interest_rate"] == "0.4750"
+
+
+async def test_debt_terms_are_checked(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    await _create_account(client, headers, name="Santander", initial_balance="5000")
+
+    base = {"person": "Crédito", "date": "2025-05-15", "direction": "Debo"}
+    content = _build_debt_upload(
+        [
+            {
+                **base,
+                "amount": 1000,
+                "kind": "Saldo inicial",
+                "total": 900,
+            },  # total below the balance
+            {**base, "person": "B", "amount": 1000, "kind": "Saldo inicial", "rate": 150},
+            {**base, "person": "C", "amount": 1000, "kind": "Saldo inicial", "lent": 0},
+            {
+                **base,
+                "person": "D",
+                "amount": 100,
+                "kind": "Préstamo",
+                "account": "Santander",
+                "total": 200,
+            },
+            {**base, "person": "E", "amount": 1000, "kind": "Saldo inicial", "total": 1500},
+        ]
+    )
+    response = await _post(client, headers, "upload", content)
+    data = response.json()["data"]
+    assert data["created"] == 1
+    assert sorted(e["row"] for e in data["errors"]) == [3, 4, 5, 6]

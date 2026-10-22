@@ -101,6 +101,26 @@ describe('DebtsList', () => {
   })
 })
 
+describe('Debt with interest', () => {
+  it('shows what was lent, what will be paid and the interest, only when it has them', () => {
+    const loan = debt({
+      id: '5',
+      name: 'Préstamo nómina Santander',
+      direction: 'owed_by_me',
+      original_amount: '50000.00',
+      total_amount: '98700.00',
+      current_balance: '76000.00',
+    })
+    const plain = debt({ id: '6', name: 'Sin intereses', total_amount: '1000.00', current_balance: '1000.00' })
+    render(<DebtsList debts={[loan, plain]} />)
+    const rows = screen.getAllByTestId('debt-row')
+    expect(within(rows[0]).getByTestId('debt-terms')).toHaveTextContent(
+      'Prestado $50,000.00 · A pagar $98,700.00 · Intereses $48,700.00',
+    )
+    expect(within(rows[1]).queryByTestId('debt-terms')).not.toBeInTheDocument()
+  })
+})
+
 describe('DebtsViewToggle', () => {
   it('marks the chosen view and reports the change', () => {
     const onChange = vi.fn()
