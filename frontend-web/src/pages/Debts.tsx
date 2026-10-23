@@ -5,6 +5,7 @@ import {
   Check,
   ChevronDown,
   Coins,
+  CreditCard,
   HandCoins,
   History,
   Landmark,
@@ -62,6 +63,7 @@ const DEBT_TYPES: DebtType[] = [
   'informal',
   'civic',
   'loan_received',
+  'credit',
 ]
 
 const FREQUENCIES: PaymentFrequency[] = ['weekly', 'biweekly', 'monthly', 'irregular']
@@ -77,6 +79,7 @@ const DEBT_TYPE_ICONS: Record<DebtType, LucideIcon> = {
   informal: Users,
   civic: Landmark,
   loan_received: HandCoins,
+  credit: CreditCard,
 }
 const DEBT_TYPE_COLORS: Record<DebtType, { bg: string; ink: string }> = {
   personal_loan: { bg: 'var(--nl-blue-soft-bg)', ink: 'var(--nl-blue-ink)' },
@@ -84,6 +87,7 @@ const DEBT_TYPE_COLORS: Record<DebtType, { bg: string; ink: string }> = {
   informal: { bg: 'var(--nl-warning-soft-bg)', ink: 'var(--nl-warning-ink)' },
   civic: { bg: 'var(--nl-accent-soft-bg)', ink: 'var(--nl-accent-ink)' },
   loan_received: { bg: 'var(--nl-blue-soft-bg)', ink: 'var(--nl-blue-ink)' },
+  credit: { bg: 'var(--nl-danger-soft-bg)', ink: 'var(--nl-danger-ink)' },
 }
 
 function NewUnplannedDebtForm({

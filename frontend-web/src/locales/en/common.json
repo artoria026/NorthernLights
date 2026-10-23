@@ -227,7 +227,8 @@
     "payroll_loan": "Payroll loan",
     "informal": "Informal loan",
     "civic": "Civic credit",
-    "loan_received": "Loan received"
+    "loan_received": "Loan received",
+    "credit": "Credit"
   },
   "paymentFrequencyLabels": {
     "weekly": "Weekly",
