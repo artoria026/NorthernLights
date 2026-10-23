@@ -16,6 +16,7 @@ DEBT_TYPES = (
     "informal",
     "civic",
     "loan_received",
+    "credit",
 )
 DEBT_STATUSES = ("active", "completed", "negotiating")
 PAYMENT_FREQUENCIES = ("weekly", "biweekly", "monthly", "irregular")

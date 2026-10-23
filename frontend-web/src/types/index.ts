@@ -191,6 +191,7 @@ export type DebtType =
   | 'informal'
   | 'civic'
   | 'loan_received'
+  | 'credit'
 
 export type PaymentFrequency = 'weekly' | 'biweekly' | 'monthly' | 'irregular'
 

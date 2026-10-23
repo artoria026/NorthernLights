@@ -116,7 +116,7 @@ async def _process_overdue_loans_for_user(session: AsyncSession, user_id, today:
     overdue = await session.execute(
         select(Debt).where(
             Debt.user_id == user_id,
-            Debt.type.in_(("loan_received", "informal")),
+            Debt.type.in_(("loan_received", "informal", "credit")),
             Debt.status == "active",
             Debt.due_date.is_not(None),
             Debt.due_date < today,

@@ -227,7 +227,8 @@
     "payroll_loan": "Crédito de nómina",
     "informal": "Préstamo informal",
     "civic": "Crédito cívico",
-    "loan_received": "Préstamo recibido"
+    "loan_received": "Préstamo recibido",
+    "credit": "Crédito"
   },
   "paymentFrequencyLabels": {
     "weekly": "Semanal",

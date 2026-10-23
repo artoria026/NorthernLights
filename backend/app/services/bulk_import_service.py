@@ -108,6 +108,7 @@ DEBT_TYPE_OPTIONS = [
     "Crédito de nómina",
     "Crédito cívico",
     "Préstamo recibido",
+    "Crédito",
 ]
 _DEBT_TYPES = {
     "": "informal",
@@ -126,6 +127,9 @@ _DEBT_TYPES = {
     "préstamo recibido": "loan_received",
     "prestamo recibido": "loan_received",
     "loan_received": "loan_received",
+    "crédito": "credit",
+    "credito": "credit",
+    "credit": "credit",
 }
 _DEBT_FREQUENCIES = {
     "mensual": "monthly",
