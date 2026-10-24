@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -728,3 +728,70 @@ async def test_rejecting_pending_debt_payment_does_not_change_balance(
     assert bank.json()["data"]["balance"] == "5000.00"
     assert debt_after.json()["data"]["current_balance"] == "12000.00"
     assert debt_after.json()["data"]["paid_installments"] == 0
+
+
+# -- paused debts -----------------------------------------------------------------------------
+
+
+async def _active_debt(client: AsyncClient, headers: dict, **overrides) -> dict:
+    payload = {
+        "name": "Nu tarjeta",
+        "type": "personal_loan",
+        "total_amount": "1000.00",
+        "payment_amount": "100.00",
+        "payment_frequency": "monthly",
+        "next_payment_date": (date.today() + timedelta(days=5)).isoformat(),
+    }
+    payload.update(overrides)
+    created = await client.post("/api/v1/debts", headers=headers, json=payload)
+    assert created.status_code == 201, created.text
+    return created.json()["data"]
+
+
+async def test_a_paused_debt_still_counts_as_owed_but_asks_for_nothing(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    debt = await _active_debt(client, headers)
+
+    paused = await client.patch(f"/api/v1/debts/{debt['id']}/pause", headers=headers)
+    assert paused.status_code == 200
+    assert paused.json()["data"]["status"] == "paused"
+
+    summary = (await client.get("/api/v1/debts/summary", headers=headers)).json()["data"]
+    assert Decimal(summary["total_owed_by_me"]) == Decimal("1000.00")  # still owed
+    assert Decimal(summary["monthly_committed"]) == 0  # but nothing is committed
+    upcoming = (await client.get("/api/v1/debts/upcoming?days_ahead=30", headers=headers)).json()
+    assert upcoming["data"] == []
+
+
+async def test_a_paused_debt_can_still_be_paid_and_can_be_resumed(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    debt = await _active_debt(client, headers, next_payment_date="2026-01-01")
+    account_id = await _create_account(client, headers, initial_balance="500")
+    await client.patch(f"/api/v1/debts/{debt['id']}/pause", headers=headers)
+
+    payment = await client.post(
+        f"/api/v1/debts/{debt['id']}/payments",
+        headers=headers,
+        json={"account_id": account_id, "amount": "100.00", "date": date.today().isoformat()},
+    )
+    assert payment.status_code == 201, payment.text
+
+    resumed = await client.patch(f"/api/v1/debts/{debt['id']}/resume", headers=headers)
+    body = resumed.json()["data"]
+    assert body["status"] == "active"
+    assert body["current_balance"] == "900.00"
+    # a date left in the past while paused does not come back as overdue
+    assert body["next_payment_date"] == date.today().isoformat()
+
+
+async def test_only_active_debts_can_be_paused_and_only_paused_ones_resumed(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    debt = await _active_debt(client, headers)
+    resume = await client.patch(f"/api/v1/debts/{debt['id']}/resume", headers=headers)
+    assert resume.status_code == 400
+    await client.patch(f"/api/v1/debts/{debt['id']}/pause", headers=headers)
+    pause_again = await client.patch(f"/api/v1/debts/{debt['id']}/pause", headers=headers)
+    assert pause_again.status_code == 400

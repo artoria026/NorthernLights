@@ -11,7 +11,9 @@ import {
   Landmark,
   LayoutGrid,
   List,
+  Pause,
   Pencil,
+  Play,
   Plus,
   Scale,
   Trash2,
@@ -46,7 +48,9 @@ import {
   useDebtMovements,
   useDebts,
   useIncreaseDebt,
+  usePauseDebt,
   useRegisterDebtPayment,
+  useResumeDebt,
   useUnplannedDebts,
   useUpdateDebt,
 } from '@/hooks/useDebts'
@@ -1018,6 +1022,8 @@ function DebtActions({ debt, className = '' }: { debt: Debt; className?: string 
   const [lendOpen, setLendOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const isReceivable = debt.direction === 'owed_to_me'
+  const pause = usePauseDebt()
+  const resume = useResumeDebt()
 
   return (
     <div className={`flex flex-wrap items-center gap-1 ${className}`}>
@@ -1067,8 +1073,36 @@ function DebtActions({ debt, className = '' }: { debt: Debt; className?: string 
           </Dialog>
         </div>
       )}
-      {debt.status === 'active' && (
+      {(debt.status === 'active' || debt.status === 'paused') && (
         <div className="flex items-center gap-1 flex-shrink-0">
+          {debt.status === 'active' ? (
+            <button
+              type="button"
+              disabled={pause.isPending}
+              title={t('debts.card.pauseTitle')}
+              onClick={() => pause.mutate(debt.id)}
+              className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border border-border text-muted-foreground hover:text-foreground disabled:opacity-40"
+            >
+              <Pause size={11} />
+              {t('debts.card.pauseButton')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={resume.isPending}
+              title={t('debts.card.resumeTitle')}
+              onClick={() => resume.mutate(debt.id)}
+              className="flex items-center gap-1 rounded px-2 py-1 text-[11px] border"
+              style={{
+                background: 'var(--nl-accent-soft-bg)',
+                color: 'var(--nl-accent-ink)',
+                borderColor: 'var(--nl-accent-ink)',
+              }}
+            >
+              <Play size={11} />
+              {t('debts.card.resumeButton')}
+            </button>
+          )}
           <Dialog open={correctOpen} onOpenChange={setCorrectOpen}>
             <DialogTrigger
               render={
@@ -1121,6 +1155,19 @@ function DebtActions({ debt, className = '' }: { debt: Debt; className?: string 
 /** What was lent and what it ends up costing: "Lent X · To pay Y · Interest Z" when the total is
  * more than the loan (interest), "Owed X · Agreement Y · Write-off Z" when it is less (the creditor
  * accepted less than the debt). Quiet for the rest, or when no original amount was recorded. */
+function PausedChip() {
+  const { t } = useTranslation('pages')
+  return (
+    <span
+      className="flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[9px]"
+      style={{ background: 'var(--nl-warning-soft-bg)', color: 'var(--nl-warning-ink)' }}
+    >
+      <Pause size={9} />
+      {t('debts.card.pausedBadge')}
+    </span>
+  )
+}
+
 function DebtTermsLine({ debt, className = '' }: { debt: Debt; className?: string }) {
   const { t } = useTranslation('pages')
   if (!debt.original_amount) return null
@@ -1174,6 +1221,7 @@ function DebtCard({ debt }: { debt: Debt }) {
         >
           {isReceivable ? t('debts.card.receivableBadge') : debtTypeLabel(debt.type)}
         </span>
+        {debt.status === 'paused' && <PausedChip />}
         <DebtManageActions debt={debt} />
       </div>
       <div className="flex items-center gap-3 mb-2">
@@ -1210,7 +1258,9 @@ function DebtCard({ debt }: { debt: Debt }) {
         <div className="text-[10px] text-muted-foreground truncate">
           {debt.status === 'completed'
             ? t('debts.card.completed')
-            : t('debts.card.nextPayment', { date: debt.next_payment_date ?? '—' })}
+            : debt.status === 'paused'
+              ? t('debts.card.pausedNote')
+              : t('debts.card.nextPayment', { date: debt.next_payment_date ?? '—' })}
         </div>
         <DebtActions debt={debt} />
         {debt.status === 'completed' && (
@@ -1298,6 +1348,7 @@ function DebtRow({ debt }: { debt: Debt }) {
           </span>
           <DebtTermsLine debt={debt} />
         </span>
+        {debt.status === 'paused' && <PausedChip />}
         <DebtManageActions debt={debt} />
       </div>
       <RowFigure label={isReceivable ? t('debts.list.lent') : t('debts.list.borrowed')} value={formatMoney(debt.total_amount)} />

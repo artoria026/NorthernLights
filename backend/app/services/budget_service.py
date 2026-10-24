@@ -1,4 +1,6 @@
 import calendar
+import math
+import statistics
 from datetime import date
 from decimal import Decimal
 from uuid import UUID, uuid4
@@ -82,6 +84,7 @@ async def get_limit_suggestions(session: AsyncSession, user_id: UUID) -> list[di
     limits_by_category = {row.category_id: row.monthly_limit for row in limits_result.all()}
 
     averages = await _average_spent_by_category(session, user_id, category_ids)
+    suggested, history_months = await suggest_limits_from_history(session, user_id, category_ids)
 
     return [
         {
@@ -90,6 +93,8 @@ async def get_limit_suggestions(session: AsyncSession, user_id: UUID) -> list[di
             "color": row.color,
             "current_limit": limits_by_category.get(row.id),
             "average_last_3_months": averages.get(row.id, Decimal("0")),
+            "suggested_limit": suggested.get(row.id, Decimal("0")),
+            "history_months": history_months,
         }
         for row in categories
     ]
@@ -305,6 +310,73 @@ async def _average_spent_by_category(
         ).quantize(Decimal("0.01"))
         for category_id in category_ids
     }
+
+
+HISTORY_MAX_MONTHS = 12
+SUGGESTION_STEP = 50
+
+
+async def suggest_limits_from_history(
+    session: AsyncSession, user_id: UUID, category_ids: set[UUID]
+) -> tuple[dict[UUID, Decimal], int]:
+    """A monthly limit per category taken from the user's own history: the MEDIAN of what was spent
+    in each complete month, up to the last 12 (the month in progress is left out, it is not over).
+    The median, not the average, so one extraordinary month (a trip, a repair) does not set the
+    limit; months with no spend in a category count as zero, so an occasional expense does not turn
+    into a monthly one. Rounded up to the next 50 so the limit has a little room. Returns the
+    suggestion per category and how many months of history it was based on (0: nothing to go on)."""
+    if not category_ids:
+        return {}, 0
+    this_month = date.today().replace(day=1)
+    first_entry = (
+        await session.execute(
+            select(func.min(JournalEntry.date)).where(
+                JournalEntry.user_id == user_id,
+                JournalEntry.entry_type == "expense",
+                JournalEntry.status == "confirmed",
+                JournalEntry.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one()
+    if first_entry is None:
+        return {}, 0
+    first_month = first_entry.replace(day=1)
+    months = min(
+        HISTORY_MAX_MONTHS,
+        (this_month.year - first_month.year) * 12 + this_month.month - first_month.month,
+    )
+    if months <= 0:
+        return {}, 0
+    since = this_month - relativedelta(months=months)
+
+    effective_id = func.coalesce(Category.parent_id, Category.id)
+    month_start = func.date_trunc("month", JournalEntry.date)
+    result = await session.execute(
+        select(effective_id, month_start, func.sum(JournalEntry.amount))
+        .join(Category, Category.id == JournalEntry.category_id)
+        .where(
+            JournalEntry.user_id == user_id,
+            JournalEntry.entry_type == "expense",
+            JournalEntry.status == "confirmed",
+            JournalEntry.deleted_at.is_(None),
+            effective_id.in_(category_ids),
+            JournalEntry.date >= since,
+            JournalEntry.date < this_month,
+        )
+        .group_by(effective_id, month_start)
+    )
+    by_category: dict[UUID, list[Decimal]] = {}
+    for category_id, _month, total in result.all():
+        by_category.setdefault(category_id, []).append(total)
+
+    suggestions: dict[UUID, Decimal] = {}
+    for category_id, totals in by_category.items():
+        monthly = totals + [Decimal("0")] * (months - len(totals))
+        median = Decimal(str(statistics.median(monthly)))
+        suggestions[category_id] = Decimal(
+            math.ceil(median / SUGGESTION_STEP) * SUGGESTION_STEP
+        ).quantize(Decimal("0.01"))
+    return suggestions, months
 
 
 async def get_current_budget(session: AsyncSession, user_id: UUID, year: int, month: int) -> dict:

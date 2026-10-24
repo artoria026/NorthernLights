@@ -18,7 +18,7 @@ DEBT_TYPES = (
     "loan_received",
     "credit",
 )
-DEBT_STATUSES = ("active", "completed", "negotiating")
+DEBT_STATUSES = ("active", "completed", "negotiating", "paused")
 PAYMENT_FREQUENCIES = ("weekly", "biweekly", "monthly", "irregular")
 UNPLANNED_STATUSES = ("pending", "converted")
 # owed_by_me: money that I owe (Mireya, the bank, my grandfather). owed_to_me:

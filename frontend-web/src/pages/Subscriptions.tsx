@@ -19,10 +19,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CategorySelect } from '@/components/nl/CategorySelect'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { RegisterChargeButton } from '@/components/nl/RegisterChargeButton'
 import { SubscriptionIcon, SubscriptionIconPicker } from '@/components/nl/SubscriptionIcon'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { FREQUENCY_LABELS, monthlyEquivalent, STATUS_LABELS } from '@/lib/recurring'
-import { formatMoney, formatShortDate, selectClass } from '@/lib/utils'
+import { formatMoney, formatShortDate, localIsoDate, selectClass } from '@/lib/utils'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
@@ -329,6 +330,9 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
   // below gets mounted, never both at once.
   const actions = (
     <>
+      {item.status === 'active' && !item.auto_generate && (
+        <RegisterChargeButton item={item} highlight={item.next_date <= localIsoDate()} />
+      )}
       <SoftBadge severity={STATUS_SEVERITY[item.status]}>{STATUS_LABELS[item.status]}</SoftBadge>
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogTrigger
@@ -404,7 +408,7 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
   if (isDesktop) {
     return (
       <div className="py-2.5 border-t border-border first:border-0">
-        <div className="grid grid-cols-[2fr_1.2fr_1fr_1fr_230px] gap-2 items-center text-[13px]">
+        <div className="grid grid-cols-[2fr_1.2fr_1fr_1fr_340px] gap-2 items-center text-[13px]">
           <span className="flex items-center gap-2 min-w-0">
             <SubscriptionIcon icon={item.icon} name={item.name} size="sm" />
             <span className="font-medium truncate">{item.name}</span>
@@ -531,15 +535,17 @@ export function Subscriptions() {
         <StatCard
           compact
           icon={<Lock />}
+          tone="violet"
           label={t('subscriptions.stats.committedMonthly')}
           value={formatMoney(committedMonthly)}
           note={t('subscriptions.stats.committedMonthlyNote', { amount: formatMoney(committedMonthly * 12) })}
           dataTour="subscriptions:committed"
         />
-        <StatCard compact icon={<CheckCircle2 />} label={t('subscriptions.stats.active')} value={String(active.length)} />
+        <StatCard compact icon={<CheckCircle2 />} tone="accent" label={t('subscriptions.stats.active')} value={String(active.length)} />
         <StatCard
           compact
           icon={<PauseCircle />}
+          tone="warning"
           label={t('subscriptions.stats.paused')}
           value={String(paused.length)}
           valueClassName="text-[color:var(--nl-warning-ink)]"
@@ -547,6 +553,7 @@ export function Subscriptions() {
         <StatCard
           compact
           icon={<XCircle />}
+          tone="danger"
           label={t('subscriptions.stats.cancelled')}
           value={String(cancelled.length)}
           valueClassName="text-muted-foreground"
@@ -602,7 +609,7 @@ export function Subscriptions() {
           </EmptyState>
         ) : (
           <>
-            <div className="hidden lg:grid grid-cols-[2fr_1.2fr_1fr_1fr_230px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <div className="hidden lg:grid grid-cols-[2fr_1.2fr_1fr_1fr_340px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
               <span>{t('subscriptions.listSection.table.name')}</span>
               <span>{t('subscriptions.listSection.table.charge')}</span>
               <span className="text-right">{t('subscriptions.listSection.table.monthlyEquivalent')}</span>

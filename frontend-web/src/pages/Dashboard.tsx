@@ -11,12 +11,14 @@ import {
   formatMoney as formatMoneyBase,
   formatShortDate,
   isPositiveEntryType,
+  localIsoDate,
 } from '@/lib/utils'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { RegisterChargeButton } from '@/components/nl/RegisterChargeButton'
 import { SubscriptionIcon } from '@/components/nl/SubscriptionIcon'
 import { TagsOverviewCard } from '@/components/nl/TagsOverviewCard'
 import { CategoryBadge, HEADER_SECTIONS, Legend, StatCard, ViewHeader } from '@/components/nl/primitives'
-import { useAccounts } from '@/hooks/useAccounts'
+import { useAccountSummary, useAccounts } from '@/hooks/useAccounts'
 import { useBudgetCurrent, useBudgetWeekly } from '@/hooks/useBudget'
 import { useCategories } from '@/hooks/useCategories'
 import { useDebtSummary, useDebts } from '@/hooks/useDebts'
@@ -87,6 +89,7 @@ export function Dashboard() {
   const user = useAuthStore((s) => s.user)
   const { data: snapshot, isLoading: loadingSnapshot } = useFinancialSnapshot()
   const { data: accounts } = useAccounts()
+  const { data: accountSummary } = useAccountSummary()
   const { data: debts } = useDebts()
   const { data: debtSummary } = useDebtSummary()
   const { data: budgetCurrent } = useBudgetCurrent()
@@ -100,10 +103,10 @@ export function Dashboard() {
   const categoryColorById = new Map((categories ?? []).map((c) => [c.id, c.color]))
   const categoryColorByName = new Map((categories ?? []).map((c) => [c.name, c.color]))
 
-  const todayIso = localIso(new Date())
+  const todayIso = localIsoDate(new Date())
   // Two weeks of movements (not "the latest N"): the cash-flow bars and their comparison
   // with the previous 7 days need every day of both weeks, however many entries they hold.
-  const { data: twoWeeksTx } = useTransactions({ per_page: 500, date_from: localIso(daysAgo(13)) })
+  const { data: twoWeeksTx } = useTransactions({ per_page: 500, date_from: localIsoDate(daysAgo(13)) })
 
   const liquidAccounts = accounts?.filter((a) => a.type === 'asset') ?? []
   // Revolving debt comes from Account, not Debt: a credit card is a full
@@ -114,13 +117,16 @@ export function Dashboard() {
   const revolvingTotal = creditCardAccounts.reduce((sum, a) => sum + Number(a.balance), 0)
 
   const liquidity = Number(snapshot?.available_this_week.liquid_balance ?? 0)
-  const activeDebts = (debts ?? []).filter((d) => d.status === 'active')
-  const owedByMeDebts = activeDebts.filter((d) => d.direction !== 'owed_to_me')
-  const owedToMeDebts = activeDebts.filter((d) => d.direction === 'owed_to_me')
+  // A paused debt is still owed (it counts in the totals and in Position) but asks for
+  // nothing: only the active ones feed the upcoming payments.
+  const openDebts = (debts ?? []).filter((d) => d.status !== 'completed')
+  const owedByMeDebts = openDebts.filter((d) => d.direction !== 'owed_to_me')
+  const owedToMeDebts = openDebts.filter((d) => d.direction === 'owed_to_me')
   const owedByMe = Number(debtSummary?.total_owed_by_me ?? 0) + revolvingTotal
   const owedToMe = Number(debtSummary?.total_owed_to_me ?? 0)
-  // Built from the same pieces the cards show, so the headline always adds up with them.
-  const netWorth = liquidity + owedToMe - owedByMe
+  // The same number Accounts shows: the backend's own net worth (real accounts plus what is owed
+  // to and by the user). Until it loads, the pieces on screen give the same figure.
+  const netWorth = accountSummary ? Number(accountSummary.net_worth) : liquidity + owedToMe - owedByMe
 
   // A budget at 0% used to mean two different things: "nothing spent" and "no budget set up".
   const monthBudgeted = Number(budgetCurrent?.variable_total_budgeted ?? 0)
@@ -173,25 +179,31 @@ export function Dashboard() {
   // PAYMENTS", mixing income in here with the same due-date language
   // wouldn't make sense. Debts come from their own next payment date (any of the
   // next 30 days), not just the week the snapshot looks at.
-  const in30Days = localIso(daysAgo(-30))
+  const in30Days = localIsoDate(daysAgo(-30))
+  const in3Days = localIsoDate(daysAgo(-3))
   const upcomingAll = [
     ...(recurring ?? [])
       .filter((item) => item.item_type !== 'income')
       .map((item) => ({
         key: `r-${item.id}`,
+        id: item.id,
         name: item.name,
         amount: item.amount,
         due: item.next_date,
         icon: item.icon,
+        // The app does not generate this item's charges: the user registers each one by hand.
+        manual: !item.auto_generate,
       })),
     ...owedByMeDebts
-      .filter((d) => d.next_payment_date && d.payment_amount)
+      .filter((d) => d.status === 'active' && d.next_payment_date && d.payment_amount)
       .map((d) => ({
         key: `d-${d.id}`,
+        id: d.id,
         name: d.name,
         amount: d.payment_amount as string,
         due: d.next_payment_date as string,
         icon: null,
+        manual: false,
       })),
   ].sort((a, b) => a.due.localeCompare(b.due))
   const upcoming = upcomingAll.slice(0, 6)
@@ -199,10 +211,10 @@ export function Dashboard() {
     .filter((u) => u.due <= in30Days)
     .reduce((sum, u) => sum + Number(u.amount), 0)
 
-  const dueSoonItems = upcoming.filter((u) => {
-    const days = (new Date(u.due).getTime() - Date.now()) / 86_400_000
-    return days >= 0 && days <= 3
-  })
+  // Compared as calendar dates: an item due TODAY is "in the next 3 days", and a charge the user
+  // follows by hand whose date has passed is one they have not registered yet.
+  const dueSoonItems = upcoming.filter((u) => u.due >= todayIso && u.due <= in3Days)
+  const unregisteredItems = upcomingAll.filter((u) => u.manual && u.due < todayIso)
 
   const weekTx = twoWeeksTx?.data ?? []
   const sumOf = (type: string, from: string, to: string) =>
@@ -211,11 +223,11 @@ export function Dashboard() {
       .reduce((s, tx) => s + Number(tx.amount ?? 0), 0)
   const weekDays = Array.from({ length: 7 }, (_, i) => daysAgo(6 - i))
   const weeklyBars = weekDays.map((day) => {
-    const iso = localIso(day)
+    const iso = localIsoDate(day)
     return { label: weekdayShort(t, day.getDay()), a: sumOf('income', iso, iso), b: sumOf('expense', iso, iso) }
   })
   const weekExpenses = weeklyBars.reduce((s, d) => s + d.b, 0)
-  const prevWeekExpenses = sumOf('expense', localIso(daysAgo(13)), localIso(daysAgo(7)))
+  const prevWeekExpenses = sumOf('expense', localIsoDate(daysAgo(13)), localIsoDate(daysAgo(7)))
   const weekChangePct = prevWeekExpenses > 0 ? ((weekExpenses - prevWeekExpenses) / prevWeekExpenses) * 100 : null
 
   // A balance adjustment is the app correcting a number, not something that happened:
@@ -250,25 +262,50 @@ export function Dashboard() {
         }
       />
 
-      {dueSoonItems.length > 0 && (
+      {(unregisteredItems.length > 0 || dueSoonItems.length > 0) && (
         <div className="bg-card border border-border rounded-md p-3.5 mb-4" data-tour="dashboard:due-soon">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={15} className="text-muted-foreground flex-shrink-0" />
-            <span className="text-[13px] font-medium">
-              {t('dashboard.upcomingPaymentsCount', { count: dueSoonItems.length })}
-            </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {dueSoonItems.map((item) => (
-              <span
-                key={item.key}
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px]"
-                style={{ background: 'var(--nl-warning-soft-bg)', color: 'var(--nl-warning-ink)' }}
-              >
-                {item.name} · {formatMoney(item.amount)} · {item.due}
-              </span>
-            ))}
-          </div>
+          {unregisteredItems.length > 0 && (
+            <div className={dueSoonItems.length > 0 ? 'mb-3' : ''}>
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={15} className="flex-shrink-0" style={{ color: 'var(--nl-danger-ink)' }} />
+                <span className="text-[13px] font-medium">
+                  {t('recurring.registerCharge.pendingBanner', { count: unregisteredItems.length })}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {unregisteredItems.map((item) => (
+                  <span
+                    key={item.key}
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px]"
+                    style={{ background: 'var(--nl-danger-soft-bg)', color: 'var(--nl-danger-ink)' }}
+                  >
+                    {item.name} · {formatMoney(item.amount)} · {item.due}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {dueSoonItems.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={15} className="text-muted-foreground flex-shrink-0" />
+                <span className="text-[13px] font-medium">
+                  {t('dashboard.upcomingPaymentsCount', { count: dueSoonItems.length })}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {dueSoonItems.map((item) => (
+                  <span
+                    key={item.key}
+                    className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px]"
+                    style={{ background: 'var(--nl-warning-soft-bg)', color: 'var(--nl-warning-ink)' }}
+                  >
+                    {item.name} · {formatMoney(item.amount)} · {item.due}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -279,6 +316,7 @@ export function Dashboard() {
         <StatCard
           compact
           icon={<Droplet />}
+          tone="blue"
           label={t('dashboard.stats.liquidity')}
           value={loadingSnapshot ? '—' : formatMoney(liquidity)}
           note={t('dashboard.stats.accountsCount', { count: liquidAccounts.length })}
@@ -287,6 +325,7 @@ export function Dashboard() {
         <StatCard
           compact
           icon={<Scale />}
+          tone={monthNet < 0 ? 'danger' : 'accent'}
           label={t('dashboard.stats.monthNet')}
           value={formatMoney(monthNet)}
           valueClassName={monthNet < 0 ? 'text-[color:var(--nl-danger-ink)]' : undefined}
@@ -296,6 +335,7 @@ export function Dashboard() {
         <StatCard
           compact
           icon={<Wallet />}
+          tone={owedByMe > 0 ? 'danger' : 'accent'}
           label={t('dashboard.stats.owe')}
           value={formatMoney(owedByMe)}
           valueClassName={owedByMe > 0 ? 'text-[color:var(--nl-danger-ink)]' : undefined}
@@ -304,6 +344,7 @@ export function Dashboard() {
         <StatCard
           compact
           icon={<HandCoins />}
+          tone="accent"
           label={t('dashboard.stats.owedToMe')}
           value={formatMoney(owedToMe)}
           note={t('dashboard.stats.owedToMeNote', { count: owedToMeDebts.length })}
@@ -311,6 +352,7 @@ export function Dashboard() {
         <StatCard
           compact
           icon={<Grid2x2 />}
+          tone={monthBudgeted <= 0 ? 'violet' : monthPct >= 90 ? 'danger' : monthPct >= 70 ? 'warning' : 'accent'}
           label={t('dashboard.stats.monthBudget')}
           value={
             monthBudgeted > 0 ? <span style={{ color: pctColor(monthPct) }}>{monthPct}%</span> : '—'
@@ -321,7 +363,11 @@ export function Dashboard() {
                   spent: formatMoney(monthSpent),
                   week: currentWeekBudget > 0 ? ` · ${t('dashboard.stats.budgetWeek', { pct: weekPct })}` : '',
                 })
-              : t('dashboard.stats.noBudget')
+              : (
+                  <Link to="/budget" className="hover:text-foreground underline-offset-2 hover:underline">
+                    {t('dashboard.stats.noBudget')}
+                  </Link>
+                )
           }
           dataTour="dashboard:budget"
         />
@@ -474,10 +520,21 @@ export function Dashboard() {
                   <SubscriptionIcon icon={bill.icon} name={bill.name} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] truncate">{bill.name}</div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {t('dashboard.upcomingPayments.dueDate', { date: formatShortDate(bill.due) })}
+                    <div
+                      className="text-[11px] text-muted-foreground"
+                      style={bill.manual && bill.due < todayIso ? { color: 'var(--nl-danger-ink)' } : undefined}
+                    >
+                      {t(
+                        bill.manual && bill.due < todayIso
+                          ? 'dashboard.upcomingPayments.overdueDate'
+                          : 'dashboard.upcomingPayments.dueDate',
+                        { date: formatShortDate(bill.due) },
+                      )}
                     </div>
                   </div>
+                  {bill.manual && bill.due <= in3Days && (
+                    <RegisterChargeButton item={bill} highlight={bill.due <= todayIso} />
+                  )}
                   <div className="text-[13px] font-medium">{formatMoney(bill.amount)}</div>
                 </div>
               ))}
@@ -547,6 +604,7 @@ export function Dashboard() {
                     amount={formatMoney(d.current_balance)}
                     pctPaid={paidPct(d)}
                     color="var(--nl-danger)"
+                    hint={d.status === 'paused' ? t('dashboard.position.paused') : undefined}
                   />
                 ))}
               {owedByMeDebts.length === 0 && creditCardAccounts.length === 0 && (
@@ -566,6 +624,7 @@ export function Dashboard() {
                     amount={formatMoney(d.current_balance)}
                     pctPaid={paidPct(d)}
                     color="var(--nl-accent)"
+                    hint={d.status === 'paused' ? t('dashboard.position.paused') : undefined}
                   />
                 ))}
               {owedToMeDebts.length === 0 && (
@@ -587,13 +646,6 @@ export function Dashboard() {
       </div>
     </div>
   )
-}
-
-/** Local calendar date as YYYY-MM-DD. `toISOString()` is UTC: after 6pm in Mexico it already
- * says "tomorrow", which shifted the week's bars and today's budget week by a day. */
-function localIso(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 function daysAgo(days: number): Date {

@@ -164,8 +164,19 @@ export function ViewHeader({
   )
 }
 
+export type StatTone = 'accent' | 'danger' | 'warning' | 'blue' | 'violet'
+
+const STAT_TONES: Record<StatTone, { bg: string; ink: string }> = {
+  accent: { bg: 'var(--nl-accent-soft-bg)', ink: 'var(--nl-accent-ink)' },
+  danger: { bg: 'var(--nl-danger-soft-bg)', ink: 'var(--nl-danger-ink)' },
+  warning: { bg: 'var(--nl-warning-soft-bg)', ink: 'var(--nl-warning-ink)' },
+  blue: { bg: 'var(--nl-blue-soft-bg)', ink: 'var(--nl-blue-ink)' },
+  violet: { bg: 'var(--nl-violet-soft-bg)', ink: 'var(--nl-violet-ink)' },
+}
+
 export function StatCard({
   icon,
+  tone,
   label,
   value,
   valueClassName,
@@ -175,6 +186,9 @@ export function StatCard({
   dataTour,
 }: {
   icon?: ReactNode
+  /** Optional color for the icon: it goes in a tinted tile of that tone. Without it the icon
+   * stays plain and muted, as it always was. */
+  tone?: StatTone
   label: string
   value: ReactNode
   valueClassName?: string
@@ -195,7 +209,10 @@ export function StatCard({
     >
       {icon && (
         <span
-          className={`text-muted-foreground block w-fit [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:stroke-[1.6] ${compact ? 'mb-1.5' : 'mb-3.5'}`}
+          className={`block w-fit [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:stroke-[1.6] ${
+            tone ? 'rounded-lg p-1.5' : 'text-muted-foreground'
+          } ${compact ? 'mb-1.5' : 'mb-3.5'}`}
+          style={tone ? { background: STAT_TONES[tone].bg, color: STAT_TONES[tone].ink } : undefined}
         >
           {icon}
         </span>

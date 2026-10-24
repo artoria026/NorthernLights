@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import LIQUID_SUBTYPES
 from app.models.account import Account
+from app.models.debt import Debt
 from app.models.transaction import JournalEntry, JournalLine
 from app.schemas.account import (
     ACCOUNT_EXPORT_FORMAT,
@@ -197,10 +198,9 @@ async def get_or_create_debt_ledger_account(
     """Internal accounting counterpart for informal debts (M05): ONE hidden
     account per user per direction (not one per person -- the person/amount
     lives in `debts.current_balance`, not here). This way the double entry
-    engine balances and the balance enters the net worth calculation
-    (account_service.get_summary sums by type asset/liability regardless of
-    is_internal) without the user ever seeing this account in Accounts
-    (list_accounts filters out is_internal)."""
+    engine balances without the user ever seeing this account in Accounts
+    (list_accounts filters out is_internal). Net worth does not read it: it reads the debts
+    (see get_summary)."""
     meta = _DEBT_LEDGER[direction]
     result = await session.execute(
         select(Account)
@@ -279,6 +279,15 @@ async def delete_account(session: AsyncSession, user_id: UUID, account_id: UUID)
 
 
 async def get_summary(session: AsyncSession, user_id: UUID) -> dict:
+    """Net worth: what the user has minus what the user owes.
+
+    The user's real accounts (internal ones left out) plus the debts, read from the debts
+    themselves: what people owe the user counts as an asset and what the user owes as a
+    liability. NOT from the hidden ledger accounts of informal debts: those only agree with the
+    debts when every loan went through them, and a debt registered with its balance already
+    running (opened before the app) pays down a ledger that never received it -- which left it
+    negative and inflated the net worth by the whole debt. A debt tied to a real account
+    (linked_account_id) is that account's balance already: it is not counted twice."""
     result = await session.execute(
         select(
             func.coalesce(func.sum(case((Account.type == "asset", Account.balance), else_=0)), 0),
@@ -288,10 +297,29 @@ async def get_summary(session: AsyncSession, user_id: UUID) -> dict:
         ).where(
             Account.user_id == user_id,
             Account.is_active.is_(True),
+            Account.is_internal.is_(False),
             Account.deleted_at.is_(None),
         )
     )
-    total_assets, total_liabilities = result.one()
+    account_assets, account_liabilities = result.one()
+
+    debts = await session.execute(
+        select(
+            Debt.direction,
+            func.coalesce(func.sum(Debt.current_balance), 0),
+        )
+        .where(
+            Debt.user_id == user_id,
+            Debt.status != "completed",
+            Debt.linked_account_id.is_(None),
+            Debt.deleted_at.is_(None),
+        )
+        .group_by(Debt.direction)
+    )
+    owed = dict(debts.all())
+    cents = Decimal("0.01")
+    total_assets = (account_assets + owed.get("owed_to_me", Decimal("0"))).quantize(cents)
+    total_liabilities = (account_liabilities + owed.get("owed_by_me", Decimal("0"))).quantize(cents)
     return {
         "total_assets": total_assets,
         "total_liabilities": total_liabilities,

@@ -87,6 +87,109 @@ async def test_summary_computes_net_worth(client: AsyncClient):
     assert data["net_worth"] == "600.00"
 
 
+async def _summary(client: AsyncClient, headers: dict) -> dict:
+    response = await client.get("/api/v1/accounts/summary", headers=headers)
+    assert response.status_code == 200
+    return response.json()["data"]
+
+
+async def test_net_worth_counts_what_is_owed_to_and_by_the_user(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank = (
+        await client.post(
+            "/api/v1/accounts",
+            headers=headers,
+            json={"name": "Banco", "type": "asset", "subtype": "checking", "initial_balance": "1000"},
+        )
+    ).json()["data"]["id"]
+    # lent 100 out of the bank: the bank has 900 and someone owes 100
+    await client.post(
+        "/api/v1/debts",
+        headers=headers,
+        json={
+            "name": "Ana",
+            "type": "informal",
+            "direction": "owed_to_me",
+            "total_amount": "100.00",
+            "funding_account_id": bank,
+        },
+    )
+    # owed from before the app, no money moved: a liability of 300
+    await client.post(
+        "/api/v1/debts",
+        headers=headers,
+        json={"name": "Prestamo viejo", "type": "personal_loan", "total_amount": "300.00"},
+    )
+
+    data = await _summary(client, headers)
+    assert data["total_assets"] == "1000.00"  # 900 in the bank + 100 owed to the user
+    assert data["total_liabilities"] == "300.00"
+    assert data["net_worth"] == "700.00"
+
+
+async def test_paying_a_debt_that_started_before_the_app_does_not_inflate_net_worth(
+    client: AsyncClient,
+):
+    """A debt registered with its balance already running is paid out of a hidden ledger that
+    never received it: that ledger goes negative. Net worth must follow the debt (300 -> 200),
+    not the ledger, or paying 100 would look like the user got richer by 200."""
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank = (
+        await client.post(
+            "/api/v1/accounts",
+            headers=headers,
+            json={"name": "Banco", "type": "asset", "subtype": "checking", "initial_balance": "1000"},
+        )
+    ).json()["data"]["id"]
+    debt = (
+        await client.post(
+            "/api/v1/debts",
+            headers=headers,
+            json={"name": "Prestamo viejo", "type": "personal_loan", "total_amount": "300.00"},
+        )
+    ).json()["data"]
+    assert (await _summary(client, headers))["net_worth"] == "700.00"
+
+    await client.post(
+        f"/api/v1/debts/{debt['id']}/payments",
+        headers=headers,
+        json={"account_id": bank, "amount": "100.00", "date": "2026-10-24"},
+    )
+    data = await _summary(client, headers)
+    assert data["total_assets"] == "900.00"
+    assert data["total_liabilities"] == "200.00"
+    assert data["net_worth"] == "700.00"  # paying a debt does not change what the user is worth
+
+
+async def test_a_completed_debt_no_longer_counts(client: AsyncClient):
+    token = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    bank = (
+        await client.post(
+            "/api/v1/accounts",
+            headers=headers,
+            json={"name": "Banco", "type": "asset", "subtype": "checking", "initial_balance": "1000"},
+        )
+    ).json()["data"]["id"]
+    debt = (
+        await client.post(
+            "/api/v1/debts",
+            headers=headers,
+            json={"name": "Chica", "type": "personal_loan", "total_amount": "100.00"},
+        )
+    ).json()["data"]
+    await client.post(
+        f"/api/v1/debts/{debt['id']}/payments",
+        headers=headers,
+        json={"account_id": bank, "amount": "100.00", "date": "2026-10-24"},
+    )
+    data = await _summary(client, headers)
+    assert data["total_liabilities"] == "0.00"
+    assert data["net_worth"] == "900.00"
+
+
 async def test_reconcile_creates_adjustment_out_when_real_balance_lower(client: AsyncClient):
     token = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}

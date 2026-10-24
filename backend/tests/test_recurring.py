@@ -416,3 +416,76 @@ async def test_rls_isolates_recurring_items_between_users(client: AsyncClient):
 
     get_b = await client.get(f"/api/v1/recurring-items/{item['id']}", headers=headers_b)
     assert get_b.status_code == 404
+
+
+# -- registering the charge of an item followed by hand ---------------------------------------
+
+
+async def _manual_item(client: AsyncClient, headers: dict, **overrides) -> dict:
+    return await _create_recurring_item(
+        client,
+        headers,
+        name="Hetzner",
+        amount="209.08",
+        auto_generate=False,
+        next_date="2026-10-14",
+        **overrides,
+    )
+
+
+async def test_registering_a_manual_charge_records_it_and_moves_the_date(client: AsyncClient):
+    token, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    item = await _manual_item(client, headers)
+
+    response = await client.post(
+        f"/api/v1/recurring-items/{item['id']}/register",
+        headers=headers,
+        json={"date": "2026-10-15"},
+    )
+    assert response.status_code == 201, response.text
+    data = response.json()["data"]
+    assert data["item"]["next_date"] == "2026-11-14"
+    assert data["transaction"]["status"] == "confirmed"
+    assert data["transaction"]["is_recurring"] is True
+    assert data["transaction"]["description"] == "Hetzner"
+    assert data["transaction"]["amount"] == "209.08"
+    assert data["transaction"]["date"] == "2026-10-15"
+
+    balance = (await client.get(f"/api/v1/accounts/{item['account_id']}", headers=headers)).json()[
+        "data"
+    ]["balance"]
+    assert balance == "790.92"
+
+
+async def test_the_date_defaults_to_today(client: AsyncClient):
+    token, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    item = await _manual_item(client, headers)
+    response = await client.post(f"/api/v1/recurring-items/{item['id']}/register", headers=headers)
+    assert response.status_code == 201, response.text
+    assert response.json()["data"]["transaction"]["date"] == date.today().isoformat()
+
+
+async def test_a_paused_item_cannot_register_a_charge(client: AsyncClient):
+    token, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    item = await _manual_item(client, headers)
+    await client.patch(f"/api/v1/recurring-items/{item['id']}/pause", headers=headers)
+    response = await client.post(f"/api/v1/recurring-items/{item['id']}/register", headers=headers)
+    assert response.status_code == 400
+
+
+async def test_an_automatic_item_with_a_waiting_draft_is_not_charged_twice(
+    client: AsyncClient, session_factory
+):
+    token, user_id = await _register_and_login(client)
+    uid = uuid.UUID(user_id)
+    headers = {"Authorization": f"Bearer {token}"}
+    item = await _create_recurring_item(client, headers)
+
+    # The scheduled job leaves a draft; registering by hand on top would count the charge twice.
+    async with rls_session(session_factory, uid) as session:
+        await recurring_service.process_due_recurring_items(session, uid, date.today())
+    response = await client.post(f"/api/v1/recurring-items/{item['id']}/register", headers=headers)
+    assert response.status_code == 409

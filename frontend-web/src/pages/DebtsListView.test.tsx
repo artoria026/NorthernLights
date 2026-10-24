@@ -11,6 +11,8 @@ vi.mock('@/hooks/useAuth', () => ({
 }))
 vi.mock('@/hooks/useDebts', () => ({
   useDeleteDebt: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  usePauseDebt: () => ({ mutate: vi.fn(), isPending: false }),
+  useResumeDebt: () => ({ mutate: vi.fn(), isPending: false }),
   useDebtSummary: () => ({ data: undefined }),
   useUnplannedDebts: () => ({ data: [], isLoading: false }),
   useDebts: (direction: string) => {

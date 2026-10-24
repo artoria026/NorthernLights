@@ -209,6 +209,36 @@ export function useRegisterDebtPayment() {
   })
 }
 
+/** Puts an active debt on hold (it keeps counting as owed, but asks for no payments), or takes it
+ * back. */
+export function usePauseDebt() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (debtId: string) => {
+      const { data } = await api.patch<ApiSuccess<Debt>>(`/debts/${debtId}/pause`)
+      return data.data
+    },
+    onSuccess: () => {
+      invalidateDebts(queryClient)
+      queryClient.invalidateQueries({ queryKey: ['engine'] })
+    },
+  })
+}
+
+export function useResumeDebt() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (debtId: string) => {
+      const { data } = await api.patch<ApiSuccess<Debt>>(`/debts/${debtId}/resume`)
+      return data.data
+    },
+    onSuccess: () => {
+      invalidateDebts(queryClient)
+      queryClient.invalidateQueries({ queryKey: ['engine'] })
+    },
+  })
+}
+
 /** The debt's history (loans, payments, corrections), oldest first. Lives under ['debts'] so
  * every debt mutation refreshes it. */
 export function useDebtMovements(debtId: string, enabled = true) {

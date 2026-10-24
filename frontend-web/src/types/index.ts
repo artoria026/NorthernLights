@@ -229,7 +229,7 @@ export interface Debt {
   payment_day: number | null
   total_installments: number | null
   paid_installments: number
-  status: 'active' | 'completed' | 'negotiating'
+  status: 'active' | 'completed' | 'negotiating' | 'paused'
   linked_account_id: string | null
   payment_source_account_id: string | null
   start_date: string | null
@@ -290,6 +290,9 @@ export interface BudgetLimitSuggestion {
   color: string
   current_limit: string | null
   average_last_3_months: string
+  /** Typical month of the user's own history (median of up to 12 complete months), 0 if none. */
+  suggested_limit: string
+  history_months: number
 }
 
 export interface BudgetCategoryBreakdown {

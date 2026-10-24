@@ -135,7 +135,7 @@
       "owedToMeNote_other": "{{count}} debts to collect",
       "budgetNote": "{{spent}} spent{{week}}",
       "budgetWeek": "week {{pct}}%",
-      "noBudget": "No budget set"
+      "noBudget": "Create a budget →"
     },
     "recentTransactions": {
       "heading": "Recent transactions",
@@ -152,7 +152,8 @@
       "heading": "Upcoming payments",
       "dueDate": "Due {{date}}",
       "empty": "No upcoming payments.",
-      "total30": "Next 30 days: {{amount}}"
+      "total30": "Next 30 days: {{amount}}",
+      "overdueDate": "Was due {{date}}"
     },
     "accounts": {
       "viewAll": "See all →",
@@ -220,7 +221,8 @@
       "owe": "I owe",
       "owedToMe": "Owed to me",
       "card": "card",
-      "nobodyOwesMe": "Nobody owes you anything right now."
+      "nobodyOwesMe": "Nobody owes you anything right now.",
+      "paused": "paused"
     }
   },
   "accounts": {
@@ -838,7 +840,13 @@
       "lendMoreButton": "Lend more",
       "borrowMoreButton": "Borrowed more",
       "lendMoreDialogTitle": "Lend {{name}} more",
-      "borrowMoreDialogTitle": "Another loan from {{name}}"
+      "borrowMoreDialogTitle": "Another loan from {{name}}",
+      "pauseButton": "Pause",
+      "pauseTitle": "Pause: it still counts as owed but stops asking for payments",
+      "resumeButton": "Resume",
+      "resumeTitle": "Resume this debt's payments",
+      "pausedBadge": "Paused",
+      "pausedNote": "Paused: no payments due"
     },
     "unplannedRow": {
       "activateButton": "Activate",
@@ -975,7 +983,13 @@
       "noLimitPlaceholder": "No limit",
       "average3MonthsLabel": "3-month average:",
       "noExpenseCategories": "No expense categories.",
-      "saveChanges": "Save changes"
+      "saveChanges": "Save changes",
+      "suggestFromHistory_one": "Suggest from my history (1 month)",
+      "suggestFromHistory_other": "Suggest from my history ({{count}} months)",
+      "suggestedLabel_one": "Suggested (1 month of history):",
+      "suggestedLabel_other": "Suggested (median of {{count}} months):",
+      "totalLabel": "Monthly total:",
+      "noHistory": "There are no complete months of history yet to suggest from."
     },
     "categoryRow": {
       "vsLastMonth": "{{pct}}% vs last month",
@@ -1210,6 +1224,16 @@
         "body": "Only shows up if you have at least one credit card. It adds up the monthly installments from your active interest-free purchases (fixed, has to be paid no matter what) plus what you've already spent in each card's open cycle (variable, keeps rising until it closes). It's informational only -- it isn't added to \"Committed / month\" above, because that expense was already counted in the budget for the month it happened; adding it here too would count it twice."
       },
       "tip": "Alert urgency (normal/high/critical) controls how insistent the reminder is before the charge date — it doesn't affect the amount or the date itself. \"Essential utilities\" are the exception: they alert daily starting the first day they go unconfirmed, regardless of the urgency you set."
+    },
+    "registerCharge": {
+      "button": "Register charge",
+      "title": "Register charge — {{name}}",
+      "description": "An expense of {{amount}} will be recorded on the item's account and its next date will move forward one period.",
+      "dateLabel": "Charge date",
+      "confirm": "Register charge",
+      "pendingBanner_one": "{{count}} charge not registered",
+      "pendingBanner_other": "{{count}} charges not registered",
+      "upcomingBanner": "Next 3 days"
     }
   },
   "subscriptions": {

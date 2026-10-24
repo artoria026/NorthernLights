@@ -7,6 +7,7 @@ import type {
   RecurringFrequency,
   RecurringItem,
   RecurringItemType,
+  Transaction,
 } from '@/types'
 
 function invalidateRecurring(queryClient: ReturnType<typeof useQueryClient>) {
@@ -146,6 +147,30 @@ export function usePauseRecurringItem() {
         (prev ?? []).map((i) => (i.id === item.id ? item : i)),
       )
       invalidateRecurring(queryClient)
+    },
+  })
+}
+
+/** The user records the charge of an item they follow by hand: it becomes a confirmed
+ * transaction and the item's next date moves one period forward. */
+export function useRegisterRecurringCharge() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, date }: { id: string; date?: string }) => {
+      const { data } = await api.post<ApiSuccess<{ item: RecurringItem; transaction: Transaction }>>(
+        `/recurring-items/${id}/register`,
+        date ? { date } : {},
+      )
+      return data.data
+    },
+    onSuccess: ({ item }) => {
+      patchAllListQueries<RecurringItem>(queryClient, ['recurring', 'list'], (prev) =>
+        (prev ?? []).map((i) => (i.id === item.id ? item : i)),
+      )
+      invalidateRecurring(queryClient)
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      queryClient.invalidateQueries({ queryKey: ['engine'] })
     },
   })
 }

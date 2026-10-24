@@ -1,6 +1,7 @@
+from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Body, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_rls_db
@@ -125,3 +126,18 @@ async def resume_recurring_item(
 ) -> SuccessResponse:
     item = await recurring_service.resume_recurring_item(session, current_user.id, item_id)
     return SuccessResponse(data=RecurringItemOut.model_validate(item))
+
+
+@router.post("/{item_id}/register", status_code=status.HTTP_201_CREATED)
+async def register_recurring_charge(
+    item_id: UUID,
+    entry_date: date | None = Body(default=None, embed=True, alias="date"),
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    """Records the charge of an item the user follows by hand (see the service)."""
+    item, entry = await recurring_service.register_recurring_charge(
+        session, current_user.id, item_id, entry_date
+    )
+    [out] = await transaction_service.to_transaction_out_list(session, [entry])
+    return SuccessResponse(data={"item": RecurringItemOut.model_validate(item), "transaction": out})
