@@ -94,4 +94,6 @@ class RecurringItem(Base, TimestampMixin, SoftDeleteMixin):
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     url: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Key of the icon the user picked (a brand or a generic one); null = suggested from the name.
+    icon: Mapped[str | None] = mapped_column(String(64), nullable=True)
     client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)

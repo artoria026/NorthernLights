@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CategorySelect } from '@/components/nl/CategorySelect'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { SubscriptionIcon, SubscriptionIconPicker } from '@/components/nl/SubscriptionIcon'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import {
   activeInstallmentPlans,
@@ -127,7 +128,7 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
     event.preventDefault()
     if (!form.category_id || !form.account_id) return
     try {
-      await createItem.mutateAsync(form)
+      await createItem.mutateAsync({ ...form, icon: form.icon ?? undefined })
       onDone()
     } catch {
       // error shown below
@@ -147,6 +148,7 @@ function NewRecurringItemForm({ onDone }: { onDone: () => void }) {
           className={`${selectClass} h-9 w-full`}
         />
       </div>
+      <SubscriptionIconPicker value={form.icon ?? null} name={form.name ?? ''} onChange={(icon) => setForm({ ...form, icon })} />
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">{t('recurring.form.typeLabel')}</label>
         <Select
@@ -265,6 +267,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
 
   const [form, setForm] = useState<UpdateRecurringItemInput>({
     name: item.name,
+    icon: item.icon,
     amount: item.amount,
     frequency: item.frequency,
     account_id: item.account_id,
@@ -295,6 +298,7 @@ function EditRecurringItemForm({ item, onDone }: { item: RecurringItem; onDone: 
           className={`${selectClass} h-9 w-full`}
         />
       </div>
+      <SubscriptionIconPicker value={form.icon ?? null} name={form.name ?? ''} onChange={(icon) => setForm({ ...form, icon })} />
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">{t('recurring.form.amountLabel')}</label>
         <input
@@ -531,7 +535,7 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
     return (
       <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr_240px] gap-2 items-center py-2.5 border-t border-border first:border-0 text-[13px]">
         <span className="flex items-center gap-2 min-w-0">
-          <TypeIcon size={14} className="text-muted-foreground flex-shrink-0" />
+          <SubscriptionIcon icon={item.icon} name={item.name} size="sm" fallback={TypeIcon} />
           <span className="font-medium truncate">{item.name}</span>
         </span>
         <span>
@@ -564,7 +568,7 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
     <div className="flex flex-col gap-2 py-3 border-t border-border first:border-0 text-[13px]">
       <div className="flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 min-w-0">
-          <TypeIcon size={14} className="text-muted-foreground flex-shrink-0" />
+          <SubscriptionIcon icon={item.icon} name={item.name} size="sm" fallback={TypeIcon} />
           <span className="font-medium truncate">{item.name}</span>
         </span>
         <span
@@ -1037,7 +1041,7 @@ export function Recurring() {
                   key={item.id}
                   className="flex items-center gap-2 lg:gap-3 py-2.5 border-t border-border first:border-0"
                 >
-                  <TypeIcon size={14} className="text-muted-foreground flex-shrink-0" />
+                  <SubscriptionIcon icon={item.icon} name={item.name} size="sm" fallback={TypeIcon} />
                   <span className="text-[13px] font-medium flex-1 min-w-0 truncate">{item.name}</span>
                   <div className="hidden lg:block flex-shrink-0">
                     <SoftBadge severity="blue">{ITEM_TYPE_LABELS[item.item_type]}</SoftBadge>

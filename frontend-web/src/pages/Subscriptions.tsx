@@ -1,5 +1,4 @@
 import {
-  CalendarClock,
   Check,
   CheckCircle2,
   Lock,
@@ -20,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CategorySelect } from '@/components/nl/CategorySelect'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { SubscriptionIcon, SubscriptionIconPicker } from '@/components/nl/SubscriptionIcon'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import { FREQUENCY_LABELS, monthlyEquivalent, STATUS_LABELS } from '@/lib/recurring'
 import { formatMoney, formatShortDate, selectClass } from '@/lib/utils'
@@ -79,7 +79,7 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
     event.preventDefault()
     if (!form.category_id || !form.account_id) return
     try {
-      await createItem.mutateAsync(form)
+      await createItem.mutateAsync({ ...form, icon: form.icon ?? undefined })
       onDone()
     } catch {
       // error shown below
@@ -99,6 +99,7 @@ function NewSubscriptionForm({ onDone }: { onDone: () => void }) {
           className={`${selectClass} h-9 w-full`}
         />
       </div>
+      <SubscriptionIconPicker value={form.icon ?? null} name={form.name ?? ''} onChange={(icon) => setForm({ ...form, icon })} />
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">{t('subscriptions.form.amountLabel')}</label>
         <input
@@ -193,6 +194,7 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
 
   const [form, setForm] = useState<UpdateRecurringItemInput>({
     name: item.name,
+    icon: item.icon,
     amount: item.amount,
     frequency: item.frequency,
     account_id: item.account_id,
@@ -222,6 +224,7 @@ function EditSubscriptionForm({ item, onDone }: { item: RecurringItem; onDone: (
           className={`${selectClass} h-9 w-full`}
         />
       </div>
+      <SubscriptionIconPicker value={form.icon ?? null} name={form.name ?? ''} onChange={(icon) => setForm({ ...form, icon })} />
       <div className="flex flex-col gap-1.5">
         <label className="text-xs text-muted-foreground">{t('subscriptions.form.amountLabel')}</label>
         <input
@@ -402,7 +405,10 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
     return (
       <div className="py-2.5 border-t border-border first:border-0">
         <div className="grid grid-cols-[2fr_1.2fr_1fr_1fr_230px] gap-2 items-center text-[13px]">
-          <span className="font-medium truncate">{item.name}</span>
+          <span className="flex items-center gap-2 min-w-0">
+            <SubscriptionIcon icon={item.icon} name={item.name} size="sm" />
+            <span className="font-medium truncate">{item.name}</span>
+          </span>
           <span className="text-muted-foreground">
             {formatMoney(item.amount)} · {FREQUENCY_LABELS[item.frequency]}
           </span>
@@ -424,7 +430,10 @@ function SubscriptionRow({ item, categoryName, categoryColor }: { item: Recurrin
   return (
     <div className="flex flex-col gap-1.5 py-3 border-t border-border first:border-0 text-[13px]">
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium truncate">{item.name}</span>
+        <span className="flex items-center gap-2 min-w-0">
+          <SubscriptionIcon icon={item.icon} name={item.name} size="sm" />
+          <span className="font-medium truncate">{item.name}</span>
+        </span>
         <span className="flex-shrink-0">
           {t('subscriptions.monthlyEquivalentSuffix', {
             amount: formatMoney(monthlyEquivalent(item.amount, item.frequency)),
@@ -551,7 +560,7 @@ export function Subscriptions() {
         ) : (
           upcomingRenewals.map((item) => (
             <div key={item.id} className="flex items-center gap-2 lg:gap-3 py-2 border-t border-border first:border-0">
-              <CalendarClock size={14} className="text-muted-foreground flex-shrink-0" />
+              <SubscriptionIcon icon={item.icon} name={item.name} size="sm" />
               <span className="text-[13px] font-medium flex-1 min-w-0 truncate">{item.name}</span>
               <span className="text-[13px] text-muted-foreground w-16 lg:w-24 text-right flex-shrink-0">
                 {formatShortDate(item.next_date)}

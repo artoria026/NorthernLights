@@ -1,9 +1,9 @@
 {
   "dashboard": {
     "welcome": {
-      "description": "A summary of your overall financial state: how much liquid money you have, how much you owe on credit cards, how close you are to your budget, and which payments are coming up.",
+      "description": "A summary of your overall financial state: how much you have, how the month is going, what you owe and what you're owed, and which payments are coming up.",
       "bullets": [
-        "See your liquidity and revolving debt at a glance",
+        "See your liquidity, your month balance and your debts at a glance",
         "Compare your spending against the month's and week's budget",
         "Check which payments are due soon before they catch you off guard"
       ]
@@ -22,16 +22,16 @@
         "text": "The color goes from green to orange to red based on what percentage of the month's budget you've already spent."
       },
       {
-        "title": "Income and expenses for the month",
-        "text": "Only shows up once you generate the month's report in Reports -- compared against the previous month."
+        "title": "Month balance",
+        "text": "Income minus expenses of the month in progress, live -- you don't need to generate any report."
       },
       {
         "title": "This week's cash flow",
         "text": "Income vs. expenses over the last 7 days, to quickly notice if you're spending more than you're bringing in this week."
       },
       {
-        "title": "Net worth",
-        "text": "Joins together the monthly reports you've already generated -- you need at least 2 months of reports to see the trend line."
+        "title": "Position",
+        "text": "Your accounts, what you owe and what you're owed, and the net worth that results. If you've already generated at least 2 monthly reports, their trend shows below."
       },
       {
         "title": "Highlighted insights",
