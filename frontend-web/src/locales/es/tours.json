@@ -1,9 +1,9 @@
 {
   "dashboard": {
     "welcome": {
-      "description": "Un resumen del estado general de tus finanzas: cuánto dinero líquido tienes, cuánto debes en tarjetas, qué tan cerca estás de tu presupuesto y qué pagos se acercan.",
+      "description": "Un resumen del estado general de tus finanzas: cuánto tienes, cómo va el mes, cuánto debes y cuánto te deben, y qué pagos se acercan.",
       "bullets": [
-        "Ve tu liquidez y deuda revolvente de un vistazo",
+        "Ve tu liquidez, tu balance del mes y tus deudas de un vistazo",
         "Compara tu gasto contra el presupuesto del mes y de la semana",
         "Revisa qué pagos vencen pronto antes de que te agarren desprevenido"
       ]
@@ -22,16 +22,16 @@
         "text": "El color cambia de verde a naranja a rojo según qué porcentaje de tu presupuesto del mes ya gastaste."
       },
       {
-        "title": "Ingresos y gastos del mes",
-        "text": "Solo aparecen una vez que generas el reporte del mes en Reportes -- comparados contra el mes anterior."
+        "title": "Balance del mes",
+        "text": "Ingresos menos gastos del mes en curso, al momento -- no necesitas generar ningún reporte."
       },
       {
         "title": "Flujo de caja de la semana",
         "text": "Ingresos vs. gastos de los últimos 7 días, para notar rápido si esta semana estás gastando más de lo que entra."
       },
       {
-        "title": "Patrimonio neto",
-        "text": "Une los reportes mensuales que ya generaste -- necesitas al menos 2 meses de reportes para ver la línea de tendencia."
+        "title": "Posición",
+        "text": "Tus cuentas, lo que debes y lo que te deben, y el patrimonio neto que resulta. Si ya generaste al menos 2 reportes mensuales, abajo aparece su tendencia."
       },
       {
         "title": "Insights destacados",

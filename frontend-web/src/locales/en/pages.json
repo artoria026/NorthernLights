@@ -124,13 +124,18 @@
       "liquidity": "Liquidity",
       "accountsCount_one": "{{count}} account",
       "accountsCount_other": "{{count}} accounts",
-      "revolvingDebt": "Revolving debt",
-      "avgApr": "Average APR {{pct}}%",
-      "noActiveCards": "No active credit cards",
       "monthBudget": "Month budget",
-      "weekBudget": "Week budget",
-      "monthIncome": "Month income",
-      "monthExpenses": "Month expenses"
+      "monthNet": "Month balance",
+      "monthNetNote": "Income {{income}} · Expenses {{expenses}}",
+      "owe": "I owe",
+      "oweNote_one": "{{count}} active debt or card",
+      "oweNote_other": "{{count}} active debts or cards",
+      "owedToMe": "Owed to me",
+      "owedToMeNote_one": "{{count}} debt to collect",
+      "owedToMeNote_other": "{{count}} debts to collect",
+      "budgetNote": "{{spent}} spent{{week}}",
+      "budgetWeek": "week {{pct}}%",
+      "noBudget": "No budget set"
     },
     "recentTransactions": {
       "heading": "Recent transactions",
@@ -146,52 +151,47 @@
     "upcomingPayments": {
       "heading": "Upcoming payments",
       "dueDate": "Due {{date}}",
-      "empty": "No upcoming payments."
+      "empty": "No upcoming payments.",
+      "total30": "Next 30 days: {{amount}}"
     },
     "accounts": {
-      "heading": "Accounts",
       "viewAll": "See all →",
       "empty": "No accounts."
     },
     "activeDebts": {
       "heading": "Active debts",
       "viewAll": "See all →",
-      "progressOwedToMe": "{{balance}} to collect out of {{total}}",
-      "progressOwedByMe": "{{balance}} owed out of {{total}}",
       "empty": "No active debts."
     },
     "cashflow": {
       "heading": "This week's cash flow",
       "subtitle": "Income vs. expenses, last 7 days",
       "income": "Income",
-      "expenses": "Expenses"
+      "expenses": "Expenses",
+      "weekTotal": "You spent {{amount}} in 7 days",
+      "weekUp": "{{pct}}% more than the previous 7 days",
+      "weekDown": "{{pct}}% less than the previous 7 days"
     },
     "netWorth": {
-      "heading": "Net worth",
-      "viewReports": "View reports →",
-      "subtitle": "At the close of each month with a generated report",
-      "empty": "Generate reports for at least 2 months (in Reports) to see the trend here."
-    },
-    "monthDelta": {
-      "comparesAtMonthEnd": "Compares once the month closes",
-      "vsPreviousMonth": "{{pct}}% vs previous month"
+      "subtitle": "Trend at the close of each month with a generated report",
+      "viewReports": "View reports →"
     },
     "help": {
       "whatIsThisScreen": {
         "heading": "What this screen is",
-        "body": "A summary of the overall state of your finances: how much liquid money you have, how much you owe on credit cards, how close you are to your budget limit, and which payments are coming up."
+        "body": "A summary of the overall state of your finances: how much you have, how the month is going, what you owe and what you're owed, how close you are to your budget, and which payments are coming up."
       },
       "cardsAbove": {
         "heading": "The cards up top",
-        "body": "<0>Liquidity</0> adds up the balance of your cash/bank-type accounts (not credit cards). <2>Revolving debt</2> is what you owe on active credit cards, with its average APR. <4>Month budget</4> and <6>week budget</6> show what percentage you've spent against what was budgeted — the color changes from green to orange to red depending on how close you are to the limit. As soon as you generate the current month's report (Reports → Generate), two more cards appear: <8>Month income</8> and <10>Month expenses</10>, each compared against the previous month."
+        "body": "Liquidity adds up the balance of your cash and bank accounts (not credit cards). Month balance is what you've earned minus what you've spent this month, live, without generating any report. I owe adds your active debts and what you owe on credit cards; Owed to me is what other people owe you. Budget shows the percentage spent this month (and this week) against what was budgeted; if you haven't set a budget up, it shows a dash and only what was spent."
       },
       "upcomingPayments": {
         "heading": "Upcoming payments",
-        "body": "Combines your active recurring expenses (Netflix, rent, etc.) with debt payments due in the next 7 days. If something is due in 3 days or less, it shows as a notice above the cards."
+        "body": "Combines your active recurring expenses with debt payments due in the coming days; at the top, the total for the next 30 days. If something is due in 3 days or less, it also shows as a notice above the cards."
       },
       "netWorthAndDebts": {
-        "heading": "Net worth and active debts",
-        "body": "The net worth line uses your generated monthly reports (Reports → Generate); if a month has no report, no point appears for it. Each debt's progress compares the current balance against the original amount — it doesn't distinguish principal from interest, it's a quick visual reference."
+        "heading": "Position and net worth",
+        "body": "Position gathers your accounts, what you owe and what you're owed, and the net worth that results from adding it up. The trend line uses your generated monthly reports (Reports → Generate). Each debt's progress compares the current balance against the original amount; it doesn't tell principal from interest."
       },
       "readOnlyTip": "This screen is read-only — to record transactions use Transactions, and to see the detail of each item go to its specific page (the \"See all →\" links take you straight there)."
     },
@@ -207,6 +207,20 @@
     "tags": {
       "heading": "Tags",
       "viewAll": "View all"
+    },
+    "monthCategories": {
+      "heading": "This month's spending by category",
+      "viewReports": "View reports →",
+      "empty": "No spending yet this month."
+    },
+    "position": {
+      "heading": "Position",
+      "netWorth": "Net worth",
+      "accounts": "Accounts",
+      "owe": "I owe",
+      "owedToMe": "Owed to me",
+      "card": "card",
+      "nobodyOwesMe": "Nobody owes you anything right now."
     }
   },
   "accounts": {
@@ -1899,6 +1913,44 @@
       "recurringTitle": "Recurring",
       "recurringItems_one": "{{count}} recurring item to create (sum of their amounts per period)",
       "recurringItems_other": "{{count}} recurring items to create (sum of their amounts per period)"
+    }
+  },
+  "subscriptionIcons": {
+    "label": "Icon",
+    "automatic": "Automatic",
+    "automaticWith": "Automatic: {{name}}",
+    "search": "Search icon…",
+    "empty": "No results.",
+    "generic": {
+      "streaming": "Streaming",
+      "tv": "Television",
+      "music": "Music",
+      "ai": "Artificial intelligence",
+      "server": "Server",
+      "cloud": "Cloud",
+      "shopping": "Shopping",
+      "insurance": "Insurance",
+      "phone": "Phone",
+      "internet": "Internet",
+      "electricity": "Electricity",
+      "water": "Water",
+      "gas": "Gas",
+      "gym": "Gym",
+      "health": "Health",
+      "education": "Education",
+      "books": "Books",
+      "news": "News",
+      "games": "Video games",
+      "car": "Car",
+      "home": "Home",
+      "design": "Design",
+      "podcast": "Podcast",
+      "photo": "Photos",
+      "web": "Web",
+      "security": "Security",
+      "mail": "Mail",
+      "work": "Work",
+      "package": "Shipping"
     }
   }
 }

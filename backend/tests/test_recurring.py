@@ -91,6 +91,32 @@ async def test_subscription_defaults_to_normal_urgency(client: AsyncClient):
     assert item["alert_urgency"] == "normal"
 
 
+async def test_an_item_without_an_icon_has_none_and_the_user_can_pick_and_clear_one(
+    client: AsyncClient,
+):
+    token, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    item = await _create_recurring_item(client, headers)
+    assert item["icon"] is None
+
+    picked = await client.put(
+        f"/api/v1/recurring-items/{item['id']}", headers=headers, json={"icon": "spotify"}
+    )
+    assert picked.json()["data"]["icon"] == "spotify"
+
+    cleared = await client.put(
+        f"/api/v1/recurring-items/{item['id']}", headers=headers, json={"icon": None}
+    )
+    assert cleared.json()["data"]["icon"] is None
+
+
+async def test_an_icon_can_be_set_when_creating_the_item(client: AsyncClient):
+    token, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    item = await _create_recurring_item(client, headers, icon="netflix")
+    assert item["icon"] == "netflix"
+
+
 async def test_explicit_alert_urgency_overrides_default(client: AsyncClient):
     token, _ = await _register_and_login(client)
     headers = {"Authorization": f"Bearer {token}"}

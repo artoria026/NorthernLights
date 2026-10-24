@@ -242,6 +242,13 @@ WRITE_TOOLS = [
                 },
                 "notes": {"type": "string"},
                 "url": {"type": "string"},
+                "icon": {
+                    "type": "string",
+                    "description": (
+                        "Clave de icono (ej. spotify, netflix, server). Omitelo: la app sugiere "
+                        "uno segun el nombre"
+                    ),
+                },
             },
             "required": [
                 "name",
@@ -713,6 +720,7 @@ def _recurring_model(tool_input: dict, account_id: UUID, category_id: UUID) -> R
         auto_generate=tool_input.get("auto_generate", True),
         notes=tool_input.get("notes"),
         url=tool_input.get("url"),
+        icon=tool_input.get("icon"),
     )
 
 

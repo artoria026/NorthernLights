@@ -72,6 +72,8 @@ export interface CreateRecurringItemInput {
   next_date: string
   notes?: string
   url?: string
+  /** Key from lib/subscriptionIcons; leave it out to let the app suggest one from the name. */
+  icon?: string | null
 }
 
 export function useCreateRecurringItem() {
@@ -103,6 +105,8 @@ export interface UpdateRecurringItemInput {
   category_id?: string
   alert_urgency?: AlertUrgency
   next_date?: string
+  /** null clears the choice (back to the suggestion from the name). */
+  icon?: string | null
 }
 
 /** item_type and status are not editable here (item_type defines valid

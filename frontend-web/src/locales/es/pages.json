@@ -124,13 +124,18 @@
       "liquidity": "Liquidez",
       "accountsCount_one": "{{count}} cuenta",
       "accountsCount_other": "{{count}} cuentas",
-      "revolvingDebt": "Deuda revolvente",
-      "avgApr": "TAE promedio {{pct}}%",
-      "noActiveCards": "Sin TDC activas",
       "monthBudget": "Presupuesto del mes",
-      "weekBudget": "Presupuesto de la semana",
-      "monthIncome": "Ingresos del mes",
-      "monthExpenses": "Gastos del mes"
+      "monthNet": "Balance del mes",
+      "monthNetNote": "Ingresos {{income}} · Gastos {{expenses}}",
+      "owe": "Debo",
+      "oweNote_one": "{{count}} deuda o tarjeta activa",
+      "oweNote_other": "{{count}} deudas o tarjetas activas",
+      "owedToMe": "Me deben",
+      "owedToMeNote_one": "{{count}} deuda por cobrar",
+      "owedToMeNote_other": "{{count}} deudas por cobrar",
+      "budgetNote": "{{spent}} gastado{{week}}",
+      "budgetWeek": "semana {{pct}}%",
+      "noBudget": "Sin presupuesto definido"
     },
     "recentTransactions": {
       "heading": "Transacciones recientes",
@@ -146,52 +151,47 @@
     "upcomingPayments": {
       "heading": "Próximos pagos",
       "dueDate": "Vence {{date}}",
-      "empty": "No hay pagos próximos."
+      "empty": "No hay pagos próximos.",
+      "total30": "Próximos 30 días: {{amount}}"
     },
     "accounts": {
-      "heading": "Cuentas",
       "viewAll": "Ver todas →",
       "empty": "Sin cuentas."
     },
     "activeDebts": {
       "heading": "Deudas activas",
       "viewAll": "Ver todas →",
-      "progressOwedToMe": "{{balance}} por cobrar de {{total}}",
-      "progressOwedByMe": "{{balance}} pendiente de {{total}}",
       "empty": "Sin deudas activas."
     },
     "cashflow": {
       "heading": "Flujo de caja de la semana",
       "subtitle": "Ingresos vs. gastos, últimos 7 días",
       "income": "Ingresos",
-      "expenses": "Gastos"
+      "expenses": "Gastos",
+      "weekTotal": "Gastaste {{amount}} en 7 días",
+      "weekUp": "{{pct}}% más que los 7 días anteriores",
+      "weekDown": "{{pct}}% menos que los 7 días anteriores"
     },
     "netWorth": {
-      "heading": "Patrimonio neto",
-      "viewReports": "Ver reportes →",
-      "subtitle": "Al cierre de cada mes con reporte generado",
-      "empty": "Genera reportes de al menos 2 meses (en Reportes) para ver la tendencia aquí."
-    },
-    "monthDelta": {
-      "comparesAtMonthEnd": "Se compara al cerrar el mes",
-      "vsPreviousMonth": "{{pct}}% vs mes anterior"
+      "subtitle": "Tendencia al cierre de cada mes con reporte generado",
+      "viewReports": "Ver reportes →"
     },
     "help": {
       "whatIsThisScreen": {
         "heading": "Qué es esta pantalla",
-        "body": "Un resumen del estado general de tus finanzas: cuánto dinero líquido tienes, cuánto debes en tarjetas, qué tan cerca estás de tu límite de presupuesto y qué pagos se acercan."
+        "body": "Un resumen del estado general de tus finanzas: cuánto tienes, cómo va el mes, cuánto debes y cuánto te deben, qué tan cerca estás de tu presupuesto y qué pagos se acercan."
       },
       "cardsAbove": {
         "heading": "Las tarjetas de arriba",
-        "body": "<0>Liquidez</0> suma el saldo de tus cuentas tipo efectivo/banco (no tarjetas de crédito). <2>Deuda revolvente</2> es lo que debes en tarjetas de crédito activas, con su TAE promedio. <4>Presupuesto del mes</4> y <6>de la semana</6> muestran qué porcentaje llevas gastado contra lo presupuestado — el color cambia de verde a naranja a rojo según qué tan cerca estás del límite. En cuanto generes el reporte del mes en curso (Reportes → Generar), aparecen dos tarjetas más: <8>Ingresos del mes</8> y <10>Gastos del mes</10>, cada una comparada contra el mes anterior."
+        "body": "Liquidez suma el saldo de tus cuentas de efectivo y banco (no tarjetas de crédito). Balance del mes es lo que has ingresado menos lo que has gastado este mes, en vivo, sin generar ningún reporte. Debo junta tus deudas activas y lo que debes en tarjetas; Me deben, lo que otras personas te deben a ti. Presupuesto muestra el porcentaje gastado del mes (y de la semana) contra lo presupuestado; si no has configurado un presupuesto, aparece un guion y solo lo gastado."
       },
       "upcomingPayments": {
         "heading": "Próximos pagos",
-        "body": "Junta tus gastos recurrentes activos (Netflix, renta, etc.) con los pagos de deudas que vencen en los próximos 7 días. Si algo vence en 3 días o menos, aparece como aviso arriba de las tarjetas."
+        "body": "Junta tus gastos recurrentes activos con los pagos de deudas que vencen en los próximos días; arriba del todo, el total de los próximos 30 días. Si algo vence en 3 días o menos, aparece también como aviso arriba de las tarjetas."
       },
       "netWorthAndDebts": {
-        "heading": "Patrimonio neto y deudas activas",
-        "body": "La línea de patrimonio neto usa tus reportes mensuales generados (Reportes → Generar); si un mes no tiene reporte, no aparece un punto para él. El progreso de cada deuda compara el saldo actual contra el monto original — no distingue capital de intereses, es una referencia visual rápida."
+        "heading": "Posición y patrimonio neto",
+        "body": "Posición reúne tus cuentas, lo que debes y lo que te deben, y el patrimonio neto que resulta de sumarlo. La línea de tendencia usa tus reportes mensuales generados (Reportes → Generar). El progreso de cada deuda compara el saldo actual contra el monto original; no distingue capital de intereses."
       },
       "readOnlyTip": "Esta pantalla es de solo lectura — para registrar movimientos usa Transacciones, y para ver el detalle de cada rubro entra a su página específica (los enlaces \"Ver todas →\" te llevan directo)."
     },
@@ -207,6 +207,20 @@
     "tags": {
       "heading": "Etiquetas",
       "viewAll": "Ver todas"
+    },
+    "monthCategories": {
+      "heading": "Gastos del mes por categoría",
+      "viewReports": "Ver reportes →",
+      "empty": "Aún no hay gastos este mes."
+    },
+    "position": {
+      "heading": "Posición",
+      "netWorth": "Patrimonio neto",
+      "accounts": "Cuentas",
+      "owe": "Debo",
+      "owedToMe": "Me deben",
+      "card": "tarjeta",
+      "nobodyOwesMe": "Nadie te debe nada por ahora."
     }
   },
   "accounts": {
@@ -1899,6 +1913,44 @@
       "recurringTitle": "Recurrentes",
       "recurringItems_one": "{{count}} pago recurrente por dar de alta (suma de sus montos por periodo)",
       "recurringItems_other": "{{count}} pagos recurrentes por dar de alta (suma de sus montos por periodo)"
+    }
+  },
+  "subscriptionIcons": {
+    "label": "Icono",
+    "automatic": "Automático",
+    "automaticWith": "Automático: {{name}}",
+    "search": "Buscar icono…",
+    "empty": "Sin resultados.",
+    "generic": {
+      "streaming": "Streaming",
+      "tv": "Televisión",
+      "music": "Música",
+      "ai": "Inteligencia artificial",
+      "server": "Servidor",
+      "cloud": "Nube",
+      "shopping": "Compras",
+      "insurance": "Seguro",
+      "phone": "Celular",
+      "internet": "Internet",
+      "electricity": "Luz",
+      "water": "Agua",
+      "gas": "Gas",
+      "gym": "Gimnasio",
+      "health": "Salud",
+      "education": "Educación",
+      "books": "Libros",
+      "news": "Noticias",
+      "games": "Videojuegos",
+      "car": "Auto",
+      "home": "Casa",
+      "design": "Diseño",
+      "podcast": "Podcast",
+      "photo": "Fotos",
+      "web": "Web",
+      "security": "Seguridad",
+      "mail": "Correo",
+      "work": "Trabajo",
+      "package": "Envíos"
     }
   }
 }

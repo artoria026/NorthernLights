@@ -26,6 +26,7 @@ class RecurringItemCreate(BaseModel):
 
     notes: str | None = None
     url: str | None = None
+    icon: str | None = Field(default=None, max_length=64)
 
 
 class RecurringItemUpdate(BaseModel):
@@ -41,6 +42,7 @@ class RecurringItemUpdate(BaseModel):
     next_date: date_type | None = None
     notes: str | None = None
     url: str | None = None
+    icon: str | None = Field(default=None, max_length=64)
 
 
 class RecurringItemOut(BaseModel):
@@ -62,6 +64,7 @@ class RecurringItemOut(BaseModel):
     next_date: date_type
     notes: str | None
     url: str | None
+    icon: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

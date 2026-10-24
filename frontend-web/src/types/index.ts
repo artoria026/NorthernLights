@@ -274,6 +274,7 @@ export interface RecurringItem {
   next_date: string
   notes: string | null
   url: string | null
+  icon: string | null
   created_at: string
 }
 

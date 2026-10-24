@@ -4,17 +4,20 @@ import { useTags } from '@/hooks/useTags'
 import { formatMoney } from '@/lib/utils'
 
 const SHOWN = 4
+/** Below this many tags in use the card says too little to deserve a place on the dashboard. */
+const MIN_TAGS = 3
 
 /** Dashboard card: the most recently used tags and what each has spent. Hidden
- * until the user has created at least one tag. */
+ * until the user has at least MIN_TAGS tags in use. */
 export function TagsOverviewCard() {
   const { t } = useTranslation('pages')
   const { data: tags = [] } = useTags()
-  const active = tags.filter((tag) => tag.transaction_count > 0).slice(0, SHOWN)
-  if (active.length === 0) return null
+  const inUse = tags.filter((tag) => tag.transaction_count > 0)
+  if (inUse.length < MIN_TAGS) return null
+  const active = inUse.slice(0, SHOWN)
 
   return (
-    <div className="lg:col-span-2 bg-card border border-border rounded-md p-4" data-tour="dashboard:tags">
+    <div className="bg-card border border-border rounded-md p-4" data-tour="dashboard:tags">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[15px] font-medium">{t('dashboard.tags.heading')}</span>
         <Link to="/tags" className="text-xs text-muted-foreground hover:text-foreground">

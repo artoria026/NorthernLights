@@ -113,6 +113,7 @@ async def create_recurring_item(
         next_date=data.next_date,
         notes=data.notes,
         url=data.url,
+        icon=data.icon,
     )
     session.add(item)
     await session.flush()
