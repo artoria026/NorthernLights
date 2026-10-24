@@ -11,6 +11,7 @@ functions are what the server runs, from proposal_service, when the user
 confirms: what the user saw is exactly what gets executed.
 """
 
+from datetime import date as date_type
 from decimal import Decimal, InvalidOperation
 from uuid import UUID
 
@@ -20,17 +21,18 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.account import ACCOUNT_SUBTYPES, ACCOUNT_TYPES
-from app.models.debt import DEBT_TYPES, PAYMENT_FREQUENCIES
+from app.models.debt import DEBT_DIRECTIONS, DEBT_TYPES, PAYMENT_FREQUENCIES
 from app.models.recurring import FREQUENCIES, ITEM_TYPES
 from app.schemas.account import AccountCreate
-from app.schemas.debt import DebtCreate, UnplannedDebtCreate
+from app.schemas.debt import DebtCreate, DebtIncreaseCreate, DebtPaymentCreate, UnplannedDebtCreate
 from app.schemas.recurring import RecurringItemCreate
-from app.schemas.transaction import TransactionCreate
+from app.schemas.transaction import JournalLineIn, SplitExpenseCreate, TransactionCreate
 from app.services import (
     account_service,
     category_service,
     debt_service,
     recurring_service,
+    tag_service,
     transaction_service,
 )
 
@@ -42,9 +44,9 @@ WRITE_TOOLS = [
         "description": (
             "Crea UN ingreso o gasto puntual, no recurrente -- para cuando el usuario "
             "dicta de memoria movimientos sueltos (ej. 'gaste 100 en comida el martes, "
-            "y 500 en gasolina el jueves'). Llama a esta tool una vez por cada "
-            "movimiento; puedes hacer varias llamadas en la misma respuesta si ya "
-            "tienes todos los datos de cada uno."
+            "y 500 en gasolina el jueves') o a partir de un ticket o estado de cuenta. "
+            "Un movimiento por elemento; un ticket puede partirse en varios elementos "
+            "(uno por categoria) si el usuario lo pide."
         ),
         "input_schema": {
             "type": "object",
@@ -60,6 +62,25 @@ WRITE_TOOLS = [
                 "category_name": {
                     "type": "string",
                     "description": "Nombre exacto de una de las categorias del sistema",
+                },
+                "notes": {
+                    "type": "string",
+                    "description": "Detalle libre (ej. los articulos de un ticket). Opcional",
+                },
+                "tag_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Etiquetas que el usuario YA tiene (ver list_categories_and_tags); "
+                        "solo para gastos"
+                    ),
+                },
+                "installment_total": {
+                    "type": "integer",
+                    "description": (
+                        "Solo gasto pagado con TDC: numero de mensualidades si fue a meses "
+                        "sin intereses (monto = total de la compra)"
+                    ),
                 },
             },
             "required": [
@@ -112,7 +133,11 @@ WRITE_TOOLS = [
     {
         "name": "create_debt",
         "description": (
-            "Crea una deuda CON plan de pago activo (tiene cuota, frecuencia y dia de pago)."
+            "Crea una deuda: con plan de pago (cuota, frecuencia y dia de pago) o un prestamo "
+            "informal a/de una persona (type=informal). direction=owed_to_me si el usuario "
+            "PRESTO dinero (le deben); con funding_account_name el dinero sale de (o entra "
+            "a) esa cuenta en ese momento. Si ya existe una deuda informal activa con esa "
+            "persona usa increase_debt, no esta."
         ),
         "input_schema": {
             "type": "object",
@@ -139,6 +164,21 @@ WRITE_TOOLS = [
                 "payment_day": {"type": "integer"},
                 "total_installments": {"type": "integer"},
                 "next_payment_date": {"type": "string", "description": "YYYY-MM-DD"},
+                "direction": {
+                    "type": "string",
+                    "enum": list(DEBT_DIRECTIONS),
+                    "description": "owed_by_me (debo, por defecto) u owed_to_me (me deben)",
+                },
+                "funding_account_name": {
+                    "type": "string",
+                    "description": (
+                        "Cuenta por donde SE MOVIO el dinero del prestamo (de donde salio si "
+                        "presto, donde entro si le prestaron). Omitelo si la deuda ya existia "
+                        "antes y solo se esta registrando su saldo"
+                    ),
+                },
+                "start_date": {"type": "string", "description": "YYYY-MM-DD del prestamo"},
+                "concept": {"type": "string", "description": "Concepto del movimiento inicial"},
                 "linked_account_name": {
                     "type": "string",
                     "description": (
@@ -192,6 +232,14 @@ WRITE_TOOLS = [
                     "description": "Nombre exacto de una de las 19 categorias del sistema",
                 },
                 "next_date": {"type": "string", "description": "YYYY-MM-DD"},
+                "auto_generate": {
+                    "type": "boolean",
+                    "description": (
+                        "true (por defecto): la app genera el cargo cada ciclo. false: solo "
+                        "recordatorio/seguimiento; usalo si el usuario paga a mano o ya "
+                        "registro los cargos"
+                    ),
+                },
                 "notes": {"type": "string"},
                 "url": {"type": "string"},
             },
@@ -205,6 +253,180 @@ WRITE_TOOLS = [
             ],
         },
     },
+    {
+        "name": "create_transfer",
+        "description": (
+            "Mueve dinero entre dos cuentas del usuario SIN que sea gasto ni ingreso "
+            "(retiro a efectivo, pasar de nomina a ahorro, PAGO A UNA TARJETA DE CREDITO "
+            "desde el banco: la TDC va en to_account_name). No uses create_transaction "
+            "para esto: inflaria gastos e ingresos."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "date": {"type": "string", "description": "YYYY-MM-DD"},
+                "amount": {"type": "number"},
+                "from_account_name": {"type": "string", "description": "De donde sale"},
+                "to_account_name": {"type": "string", "description": "A donde llega"},
+                "description": {"type": "string"},
+                "notes": {"type": "string"},
+            },
+            "required": ["date", "amount", "from_account_name", "to_account_name"],
+        },
+    },
+    {
+        "name": "register_debt_payment",
+        "description": (
+            "Registra un pago a una deuda activa (o un cobro, si la deuda es de alguien que "
+            "le debe al usuario): baja su saldo y mueve el dinero de la cuenta. Es la forma "
+            "correcta de pagar una deuda; NO la registres como gasto."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "debt_name": {"type": "string", "description": "Nombre de la deuda activa"},
+                "account_name": {
+                    "type": "string",
+                    "description": "Cuenta de donde sale (o a donde entra, si es un cobro)",
+                },
+                "amount": {"type": "number"},
+                "date": {"type": "string", "description": "YYYY-MM-DD"},
+                "notes": {"type": "string"},
+            },
+            "required": ["debt_name", "account_name", "amount", "date"],
+        },
+    },
+    {
+        "name": "increase_debt",
+        "description": (
+            "Otro prestamo sobre una deuda que YA existe (le prestas mas a la misma persona, "
+            "o te prestan mas): el saldo y el total crecen y el dinero se mueve por la "
+            "cuenta."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "debt_name": {"type": "string"},
+                "account_name": {
+                    "type": "string",
+                    "description": "Cuenta de donde sale el dinero (presto) o donde entra",
+                },
+                "amount": {"type": "number"},
+                "date": {"type": "string", "description": "YYYY-MM-DD"},
+                "concept": {"type": "string"},
+            },
+            "required": ["debt_name", "account_name", "amount", "date"],
+        },
+    },
+    {
+        "name": "create_split_expense",
+        "description": (
+            "Un gasto que el usuario pago completo pero que comparte con otras personas: "
+            "solo `my_share` cuenta como gasto suyo y lo demas queda como deuda de cada "
+            "persona hacia el (se suma a la deuda informal que ya tenga con ella). Total "
+            "cargado a la cuenta = my_share + suma de debtors."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "date": {"type": "string", "description": "YYYY-MM-DD"},
+                "description": {"type": "string"},
+                "notes": {"type": "string"},
+                "category_name": {"type": "string"},
+                "paying_account_name": {
+                    "type": "string",
+                    "description": "Cuenta que absorbe el cargo completo",
+                },
+                "my_share": {"type": "number", "description": "Lo que le toca al usuario"},
+                "debtors": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "person_name": {"type": "string"},
+                            "amount": {"type": "number"},
+                        },
+                        "required": ["person_name", "amount"],
+                    },
+                },
+            },
+            "required": [
+                "date",
+                "description",
+                "category_name",
+                "paying_account_name",
+                "my_share",
+                "debtors",
+            ],
+        },
+    },
+    {
+        "name": "reconcile_account",
+        "description": (
+            "Ajusta el saldo de una cuenta liquida (efectivo, debito, ahorro) al saldo REAL "
+            "que el usuario tiene: la diferencia se registra como ajuste de saldo (no como "
+            "gasto ni ingreso). Usalo solo cuando el usuario dice cuanto tiene de verdad."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "account_name": {"type": "string"},
+                "real_balance": {"type": "number", "description": "Saldo real hoy"},
+                "date": {"type": "string", "description": "YYYY-MM-DD"},
+                "notes": {"type": "string"},
+            },
+            "required": ["account_name", "real_balance", "date"],
+        },
+    },
+    {
+        "name": "list_categories_and_tags",
+        "description": (
+            "Categorias de gasto e ingreso disponibles (nombre exacto) y las etiquetas que "
+            "el usuario ya creo. Llamala antes de proponer movimientos si no estas seguro "
+            "del nombre exacto de la categoria."
+        ),
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "list_recurring_items",
+        "description": (
+            "Gastos recurrentes, suscripciones y servicios ya registrados (monto, "
+            "frecuencia, dia, cuenta, estado). Usala antes de crear uno para no duplicarlo."
+        ),
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "search_transactions",
+        "description": (
+            "Busca transacciones ya registradas (maximo 50, las mas recientes primero). "
+            "Usala ANTES de proponer movimientos que podrian estar ya registrados (estado "
+            "de cuenta, ticket, captura de banco) para no duplicar."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Parte de la descripcion"},
+                "date_from": {"type": "string", "description": "YYYY-MM-DD"},
+                "date_to": {"type": "string", "description": "YYYY-MM-DD"},
+                "amount_min": {"type": "number"},
+                "amount_max": {"type": "number"},
+                "account_name": {"type": "string"},
+                "limit": {"type": "integer", "description": "Por defecto 20"},
+            },
+        },
+    },
+    {
+        "name": "get_debt_movements",
+        "description": (
+            "Historial de una deuda (prestamos, pagos, ajustes) con el saldo que dejo cada "
+            "paso: para saber que ya se pago o se presto antes de registrar algo mas."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {"debt_name": {"type": "string"}},
+            "required": ["debt_name"],
+        },
+    },
 ]
 
 
@@ -216,6 +438,11 @@ WRITE_ACTION_NAMES = (
     "create_debt",
     "create_unplanned_debt",
     "create_recurring_item",
+    "create_transfer",
+    "register_debt_payment",
+    "increase_debt",
+    "create_split_expense",
+    "reconcile_account",
 )
 WRITE_ACTION_TOOLS = [t for t in WRITE_TOOLS if t["name"] in WRITE_ACTION_NAMES]
 # Read-only lookups that live in this list (the advisor may call them freely).
@@ -234,6 +461,14 @@ def _argument_reference() -> str:
         parts = []
         for name, spec in schema["properties"].items():
             kind = "|".join(spec["enum"]) if spec.get("enum") else spec.get("type", "string")
+            if spec.get("type") == "array" and spec.get("items", {}).get("type") == "object":
+                item_required = set(spec["items"].get("required", []))
+                keys = ", ".join(
+                    f"{k}{'*' if k in item_required else ''}" for k in spec["items"]["properties"]
+                )
+                kind = f"array de {{{keys}}}"
+            elif spec.get("type") == "array":
+                kind = "array de texto"
             parts.append(f"{name}{'*' if name in required else ''}: {kind}")
         lines.append(f"- {tool['name']}: {', '.join(parts)}")
     return "\n".join(lines)
@@ -314,6 +549,7 @@ PROPOSE_ACTIONS_TOOL["input_schema"]["properties"]["replaces"] = {
     ),
 }
 
+
 def _decimal(value: float | int | str | None) -> Decimal | None:
     if value is None:
         return None
@@ -370,7 +606,6 @@ def _format_validation_error(exc: ValidationError) -> str:
     return "Datos invalidos: " + "; ".join(parts)
 
 
-
 # -- display of an item in the proposal card: raw values under stable keys; the
 # frontend localizes the labels and formats money/dates (so the card follows the UI
 # language) --
@@ -380,15 +615,39 @@ def _present(**values: object) -> list[dict]:
     return [{"key": k, "value": str(v)} for k, v in values.items() if v not in (None, "")]
 
 
-def _transaction_model(tool_input: dict, account_id: UUID, category_id: UUID) -> TransactionCreate:
+def _transaction_model(
+    tool_input: dict, account_id: UUID, category_id: UUID, tag_ids: list[UUID] | None = None
+) -> TransactionCreate:
     return TransactionCreate(
         date=tool_input["date"],
         description=tool_input["description"],
+        notes=tool_input.get("notes"),
+        tag_ids=tag_ids or [],
         entry_type=tool_input["entry_type"],
         category_id=category_id,
         account_id=account_id,
         amount=_decimal(tool_input["amount"]),
+        installment_total=tool_input.get("installment_total"),
     )
+
+
+async def _resolve_tag_ids(
+    session: AsyncSession, user_id: UUID, names: list[str] | None
+) -> list[UUID] | dict:
+    if not names:
+        return []
+    tags = await tag_service.list_tags(session, user_id)
+    by_name = {t.name.strip().lower(): t.id for t in tags}
+    missing = [n for n in names if n.strip().lower() not in by_name]
+    if missing:
+        existing = ", ".join(t.name for t in tags) or "(ninguna)"
+        return {
+            "error": (
+                f"No existe la etiqueta {', '.join(repr(n) for n in missing)}. Etiquetas del "
+                f"usuario: {existing}. Pregunta si la omites o la crea el desde la app."
+            )
+        }
+    return [by_name[n.strip().lower()] for n in names]
 
 
 def _account_model(tool_input: dict) -> AccountCreate:
@@ -406,11 +665,17 @@ def _account_model(tool_input: dict) -> AccountCreate:
     )
 
 
-def _debt_model(tool_input: dict, linked_account_id: UUID | None) -> DebtCreate:
+def _debt_model(
+    tool_input: dict, linked_account_id: UUID | None, funding_account_id: UUID | None = None
+) -> DebtCreate:
     return DebtCreate(
         name=tool_input["name"],
         creditor=tool_input.get("creditor"),
         type=tool_input["type"],
+        direction=tool_input.get("direction") or "owed_by_me",
+        funding_account_id=funding_account_id,
+        start_date=tool_input.get("start_date"),
+        concept=tool_input.get("concept"),
         total_amount=_decimal(tool_input["total_amount"]),
         current_balance=_decimal(tool_input.get("current_balance")),
         original_amount=_decimal(tool_input.get("original_amount")),
@@ -445,9 +710,330 @@ def _recurring_model(tool_input: dict, account_id: UUID, category_id: UUID) -> R
         account_id=account_id,
         category_id=category_id,
         next_date=tool_input["next_date"],
+        auto_generate=tool_input.get("auto_generate", True),
         notes=tool_input.get("notes"),
         url=tool_input.get("url"),
     )
+
+
+# -- actions that resolve several names (accounts, debts) before running ----------------
+# Each _plan_* does ALL the checking and returns {"fields": [...], "run": async fn} or
+# {"error": ...}. Proposing calls it and shows `fields` without running; confirming calls it
+# again and awaits `run`, so what is checked is exactly what is executed.
+
+
+async def _resolve_debt(
+    session: AsyncSession, user_id: UUID, name: str, *, only_active: bool = True
+) -> "object | dict":
+    debts = await debt_service.list_debts(session, user_id)
+    wanted = name.strip().lower()
+    matches = [
+        d
+        for d in debts
+        if d.name.strip().lower() == wanted and (not only_active or d.status == "active")
+    ]
+    if not matches:
+        existing = ", ".join(d.name for d in debts if d.status == "active") or "(ninguna)"
+        return {
+            "error": (
+                f"No encontre una deuda activa llamada '{name}'. Deudas activas: {existing}. "
+                "Pregunta al usuario cual es, o si hay que crearla primero."
+            )
+        }
+    if len(matches) > 1:
+        return {
+            "error": (
+                f"Hay {len(matches)} deudas activas llamadas '{name}': pregunta al usuario "
+                "cual es (debo o me deben)."
+            )
+        }
+    return matches[0]
+
+
+async def _plan_transfer(session: AsyncSession, user_id: UUID, a: dict) -> dict:
+    origin = await _resolve_account_id(session, user_id, a["from_account_name"])
+    if isinstance(origin, dict):
+        return origin
+    destination = await _resolve_account_id(session, user_id, a["to_account_name"])
+    if isinstance(destination, dict):
+        return destination
+    if origin == destination:
+        return {"error": "La cuenta de origen y la de destino son la misma."}
+    amount = _decimal(a["amount"])
+    data = TransactionCreate(
+        date=a["date"],
+        description=a.get("description") or "Transferencia",
+        notes=a.get("notes"),
+        entry_type="transfer",
+        lines=[
+            JournalLineIn(account_id=destination, amount=amount, type="debit"),
+            JournalLineIn(account_id=origin, amount=amount, type="credit"),
+        ],
+    )
+
+    async def run() -> dict:
+        entry = await transaction_service.create_transaction(session, user_id, data)
+        return {"id": str(entry.id), "description": entry.description, "created": True}
+
+    return {
+        "fields": _present(
+            date=a["date"],
+            amount=a["amount"],
+            from_account=a["from_account_name"],
+            to_account=a["to_account_name"],
+            description=data.description,
+        ),
+        "run": run,
+    }
+
+
+async def _plan_debt_payment(session: AsyncSession, user_id: UUID, a: dict) -> dict:
+    debt = await _resolve_debt(session, user_id, a["debt_name"])
+    if isinstance(debt, dict):
+        return debt
+    account_id = await _resolve_account_id(session, user_id, a["account_name"])
+    if isinstance(account_id, dict):
+        return account_id
+    data = DebtPaymentCreate(
+        account_id=account_id, amount=_decimal(a["amount"]), date=a["date"], notes=a.get("notes")
+    )
+
+    async def run() -> dict:
+        payment = await debt_service.register_debt_payment(session, user_id, debt.id, data)
+        return {"id": str(payment.id), "debt": debt.name, "created": True}
+
+    return {
+        "fields": _present(
+            debt=debt.name,
+            amount=a["amount"],
+            account=a["account_name"],
+            date=a["date"],
+            current_balance=debt.current_balance,
+            notes=a.get("notes"),
+        ),
+        "run": run,
+    }
+
+
+async def _plan_debt_increase(session: AsyncSession, user_id: UUID, a: dict) -> dict:
+    debt = await _resolve_debt(session, user_id, a["debt_name"], only_active=False)
+    if isinstance(debt, dict):
+        return debt
+    account_id = await _resolve_account_id(session, user_id, a["account_name"])
+    if isinstance(account_id, dict):
+        return account_id
+    data = DebtIncreaseCreate(
+        account_id=account_id,
+        amount=_decimal(a["amount"]),
+        date=a["date"],
+        concept=a.get("concept"),
+    )
+
+    async def run() -> dict:
+        movement = await debt_service.increase_debt(session, user_id, debt.id, data)
+        return {"id": str(movement.id), "debt": debt.name, "created": True}
+
+    return {
+        "fields": _present(
+            debt=debt.name,
+            amount=a["amount"],
+            account=a["account_name"],
+            date=a["date"],
+            current_balance=debt.current_balance,
+            concept=a.get("concept"),
+        ),
+        "run": run,
+    }
+
+
+async def _plan_split_expense(session: AsyncSession, user_id: UUID, a: dict) -> dict:
+    account_id = await _resolve_account_id(session, user_id, a["paying_account_name"])
+    if isinstance(account_id, dict):
+        return account_id
+    category_id = await _resolve_category_id(session, user_id, a["category_name"], "expense")
+    if isinstance(category_id, dict):
+        return category_id
+    debtors = a["debtors"]
+    if not isinstance(debtors, list) or not debtors:
+        return {"error": "'debtors' debe ser una lista con al menos una persona."}
+    data = SplitExpenseCreate(
+        date=a["date"],
+        description=a["description"],
+        notes=a.get("notes"),
+        category_id=category_id,
+        paying_account_id=account_id,
+        my_share=_decimal(a["my_share"]),
+        debtors=[
+            {"person_name": d.get("person_name"), "amount": _decimal(d.get("amount"))}
+            for d in debtors
+            if isinstance(d, dict)
+        ],
+    )
+    total = data.my_share + sum(d.amount for d in data.debtors)
+
+    async def run() -> dict:
+        entry = await transaction_service.split_expense(session, user_id, data)
+        return {"id": str(entry.id), "description": entry.description, "created": True}
+
+    return {
+        "fields": _present(
+            date=a["date"],
+            description=a["description"],
+            category=a["category_name"],
+            account=a["paying_account_name"],
+            amount=total,
+            my_share=a["my_share"],
+            debtors=", ".join(f"{d.person_name} {d.amount}" for d in data.debtors),
+        ),
+        "run": run,
+    }
+
+
+async def _plan_reconcile(session: AsyncSession, user_id: UUID, a: dict) -> dict:
+    account_id = await _resolve_account_id(session, user_id, a["account_name"])
+    if isinstance(account_id, dict):
+        return account_id
+    account = await account_service.get_account(session, user_id, account_id)
+    if account.type != "asset" or account.subtype not in account_service.LIQUID_SUBTYPES:
+        return {
+            "error": (
+                f"'{a['account_name']}' no es una cuenta liquida (efectivo, debito o ahorro): "
+                "solo esas se concilian."
+            )
+        }
+    real_balance = _decimal(a["real_balance"])
+    if real_balance is None or real_balance < 0:
+        return {"error": "real_balance debe ser un numero mayor o igual a 0."}
+    entry_date = date_type.fromisoformat(a["date"])
+
+    async def run() -> dict:
+        result = await transaction_service.reconcile_account(
+            session, user_id, account_id, real_balance, entry_date, a.get("notes")
+        )
+        return {
+            "adjusted": result["adjusted"],
+            "previous_balance": str(result["previous_balance"]),
+            "new_balance": str(result["new_balance"]),
+        }
+
+    return {
+        "fields": _present(
+            account=a["account_name"],
+            current_balance=account.balance,
+            real_balance=real_balance,
+            delta=real_balance - account.balance,
+            date=a["date"],
+            notes=a.get("notes"),
+        ),
+        "run": run,
+    }
+
+
+_LOOKUP_NAMES = (
+    "list_categories_and_tags",
+    "list_recurring_items",
+    "search_transactions",
+    "get_debt_movements",
+)
+
+_PLANNERS = {
+    "create_transfer": _plan_transfer,
+    "register_debt_payment": _plan_debt_payment,
+    "increase_debt": _plan_debt_increase,
+    "create_split_expense": _plan_split_expense,
+    "reconcile_account": _plan_reconcile,
+}
+
+
+# -- read-only lookups (the advisor calls them freely) ----------------------------------
+
+
+async def _lookup(session: AsyncSession, user_id: UUID, name: str, a: dict) -> dict:
+    match name:
+        case "list_categories_and_tags":
+            expense = await category_service.list_categories(session, user_id, "expense")
+            income = await category_service.list_categories(session, user_id, "income")
+            tags = await tag_service.list_tags(session, user_id)
+            return {
+                "expense_categories": [c.display_name for c in expense],
+                "income_categories": [c.display_name for c in income],
+                "tags": [t.name for t in tags],
+            }
+        case "list_recurring_items":
+            items = await recurring_service.list_recurring_items(session, user_id)
+            accounts = {x.id: x.name for x in await account_service.list_accounts(session, user_id)}
+            return {
+                "recurring_items": [
+                    {
+                        "name": i.name,
+                        "item_type": i.item_type,
+                        "amount": str(i.amount),
+                        "frequency": i.frequency,
+                        "frequency_day": i.frequency_day,
+                        "account": accounts.get(i.account_id),
+                        "status": i.status,
+                        "auto_generate": i.auto_generate,
+                        "next_date": str(i.next_date),
+                    }
+                    for i in items
+                ]
+            }
+        case "search_transactions":
+            account_id = None
+            if a.get("account_name"):
+                account_id = await _resolve_account_id(session, user_id, a["account_name"])
+                if isinstance(account_id, dict):
+                    return account_id
+            limit = min(max(int(a.get("limit") or 20), 1), 50)
+            entries, total = await transaction_service.list_transactions(
+                session,
+                user_id,
+                per_page=limit,
+                account_id=account_id,
+                date_from=date_type.fromisoformat(a["date_from"]) if a.get("date_from") else None,
+                date_to=date_type.fromisoformat(a["date_to"]) if a.get("date_to") else None,
+                amount_min=_decimal(a.get("amount_min")),
+                amount_max=_decimal(a.get("amount_max")),
+                q=a.get("text"),
+            )
+            categories = await transaction_service.get_category_name_map(session, entries)
+            return {
+                "total_matches": total,
+                "transactions": [
+                    {
+                        "date": str(e.date),
+                        "description": e.description,
+                        "amount": str(e.amount),
+                        "entry_type": e.entry_type,
+                        "status": e.status,
+                        "category": categories.get(e.category_id),
+                    }
+                    for e in entries
+                ],
+            }
+        case "get_debt_movements":
+            debt = await _resolve_debt(session, user_id, a["debt_name"], only_active=False)
+            if isinstance(debt, dict):
+                return debt
+            movements = await debt_service.list_debt_movements(session, user_id, debt.id)
+            return {
+                "debt": debt.name,
+                "direction": debt.direction,
+                "status": debt.status,
+                "current_balance": str(debt.current_balance),
+                "movements": [
+                    {
+                        "date": str(m["date"]),
+                        "kind": m["kind"],
+                        "delta": str(m["delta"]),
+                        "concept": m["concept"],
+                        "account": m["account_name"],
+                        "balance_after": str(m["balance_after"]),
+                    }
+                    for m in movements
+                ],
+            }
+    return {"error": f"Tool desconocido: {name}"}
 
 
 def _check_against_schema(tool_name: str, tool_input: dict) -> str | None:
@@ -484,6 +1070,9 @@ async def prepare_write_tool(
         problem = _check_against_schema(tool_name, tool_input)
         if problem:
             return {"error": problem}
+        if tool_name in _PLANNERS:
+            plan = await _PLANNERS[tool_name](session, user_id, tool_input)
+            return {"error": plan["error"]} if "error" in plan else {"fields": plan["fields"]}
         match tool_name:
             case "create_transaction":
                 account_id = await _resolve_account_id(session, user_id, tool_input["account_name"])
@@ -494,7 +1083,11 @@ async def prepare_write_tool(
                 )
                 if isinstance(category_id, dict):
                     return category_id
-                _transaction_model(tool_input, account_id, category_id)
+                tag_ids = await _resolve_tag_ids(session, user_id, tool_input.get("tag_names"))
+                if isinstance(tag_ids, dict):
+                    return tag_ids
+                tx = _transaction_model(tool_input, account_id, category_id, tag_ids)
+                await transaction_service.resolve_tags(session, user_id, tx.entry_type, tag_ids)
                 return {
                     "fields": _present(
                         date=tool_input["date"],
@@ -503,6 +1096,9 @@ async def prepare_write_tool(
                         description=tool_input["description"],
                         account=tool_input["account_name"],
                         category=tool_input["category_name"],
+                        tags=", ".join(tool_input.get("tag_names") or []),
+                        installment_total=tool_input.get("installment_total"),
+                        notes=tool_input.get("notes"),
                     )
                 }
             case "create_account":
@@ -529,12 +1125,23 @@ async def prepare_write_tool(
                     if isinstance(resolved, dict):
                         return resolved
                     linked_account_id = resolved
-                _debt_model(tool_input, linked_account_id)
+                funding_account_id = None
+                if tool_input.get("funding_account_name"):
+                    resolved = await _resolve_account_id(
+                        session, user_id, tool_input["funding_account_name"]
+                    )
+                    if isinstance(resolved, dict):
+                        return resolved
+                    funding_account_id = resolved
+                _debt_model(tool_input, linked_account_id, funding_account_id)
                 return {
                     "fields": _present(
                         name=tool_input["name"],
                         creditor=tool_input.get("creditor"),
                         type=tool_input["type"],
+                        direction=tool_input.get("direction"),
+                        funding_account=tool_input.get("funding_account_name"),
+                        start_date=tool_input.get("start_date"),
                         total_amount=tool_input["total_amount"],
                         current_balance=tool_input.get("current_balance"),
                         payment_amount=tool_input.get("payment_amount"),
@@ -575,12 +1182,17 @@ async def prepare_write_tool(
                         account=tool_input["account_name"],
                         category=tool_input["category_name"],
                         next_date=tool_input["next_date"],
+                        auto_generate=(
+                            "false" if tool_input.get("auto_generate") is False else None
+                        ),
                     )
                 }
     except ValidationError as e:
         return {"error": _format_validation_error(e)}
     except KeyError as e:
         return {"error": f"Falta el campo requerido {e} para '{tool_name}'."}
+    except ValueError as e:
+        return {"error": f"Dato invalido en '{tool_name}': {e}"}
     except HTTPException as e:
         return {"error": str(e.detail)}
     except Exception:
@@ -607,6 +1219,8 @@ async def execute_write_tool(
         }
     except ValidationError as e:
         return {"error": _format_validation_error(e)}
+    except ValueError as e:
+        return {"error": f"Dato invalido en '{tool_name}': {e}"}
     except HTTPException as e:
         return {"error": str(e.detail)}
     except Exception:
@@ -622,7 +1236,12 @@ async def execute_write_tool(
 async def _dispatch_write_tool(
     session: AsyncSession, user_id: UUID, tool_name: str, tool_input: dict, role: str = "user"
 ) -> dict:
+    if tool_name in _PLANNERS:
+        plan = await _PLANNERS[tool_name](session, user_id, tool_input)
+        return {"error": plan["error"]} if "error" in plan else await plan["run"]()
     match tool_name:
+        case name if name in _LOOKUP_NAMES:
+            return await _lookup(session, user_id, tool_name, tool_input)
         case "create_transaction":
             account_id = await _resolve_account_id(session, user_id, tool_input["account_name"])
             if isinstance(account_id, dict):
@@ -632,10 +1251,13 @@ async def _dispatch_write_tool(
             )
             if isinstance(category_id, dict):
                 return category_id
+            tag_ids = await _resolve_tag_ids(session, user_id, tool_input.get("tag_names"))
+            if isinstance(tag_ids, dict):
+                return tag_ids
             entry = await transaction_service.create_transaction(
                 session,
                 user_id,
-                _transaction_model(tool_input, account_id, category_id),
+                _transaction_model(tool_input, account_id, category_id, tag_ids),
             )
             return {"id": str(entry.id), "description": entry.description, "created": True}
         case "list_existing_accounts_and_debts":
@@ -656,9 +1278,13 @@ async def _dispatch_write_tool(
                     {
                         "name": d.name,
                         "creditor": d.creditor,
+                        "type": d.type,
+                        "direction": d.direction,
+                        "status": d.status,
                         "current_balance": str(d.current_balance),
                     }
                     for d in debts
+                    if d.status != "completed"
                 ],
                 "debts_without_plan": [
                     {"name": d.name, "creditor": d.creditor, "amount": str(d.amount)}
@@ -682,11 +1308,19 @@ async def _dispatch_write_tool(
                 if isinstance(resolved, dict):
                     return resolved
                 linked_account_id = resolved
+            funding_account_id = None
+            if tool_input.get("funding_account_name"):
+                resolved = await _resolve_account_id(
+                    session, user_id, tool_input["funding_account_name"]
+                )
+                if isinstance(resolved, dict):
+                    return resolved
+                funding_account_id = resolved
 
             debt = await debt_service.create_debt(
                 session,
                 user_id,
-                _debt_model(tool_input, linked_account_id),
+                _debt_model(tool_input, linked_account_id, funding_account_id),
                 current_user_role=role,
             )
             return {"id": str(debt.id), "name": debt.name, "created": True}

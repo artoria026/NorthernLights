@@ -1562,7 +1562,12 @@
         "create_account": "Cuenta",
         "create_debt": "Deuda con plan de pago",
         "create_unplanned_debt": "Deuda sin plan",
-        "create_recurring_item": "Gasto o ingreso recurrente"
+        "create_recurring_item": "Gasto o ingreso recurrente",
+        "create_transfer": "Transferencia entre cuentas",
+        "register_debt_payment": "Pago o cobro de deuda",
+        "increase_debt": "Préstamo adicional",
+        "create_split_expense": "Gasto compartido",
+        "reconcile_account": "Ajuste de saldo"
       },
       "fields": {
         "date": "Fecha",
@@ -1591,7 +1596,22 @@
         "item_type": "Tipo",
         "frequency": "Frecuencia",
         "frequency_day": "Día",
-        "next_date": "Próxima fecha"
+        "next_date": "Próxima fecha",
+        "notes": "Notas",
+        "tags": "Etiquetas",
+        "installment_total": "Mensualidades (MSI)",
+        "direction": "Dirección",
+        "funding_account": "Cuenta del préstamo",
+        "start_date": "Fecha de inicio",
+        "from_account": "Cuenta de origen",
+        "to_account": "Cuenta de destino",
+        "debt": "Deuda",
+        "concept": "Concepto",
+        "my_share": "Mi parte",
+        "debtors": "Me deben",
+        "real_balance": "Saldo real",
+        "delta": "Diferencia",
+        "auto_generate": "Genera cargos solo"
       },
       "values": {
         "asset": "Activo",
@@ -1615,7 +1635,10 @@
         "subscription": "Suscripción",
         "service": "Servicio",
         "utility": "Servicio básico",
-        "income": "Ingreso"
+        "income": "Ingreso",
+        "owed_to_me": "Me deben",
+        "owed_by_me": "Yo debo",
+        "false": "No"
       }
     }
   },

@@ -37,7 +37,7 @@ read and create transactions via chat, including attaching PDFs of bank statemen
 | Insights | AI-generated recommendations/alerts about financial habits. | AI-generated text + the user's financial metrics at that moment. |
 | Reports | Monthly/annual reports with a summary and AI insights for the period. | Financial summaries per period + saved AI insights. |
 | Notifications | In-app inbox (debt, budget, card, payment, subscription alerts). | Notification title/body. |
-| **AI Advisor** | AI chat that sees the user's actual financial state, can create accounts/debts/expenses if confirmed, and can read attached bank statement PDFs. | **The most sensitive of all** — see section 3, information is sent to an external provider. |
+| **AI Advisor** | AI chat that sees the user's actual financial state, can register accounts, debts, loans, debt payments, transfers, shared expenses, balance adjustments and expenses if the user confirms, and can read attached bank statement PDFs, receipts and screenshots. | **The most sensitive of all** — see section 3, information is sent to an external provider. |
 | Settings | Profile, password change, preferences, unlink Google, **selective data deletion**, **permanently delete account**, log out (one session or all). | Real user control over their own data — relevant to any ARCO-type right/portability the disclaimer promises. |
 | Admin (admin role only) | Platform administration panel. | Sees data for **all users** — see section 5. |
 

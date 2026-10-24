@@ -10,6 +10,9 @@ const MONEY_KEYS = new Set([
   'initial_balance',
   'payment_amount',
   'credit_limit',
+  'my_share',
+  'real_balance',
+  'delta',
 ])
 
 function fieldMap(item: ProposalItem): Record<string, string> {
