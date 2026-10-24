@@ -5,6 +5,7 @@ import {
   MAX_PDF_BYTES,
   classifyFile,
   formatBytes,
+  imageThumbnail,
   looksEncrypted,
   normalizeImage,
   pastedImageName,
@@ -115,6 +116,32 @@ describe('formatBytes', () => {
     expect(formatBytes(500)).toBe('500 B')
     expect(formatBytes(2048)).toBe('2 KB')
     expect(formatBytes(3 * 1024 * 1024)).toBe('3.0 MB')
+  })
+})
+
+describe('imageThumbnail', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('is a small data URL that does not depend on any object URL staying alive', async () => {
+    let size = { width: 0, height: 0 }
+    vi.stubGlobal('createImageBitmap', async () => ({ width: 600, height: 1200, close: vi.fn() }))
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement) {
+      size = { width: this.width, height: this.height }
+      return { drawImage: vi.fn() } as unknown as CanvasRenderingContext2D
+    })
+    vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/jpeg;base64,abc')
+    expect(await imageThumbnail(file(PNG, 'ticket.png', 'image/png'))).toBe('data:image/jpeg;base64,abc')
+    expect(size).toEqual({ width: 96, height: 192 })
+  })
+
+  it('is null when the browser cannot decode the image', async () => {
+    vi.stubGlobal('createImageBitmap', async () => {
+      throw new Error('decode')
+    })
+    expect(await imageThumbnail(file(PNG, 'rota.png', 'image/png'))).toBeNull()
   })
 })
 

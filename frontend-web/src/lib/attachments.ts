@@ -113,6 +113,27 @@ export async function normalizeImage(file: File): Promise<File> {
   return new File([blob], withExtension(file.name, blob.type), { type: blob.type, lastModified: Date.now() })
 }
 
+/** A small, self-contained thumbnail (data URL) of an image, for the tray and the chat bubble.
+ * Not an object URL on purpose: those die when anyone revokes them (a re-render, a hot reload,
+ * leaving the screen) while the bubble is still showing it, and the picture breaks. A data URL
+ * has no lifetime to manage. Null if the browser can't draw it: the UI falls back to the name. */
+export async function imageThumbnail(file: File, side = 192): Promise<string | null> {
+  try {
+    const bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
+    const context = canvas.getContext('2d')
+    if (!context) return null
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+    bitmap.close?.()
+    return canvas.toDataURL('image/jpeg', 0.8)
+  } catch {
+    return null
+  }
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   MAX_ATTACHMENTS,
   MAX_IMAGE_BYTES,
   type RejectionReason,
   classifyFile,
+  imageThumbnail,
   normalizeImage,
   pastedImageName,
 } from '@/lib/attachments'
@@ -39,17 +40,6 @@ export function useAttachments() {
   const [processing, setProcessing] = useState(false)
   const itemsRef = useRef(items)
   itemsRef.current = items
-
-  const revoke = (item: PendingAttachment) => {
-    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
-  }
-
-  useEffect(
-    () => () => {
-      for (const item of itemsRef.current) revoke(item)
-    },
-    [],
-  )
 
   const addFiles = useCallback(async (incoming: File[]): Promise<RejectedFile[]> => {
     const rejected: RejectedFile[] = []
@@ -96,7 +86,7 @@ export function useAttachments() {
             encrypted: false,
             password: '',
             passwordError: false,
-            previewUrl: URL.createObjectURL(file),
+            previewUrl: await imageThumbnail(file),
           })
         } catch {
           rejected.push({ name: original.name, reason: 'unreadable' })
@@ -110,11 +100,7 @@ export function useAttachments() {
   }, [])
 
   const remove = useCallback((id: string) => {
-    setItems((prev) => {
-      const gone = prev.find((i) => i.id === id)
-      if (gone) revoke(gone)
-      return prev.filter((i) => i.id !== id)
-    })
+    setItems((prev) => prev.filter((i) => i.id !== id))
   }, [])
 
   const setPassword = useCallback((id: string, password: string) => {
@@ -129,14 +115,8 @@ export function useAttachments() {
     )
   }, [])
 
-  /** Empties the list. `keepPreviews` hands the thumbnails' object URLs over to the
-   * chat bubble that now shows them instead of freeing them. */
-  const clear = useCallback((options?: { keepPreviews?: boolean }) => {
-    setItems((prev) => {
-      if (!options?.keepPreviews) for (const item of prev) revoke(item)
-      return []
-    })
-  }, [])
+  /** Empties the list (the thumbnails are data URLs: the chat bubble keeps its own copy). */
+  const clear = useCallback(() => setItems([]), [])
 
   /** What goes to the server: the files, and each one's password (null when it has none). */
   const payload = useCallback(
