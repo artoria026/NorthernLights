@@ -1562,7 +1562,12 @@
         "create_account": "Account",
         "create_debt": "Debt with a payment plan",
         "create_unplanned_debt": "Debt without a plan",
-        "create_recurring_item": "Recurring expense or income"
+        "create_recurring_item": "Recurring expense or income",
+        "create_transfer": "Transfer between accounts",
+        "register_debt_payment": "Debt payment or collection",
+        "increase_debt": "Additional loan",
+        "create_split_expense": "Shared expense",
+        "reconcile_account": "Balance adjustment"
       },
       "fields": {
         "date": "Date",
@@ -1591,7 +1596,22 @@
         "item_type": "Type",
         "frequency": "Frequency",
         "frequency_day": "Day",
-        "next_date": "Next date"
+        "next_date": "Next date",
+        "notes": "Notes",
+        "tags": "Tags",
+        "installment_total": "Installments (interest-free)",
+        "direction": "Direction",
+        "funding_account": "Loan account",
+        "start_date": "Start date",
+        "from_account": "From account",
+        "to_account": "To account",
+        "debt": "Debt",
+        "concept": "Concept",
+        "my_share": "My share",
+        "debtors": "Owed to me",
+        "real_balance": "Real balance",
+        "delta": "Difference",
+        "auto_generate": "Generates charges itself"
       },
       "values": {
         "asset": "Asset",
@@ -1615,7 +1635,10 @@
         "subscription": "Subscription",
         "service": "Service",
         "utility": "Utility",
-        "income": "Income"
+        "income": "Income",
+        "owed_to_me": "Owed to me",
+        "owed_by_me": "I owe",
+        "false": "No"
       }
     }
   },
