@@ -205,17 +205,6 @@ export function Advisor() {
     )
   }, [history, messages.length, setMessages])
 
-  const messagesRef = useRef(messages)
-  messagesRef.current = messages
-  useEffect(
-    () => () => {
-      for (const message of messagesRef.current) {
-        for (const url of message.attachmentPreviews ?? []) URL.revokeObjectURL(url)
-      }
-    },
-    [],
-  )
-
   function scrollToBottom() {
     const el = scrollRef.current
     if (!el) return
@@ -328,7 +317,7 @@ export function Advisor() {
         previews,
         onAccepted: () => {
           setInput('')
-          attachments.clear({ keepPreviews: true })
+          attachments.clear()
         },
       },
     )
@@ -346,9 +335,6 @@ export function Advisor() {
   }
 
   function handleClear() {
-    for (const message of messages) {
-      for (const url of message.attachmentPreviews ?? []) URL.revokeObjectURL(url)
-    }
     seeded.current = true
     setMessages([])
     clearHistory.mutate()

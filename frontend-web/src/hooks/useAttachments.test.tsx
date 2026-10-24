@@ -8,14 +8,13 @@ vi.mock('@/lib/attachments', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/attachments')>()),
   // jsdom can't decode images: the shrinking itself is covered in attachments.test.ts.
   normalizeImage: async (f: File) => f,
+  imageThumbnail: async () => 'data:image/jpeg;base64,thumb',
 }))
 
 const pdf = (name = 'estado.pdf') => file(PLAIN_PDF, name, 'application/pdf')
 const lockedPdf = (name = 'cifrado.pdf') => file(ENCRYPTED_PDF, name, 'application/pdf')
 
 beforeEach(() => {
-  URL.createObjectURL = vi.fn(() => 'blob:preview')
-  URL.revokeObjectURL = vi.fn()
 })
 
 describe('useAttachments', () => {
@@ -47,7 +46,7 @@ describe('useAttachments', () => {
   it('gives a screenshot a thumbnail and a pasted "image.png" a real name', async () => {
     const { result } = renderHook(() => useAttachments())
     await act(() => result.current.addFiles([file(PNG, 'image.png', 'image/png')]))
-    expect(result.current.items[0].previewUrl).toBe('blob:preview')
+    expect(result.current.items[0].previewUrl).toBe('data:image/jpeg;base64,thumb')
     expect(result.current.items[0].file.name).toMatch(/^captura-\d{8}-\d{6}\.png$/)
   })
 
@@ -88,13 +87,12 @@ describe('useAttachments', () => {
     expect(result.current.items[1].passwordError).toBe(false)
   })
 
-  it('frees the thumbnail when a file is removed or the list cleared, unless the chat keeps it', async () => {
+  it('removes one file and clears the list', async () => {
     const { result } = renderHook(() => useAttachments())
     await act(() => result.current.addFiles([file(PNG, 'a.png'), file(PNG, 'b.png')]))
     act(() => result.current.remove(result.current.items[0].id))
-    expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1)
-    act(() => result.current.clear({ keepPreviews: true }))
-    expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1)
+    expect(result.current.items).toHaveLength(1)
+    act(() => result.current.clear())
     expect(result.current.items).toEqual([])
   })
 })

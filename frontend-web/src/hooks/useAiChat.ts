@@ -45,7 +45,7 @@ export interface StreamingChatMessage {
    * are never persisted (see ChatAttachments), so this doesn't survive
    * a reload either: it's a convenience for the current session, not real history. */
   attachmentNames?: string[]
-  /** Object URLs of the screenshots sent, for thumbnails in the bubble (this session only). */
+  /** Thumbnails (data URLs) of the screenshots sent, for the bubble (this session only). */
   attachmentPreviews?: string[]
   /** Filled in after the stream ends (see the fetch to /ai/history in sendMessage's
    * finally). Nothing the advisor does is registered by itself: if it carries a
