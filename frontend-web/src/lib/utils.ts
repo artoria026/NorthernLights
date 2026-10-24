@@ -116,3 +116,10 @@ export function formatShortDate(value: string): string {
     timeZone: "UTC",
   })
 }
+
+/** A date as YYYY-MM-DD in the user's own calendar. `toISOString()` is UTC: in the evening it
+ * already says "tomorrow", which put a charge registered "today" on the next day. */
+export function localIsoDate(date: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}

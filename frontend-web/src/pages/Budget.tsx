@@ -7,6 +7,7 @@ import {
   PiggyBank,
   Plus,
   Receipt,
+  Sparkles,
   Target,
   TrendingDown,
   TrendingUp,
@@ -78,6 +79,22 @@ function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewi
     })
   }, [suggestions])
 
+  // The user's own typical month, per category (the backend takes the median of up to 12 complete
+  // months): one click fills every category that has something to go on.
+  const historyMonths = Math.max(0, ...(suggestions ?? []).map((s) => s.history_months))
+  const hasHistorySuggestions = (suggestions ?? []).some((s) => Number(s.suggested_limit) > 0)
+  const total = Object.values(values).reduce((sum, v) => sum + (Number(v) > 0 ? Number(v) : 0), 0)
+
+  function fillFromHistory() {
+    setValues((prev) => {
+      const next = { ...prev }
+      for (const s of suggestions ?? []) {
+        if (Number(s.suggested_limit) > 0) next[s.category_id] = String(Number(s.suggested_limit))
+      }
+      return next
+    })
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     const limits = Object.entries(values)
@@ -98,6 +115,28 @@ function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewi
         {t('budget.setLimits.description')}
         {viewingPastMonth && ` ${t('budget.setLimits.pastMonthNote')}`}
       </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {hasHistorySuggestions ? (
+          <button
+            type="button"
+            onClick={fillFromHistory}
+            className="flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] border"
+            style={{
+              background: 'var(--nl-violet-soft-bg)',
+              color: 'var(--nl-violet-ink)',
+              borderColor: 'var(--nl-violet-ink)',
+            }}
+          >
+            <Sparkles size={13} />
+            {t('budget.setLimits.suggestFromHistory', { count: historyMonths })}
+          </button>
+        ) : (
+          <span className="text-[12px] text-muted-foreground">{t('budget.setLimits.noHistory')}</span>
+        )}
+        <span className="text-[12px] text-muted-foreground">
+          {t('budget.setLimits.totalLabel')} <span className="font-medium text-foreground">{formatMoney(total)}</span>
+        </span>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-h-[55vh] overflow-y-auto -mx-1 px-1 py-1">
         {(suggestions ?? []).map((s) => {
           const average = Number(s.average_last_3_months)
@@ -121,15 +160,26 @@ function SetLimitsForm({ onDone, viewingPastMonth }: { onDone: () => void; viewi
                   className={`${selectClass} h-8 w-full pl-5 text-right`}
                 />
               </div>
-              {average > 0 && (
+              {Number(s.suggested_limit) > 0 ? (
                 <button
                   type="button"
-                  onClick={() => setValues((prev) => ({ ...prev, [s.category_id]: s.average_last_3_months }))}
+                  onClick={() => setValues((prev) => ({ ...prev, [s.category_id]: String(Number(s.suggested_limit)) }))}
                   className="text-[11px] text-muted-foreground hover:text-foreground text-left"
                 >
-                  {t('budget.setLimits.average3MonthsLabel')}{' '}
-                  <span className="font-medium">{formatMoney(s.average_last_3_months)}</span>
+                  {t('budget.setLimits.suggestedLabel', { count: s.history_months })}{' '}
+                  <span className="font-medium">{formatMoney(s.suggested_limit)}</span>
                 </button>
+              ) : (
+                average > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setValues((prev) => ({ ...prev, [s.category_id]: s.average_last_3_months }))}
+                    className="text-[11px] text-muted-foreground hover:text-foreground text-left"
+                  >
+                    {t('budget.setLimits.average3MonthsLabel')}{' '}
+                    <span className="font-medium">{formatMoney(s.average_last_3_months)}</span>
+                  </button>
+                )
               )}
             </div>
           )

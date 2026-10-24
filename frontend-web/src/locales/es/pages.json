@@ -135,7 +135,7 @@
       "owedToMeNote_other": "{{count}} deudas por cobrar",
       "budgetNote": "{{spent}} gastado{{week}}",
       "budgetWeek": "semana {{pct}}%",
-      "noBudget": "Sin presupuesto definido"
+      "noBudget": "Crear presupuesto →"
     },
     "recentTransactions": {
       "heading": "Transacciones recientes",
@@ -152,7 +152,8 @@
       "heading": "Próximos pagos",
       "dueDate": "Vence {{date}}",
       "empty": "No hay pagos próximos.",
-      "total30": "Próximos 30 días: {{amount}}"
+      "total30": "Próximos 30 días: {{amount}}",
+      "overdueDate": "Venció {{date}}"
     },
     "accounts": {
       "viewAll": "Ver todas →",
@@ -220,7 +221,8 @@
       "owe": "Debo",
       "owedToMe": "Me deben",
       "card": "tarjeta",
-      "nobodyOwesMe": "Nadie te debe nada por ahora."
+      "nobodyOwesMe": "Nadie te debe nada por ahora.",
+      "paused": "en pausa"
     }
   },
   "accounts": {
@@ -838,7 +840,13 @@
       "lendMoreButton": "Prestar más",
       "borrowMoreButton": "Me prestaron más",
       "lendMoreDialogTitle": "Prestarle más a {{name}}",
-      "borrowMoreDialogTitle": "Otro préstamo de {{name}}"
+      "borrowMoreDialogTitle": "Otro préstamo de {{name}}",
+      "pauseButton": "Pausar",
+      "pauseTitle": "Pausar: sigue contando como deuda pero deja de pedirte pagos",
+      "resumeButton": "Reanudar",
+      "resumeTitle": "Reanudar los pagos de esta deuda",
+      "pausedBadge": "En pausa",
+      "pausedNote": "En pausa: sin pagos pendientes"
     },
     "unplannedRow": {
       "activateButton": "Activar",
@@ -975,7 +983,13 @@
       "noLimitPlaceholder": "Sin límite",
       "average3MonthsLabel": "Promedio 3 meses:",
       "noExpenseCategories": "Sin categorías de gasto.",
-      "saveChanges": "Guardar cambios"
+      "saveChanges": "Guardar cambios",
+      "suggestFromHistory_one": "Sugerir con mi historial (1 mes)",
+      "suggestFromHistory_other": "Sugerir con mi historial ({{count}} meses)",
+      "suggestedLabel_one": "Sugerido (1 mes de historial):",
+      "suggestedLabel_other": "Sugerido (mediana de {{count}} meses):",
+      "totalLabel": "Total mensual:",
+      "noHistory": "Aún no hay meses completos de historial para sugerir."
     },
     "categoryRow": {
       "vsLastMonth": "{{pct}}% vs mes anterior",
@@ -1210,6 +1224,16 @@
         "body": "Solo aparece si tienes al menos una tarjeta de crédito. Suma las mensualidades de tus compras a meses sin intereses activas (fijo, se paga sí o sí) más lo que ya llevas gastado en el corte abierto de cada tarjeta (variable, sigue subiendo hasta que corte). Es solo informativo -- no se suma al \"Comprometido / mes\" de arriba, porque ese gasto ya se contó en el presupuesto del mes en que lo hiciste; sumarlo aquí también lo contaría dos veces."
       },
       "tip": "La urgencia de alerta (normal/alta/crítica) controla qué tan insistente es el aviso antes de la fecha de cobro — no afecta el monto ni la fecha en sí. Los \"Servicios esenciales\" son la excepción: alertan a diario desde el primer día sin confirmar, sin importar la urgencia que les pongas."
+    },
+    "registerCharge": {
+      "button": "Registrar cargo",
+      "title": "Registrar cargo — {{name}}",
+      "description": "Se registrará un gasto de {{amount}} en la cuenta del item y su próxima fecha avanzará un periodo.",
+      "dateLabel": "Fecha del cargo",
+      "confirm": "Registrar cargo",
+      "pendingBanner_one": "{{count}} cargo sin registrar",
+      "pendingBanner_other": "{{count}} cargos sin registrar",
+      "upcomingBanner": "Próximos 3 días"
     }
   },
   "subscriptions": {

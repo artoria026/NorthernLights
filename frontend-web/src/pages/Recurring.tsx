@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CategorySelect } from '@/components/nl/CategorySelect'
 import { DialogFooter, DialogPrimaryButton } from '@/components/nl/DialogActions'
 import { HelpSection, HelpTip } from '@/components/nl/Help'
+import { RegisterChargeButton } from '@/components/nl/RegisterChargeButton'
 import { SubscriptionIcon, SubscriptionIconPicker } from '@/components/nl/SubscriptionIcon'
 import { EmptyState, HEADER_SECTIONS, SegmentedControl, SoftBadge, StatCard, ViewHeader } from '@/components/nl/primitives'
 import {
@@ -39,7 +40,7 @@ import {
 } from '@/lib/cardCommitments'
 import { Donut } from '@/lib/charts'
 import { FREQUENCY_LABELS, ITEM_TYPE_LABELS, monthlyEquivalent, STATUS_LABELS, URGENCY_LABELS } from '@/lib/recurring'
-import { formatMoney, formatShortDate, selectClass } from '@/lib/utils'
+import { formatMoney, formatShortDate, localIsoDate, selectClass } from '@/lib/utils'
 import { useAccounts, useTdcCycle } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useIsDesktop } from '@/hooks/useMediaQuery'
@@ -474,6 +475,9 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
   // both.
   const actions = (
     <>
+      {item.status === 'active' && !item.auto_generate && (
+        <RegisterChargeButton item={item} highlight={item.next_date <= localIsoDate()} />
+      )}
       <SoftBadge severity={STATUS_SEVERITY[item.status]}>{STATUS_LABELS[item.status]}</SoftBadge>
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogTrigger
@@ -533,7 +537,7 @@ function RecurringItemRow({ item }: { item: RecurringItem }) {
 
   if (isDesktop) {
     return (
-      <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr_240px] gap-2 items-center py-2.5 border-t border-border first:border-0 text-[13px]">
+      <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr_340px] gap-2 items-center py-2.5 border-t border-border first:border-0 text-[13px]">
         <span className="flex items-center gap-2 min-w-0">
           <SubscriptionIcon icon={item.icon} name={item.name} size="sm" fallback={TypeIcon} />
           <span className="font-medium truncate">{item.name}</span>
@@ -1113,7 +1117,7 @@ export function Recurring() {
           <EmptyState>{t('recurring.listSection.empty')}</EmptyState>
         ) : (
           <>
-            <div className="hidden lg:grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr_240px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <div className="hidden lg:grid grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1fr_340px] gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
               <span>{t('recurring.listSection.table.name')}</span>
               <span>{t('recurring.listSection.table.type')}</span>
               <span className="text-right">{t('recurring.listSection.table.amount')}</span>

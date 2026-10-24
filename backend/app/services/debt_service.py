@@ -541,6 +541,32 @@ async def update_debt(
     return debt
 
 
+async def pause_debt(session: AsyncSession, user_id: UUID, debt_id: UUID) -> Debt:
+    """Puts an active debt on hold: it keeps counting as owed, but leaves the upcoming payments,
+    the monthly commitment and the reminders (all of those only look at active debts)."""
+    debt = await get_debt(session, user_id, debt_id)
+    if debt.status != "active":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Solo se pausan deudas activas")
+    debt.status = "paused"
+    await session.flush()
+    await cache_service.invalidate_snapshot_for(user_id)
+    return debt
+
+
+async def resume_debt(session: AsyncSession, user_id: UUID, debt_id: UUID) -> Debt:
+    """Takes a paused debt back to active. A payment date left in the past while it was paused is
+    moved to today: otherwise every payment that "came due" meanwhile would show as overdue."""
+    debt = await get_debt(session, user_id, debt_id)
+    if debt.status != "paused":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Solo se reanudan deudas en pausa")
+    debt.status = "active"
+    if debt.next_payment_date is not None and debt.next_payment_date < date.today():
+        debt.next_payment_date = date.today()
+    await session.flush()
+    await cache_service.invalidate_snapshot_for(user_id)
+    return debt
+
+
 async def delete_debt(session: AsyncSession, user_id: UUID, debt_id: UUID) -> None:
     debt = await get_debt(session, user_id, debt_id)
     if debt.current_balance != 0 and await _has_transactions(session, debt):
@@ -672,7 +698,8 @@ async def register_debt_payment(
     session: AsyncSession, user_id: UUID, debt_id: UUID, data: DebtPaymentCreate
 ) -> DebtPayment:
     debt = await get_debt(session, user_id, debt_id)
-    if debt.status != "active":
+    # A paused debt asks for nothing, but whoever pays it anyway (or collects it) is not stopped.
+    if debt.status not in ("active", "paused"):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Solo se pagan deudas activas")
 
     debt_side_account_id = await _resolve_debt_side_account(session, user_id, debt)

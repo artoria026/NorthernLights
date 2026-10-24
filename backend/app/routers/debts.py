@@ -183,6 +183,26 @@ async def delete_debt(
     return SuccessResponse(data={"success": True})
 
 
+@router.patch("/{debt_id}/pause")
+async def pause_debt(
+    debt_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    debt = await debt_service.pause_debt(session, current_user.id, debt_id)
+    return SuccessResponse(data=DebtOut.model_validate(debt))
+
+
+@router.patch("/{debt_id}/resume")
+async def resume_debt(
+    debt_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_rls_db),
+) -> SuccessResponse:
+    debt = await debt_service.resume_debt(session, current_user.id, debt_id)
+    return SuccessResponse(data=DebtOut.model_validate(debt))
+
+
 @router.post("/{debt_id}/payments", status_code=status.HTTP_201_CREATED)
 async def register_payment(
     debt_id: UUID,

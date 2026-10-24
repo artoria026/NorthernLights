@@ -317,6 +317,67 @@ async def process_due_recurring_items(
     return generated
 
 
+async def register_recurring_charge(
+    session: AsyncSession, user_id: UUID, item_id: UUID, entry_date: date | None = None
+) -> tuple[RecurringItem, JournalEntry]:
+    """The user records, by hand, the charge of an item they follow manually (the app does not
+    generate it for them: auto_generate off). Unlike the draft the Celery task makes, this one is
+    CONFIRMED -- the user is saying it happened -- and it moves the next date forward one period,
+    so the item stops showing as due. An item that does generate its own charges is refused when
+    a draft is waiting: confirming that draft is the way, otherwise it would be counted twice."""
+    item = await get_recurring_item(session, user_id, item_id)
+    if item.status != "active":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Solo se registran cargos de items activos"
+        )
+    if item.auto_generate and await get_pending_for_item(session, item.id) is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Este item ya tiene un cargo pendiente por confirmar: confirmalo en Recurrentes",
+        )
+
+    entry_type = "income" if item.item_type == "income" else "expense"
+    if entry_type == "expense":
+        lines = [
+            JournalLineIn(account_id=item.contra_account_id, amount=item.amount, type="debit"),
+            JournalLineIn(account_id=item.account_id, amount=item.amount, type="credit"),
+        ]
+    else:
+        lines = [
+            JournalLineIn(account_id=item.account_id, amount=item.amount, type="debit"),
+            JournalLineIn(account_id=item.contra_account_id, amount=item.amount, type="credit"),
+        ]
+    entry = await transaction_service.create_transaction(
+        session,
+        user_id,
+        TransactionCreate(
+            date=entry_date or date.today(),
+            description=item.name,
+            entry_type=entry_type,
+            category_id=item.category_id,
+            lines=lines,
+        ),
+        is_recurring=True,
+        recurring_id=item.id,
+    )
+    item.last_generated_at = datetime.now(UTC)
+    item.next_date = compute_next_date(item.next_date, item.frequency)
+    await session.flush()
+    await cache_service.invalidate_snapshot_for(user_id)
+    return item, entry
+
+
+async def get_pending_for_item(session: AsyncSession, item_id: UUID) -> UUID | None:
+    result = await session.execute(
+        select(JournalEntry.id).where(
+            JournalEntry.recurring_id == item_id,
+            JournalEntry.status == "pending",
+            JournalEntry.deleted_at.is_(None),
+        )
+    )
+    return result.scalars().first()
+
+
 async def remind_pending_recurring(session: AsyncSession, user_id: UUID, today: date) -> list[dict]:
     """Celery task `recurring.remind_pending` (per user). M14 (Notifications)
     doesn't exist yet: logs a structured entry for each reminder that would

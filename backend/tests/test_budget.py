@@ -493,3 +493,42 @@ async def test_cannot_set_budget_limit_directly_on_subcategory(client: AsyncClie
         json={"limits": [{"category_id": sub_id, "monthly_limit": "200.00"}]},
     )
     assert response.status_code == 400
+
+
+async def test_suggested_limit_is_the_typical_month_of_the_history(client: AsyncClient):
+    """The suggestion is the MEDIAN of the complete months (so one extraordinary month does not
+    set the limit), with months of no spend counted as zero, rounded up to the next 50."""
+    token, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    categories = (await client.get("/api/v1/categories?type=expense", headers=headers)).json()[
+        "data"
+    ]
+    regular, occasional = categories[0]["id"], categories[1]["id"]
+
+    def months_ago(n: int) -> str:
+        return (date.today().replace(day=15) - relativedelta(months=n)).isoformat()
+
+    # 3 complete months of history: 300, an extraordinary 5,000, and 330 -> median 330 -> 350
+    for months, amount in ((3, "300.00"), (2, "5000.00"), (1, "330.00")):
+        await _confirm_expense(client, headers, regular, amount, months_ago(months))
+    # one single expense in 3 months is not a monthly habit -> median 0
+    await _confirm_expense(client, headers, occasional, "1000.00", months_ago(2))
+    # what is spent this month is not over: it must not count
+    await _confirm_expense(client, headers, regular, "9999.00", date.today().isoformat())
+
+    response = await client.get("/api/v1/budget/limits/suggestions", headers=headers)
+    suggestions = {s["category_id"]: s for s in response.json()["data"]}
+    assert suggestions[regular]["suggested_limit"] == "350.00"
+    assert suggestions[regular]["history_months"] == 3
+    assert suggestions[occasional]["suggested_limit"] == "0.00"
+
+
+async def test_no_history_means_no_suggestion(client: AsyncClient):
+    token, _ = await _register_and_login(client)
+    headers = {"Authorization": f"Bearer {token}"}
+    response = await client.get("/api/v1/budget/limits/suggestions", headers=headers)
+    assert all(
+        s["suggested_limit"] == "0" or s["suggested_limit"] == "0.00"
+        for s in response.json()["data"]
+    )
+    assert {s["history_months"] for s in response.json()["data"]} == {0}

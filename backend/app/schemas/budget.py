@@ -26,6 +26,9 @@ class BudgetLimitSuggestion(BaseModel):
     color: str
     current_limit: Decimal | None
     average_last_3_months: Decimal
+    # Typical month of the user's own history (see budget_service.suggest_limits_from_history).
+    suggested_limit: Decimal = Decimal("0")
+    history_months: int = 0
 
 
 class BudgetCategoryBreakdown(BaseModel):
